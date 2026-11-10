@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom sleek scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+/* Christian Widget Soft-Glow & Stained-Glass Animations */
+@keyframes celestialSoftGlow {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.98);
+    filter: blur(28px) drop-shadow(0 0 20px rgba(245, 158, 11, 0.25));
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.03);
+    filter: blur(34px) drop-shadow(0 0 35px rgba(245, 158, 11, 0.45)) drop-shadow(0 0 50px rgba(99, 102, 241, 0.35));
+  }
+}
+
+@keyframes stainedGlassPulse {
+  0%, 100% {
+    opacity: 0.22;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.38;
+    transform: scale(1.02) rotate(1deg);
+  }
+}
+
+@keyframes divineLightSweep {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  40%, 100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+@keyframes subtleCrossFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-celestial-glow {
+  animation: celestialSoftGlow 7s ease-in-out infinite;
+}
+
+.animate-stained-glass-pulse {
+  animation: stainedGlassPulse 9s ease-in-out infinite;
+}
+
+.animate-divine-sweep {
+  animation: divineLightSweep 9s ease-in-out infinite;
+}
+
+.animate-cross-float {
+  animation: subtleCrossFloat 5s ease-in-out infinite;
+}
