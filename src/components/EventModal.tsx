@@ -7,6 +7,7 @@ import {
   Language,
 } from '../types/calendar';
 import { translations } from '../translations/i18n';
+import { getTodayLocalYMD } from '../utils/dateUtils';
 import { X, Trash2, Calendar, Clock, MapPin, Tag, AlertCircle } from 'lucide-react';
 
 interface EventModalProps {
@@ -45,9 +46,9 @@ export const EventModal: React.FC<EventModalProps> = ({
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(defaultDate || getTodayLocalYMD());
   const [startTime, setStartTime] = useState(defaultTime || '10:00');
-  const [endDate, setEndDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(defaultDate || getTodayLocalYMD());
   const [endTime, setEndTime] = useState('11:00');
   const [allDay, setAllDay] = useState(false);
   const [category, setCategory] = useState<EventCategory>('personal');
@@ -78,9 +79,9 @@ export const EventModal: React.FC<EventModalProps> = ({
     } else {
       setTitle('');
       setDescription('');
-      setStartDate(defaultDate || new Date().toISOString().slice(0, 10));
+      setStartDate(defaultDate || getTodayLocalYMD());
       setStartTime(defaultTime || '10:00');
-      setEndDate(defaultDate || new Date().toISOString().slice(0, 10));
+      setEndDate(defaultDate || getTodayLocalYMD());
       setEndTime('11:00');
       setAllDay(false);
       setCategory('personal');

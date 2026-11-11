@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarTask, Priority, Language } from '../types/calendar';
 import { translations } from '../translations/i18n';
+import { getTodayLocalYMD } from '../utils/dateUtils';
 import { X, Trash2, CalendarCheck, AlertCircle } from 'lucide-react';
 
 interface TaskModalProps {
@@ -26,7 +27,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
+  const [dueDate, setDueDate] = useState(defaultDate || getTodayLocalYMD());
   const [dueTime, setDueTime] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [category, setCategory] = useState('personal');
@@ -45,7 +46,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       setTitle('');
       setDescription('');
-      setDueDate(defaultDate || new Date().toISOString().slice(0, 10));
+      setDueDate(defaultDate || getTodayLocalYMD());
       setDueTime('');
       setPriority('medium');
       setCategory('personal');

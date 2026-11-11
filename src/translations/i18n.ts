@@ -2,8 +2,8 @@ import { Language } from '../types/calendar';
 
 export const translations = {
   en: {
-    appTitle: 'Almanac Pro',
-    appSubtitle: 'Indian Festivals, Hijri & Unified Planner',
+    appTitle: 'Harmony Calendar',
+    appSubtitle: 'Multi-Faith & Smart Lifestyle Calendar',
     views: {
       month: 'Month',
       week: 'Week',
@@ -282,8 +282,8 @@ export const translations = {
     }
   },
   hinglish: {
-    appTitle: 'Almanac Pro',
-    appSubtitle: 'Gregorian, Islamic Hijri aur Tyohar Calendar',
+    appTitle: 'Harmony Calendar',
+    appSubtitle: 'Multi-Faith, Hijri aur Tyohar Calendar',
     views: {
       month: 'Mahina (Month)',
       week: 'Hafta (Week)',

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CalendarEvent, Language, EventCategory } from '../types/calendar';
 import { translations } from '../translations/i18n';
+import { formatDateToLocalYMD } from '../utils/dateUtils';
 import { Sparkles, X, Plus, Calendar, Clock, Tag } from 'lucide-react';
 
 interface QuickAddModalProps {
@@ -45,10 +46,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       targetDate.setDate(today.getDate() + 7);
     }
 
-    const yyyy = targetDate.getFullYear();
-    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(targetDate.getDate()).padStart(2, '0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const dateStr = formatDateToLocalYMD(targetDate);
 
     // Detect time e.g. "at 4pm", "at 10:30am", "15:00"
     let timeStr = '10:00';
@@ -111,11 +109,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   };
 
   const handleApplyTemplate = (tmpl: typeof quickTemplates[0]) => {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const dateStr = formatDateToLocalYMD(new Date());
 
     const newEvent: CalendarEvent = {
       id: `evt-${Date.now()}`,

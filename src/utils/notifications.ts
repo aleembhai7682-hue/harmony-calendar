@@ -1,3 +1,5 @@
+import { getTodayLocalYMD } from './dateUtils';
+
 /**
  * Real-time Notifications & Reminders Engine
  * Handles in-app alerts and native Web Notifications for calendar events and tasks.
@@ -94,12 +96,10 @@ export function shouldTriggerReminder(
 ): boolean {
   if (notifiedSet.has(id)) return false;
 
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-    now.getDate()
-  ).padStart(2, '0')}`;
-
+  const todayStr = getTodayLocalYMD();
   if (targetDateStr !== todayStr) return false;
+
+  const now = new Date();
 
   if (!targetTimeStr) {
     // All-day event: trigger once around 09:00 AM

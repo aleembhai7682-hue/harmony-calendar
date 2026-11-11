@@ -1,6 +1,7 @@
 import { CalendarEvent } from '../types/calendar';
+import { formatDateToLocalYMD } from './dateUtils';
 
-export function exportEventsToIcs(events: CalendarEvent[], calendarTitle = 'Almanac Calendar'): void {
+export function exportEventsToIcs(events: CalendarEvent[], calendarTitle = 'Harmony Calendar'): void {
   const pad = (n: number) => String(n).padStart(2, '0');
 
   const formatIcsDate = (dateStr: string, timeStr?: string, allDay?: boolean) => {
@@ -15,7 +16,7 @@ export function exportEventsToIcs(events: CalendarEvent[], calendarTitle = 'Alma
   let ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Almanac Pro//Unified Calendar App//EN',
+    'PRODID:-//Harmony Calendar//Unified Multi-Faith Lifestyle App//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${calendarTitle}`,
@@ -27,7 +28,7 @@ export function exportEventsToIcs(events: CalendarEvent[], calendarTitle = 'Alma
     const end = formatIcsDate(evt.endDate || evt.startDate, evt.endTime || evt.startTime, evt.allDay);
 
     ics.push('BEGIN:VEVENT');
-    ics.push(`UID:${evt.id}@almanac.pro`);
+    ics.push(`UID:${evt.id}@harmonycalendar.app`);
     ics.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
     
     if (start.isAllDay) {
@@ -62,7 +63,7 @@ export function exportEventsToIcs(events: CalendarEvent[], calendarTitle = 'Alma
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `almanac-calendar-export-${new Date().toISOString().slice(0, 10)}.ics`;
+  a.download = `harmony-calendar-export-${formatDateToLocalYMD(new Date())}.ics`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

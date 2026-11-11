@@ -33,6 +33,7 @@ interface SettingsModalProps {
   onImportBackup: (jsonStr: string) => void;
   onResetDefaults: () => void;
   onLoadDemoData: () => void;
+  onClearAllData?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -50,6 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onImportBackup,
   onResetDefaults,
   onLoadDemoData,
+  onClearAllData,
 }) => {
   const t = translations[language] || translations['en'];
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -421,34 +423,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Upload className="w-4 h-4 text-sky-500" />
-                <span>Restore JSON</span>
+                <span>Restore JSON Backup</span>
               </button>
+            </div>
 
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 onClick={() => {
-                  if (confirm('Load sample demonstration events and tasks?')) {
+                  if (confirm('Load sample demonstration events and tasks into your calendar?')) {
                     onLoadDemoData();
                   }
                 }}
-                className="p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-900/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs font-bold text-indigo-600 dark:text-indigo-400 transition-colors cursor-pointer"
-                title="Load sample demonstration events"
+                className="p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                title="Load sample demonstration events and tasks"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-4 h-4 text-indigo-500" />
+                <span>Load Sample Demo Data</span>
               </button>
 
               <button
                 onClick={() => {
-                  if (confirm('Reset preferences and clear calendar events?')) {
-                    onResetDefaults();
+                  if (confirm('Are you sure you want to clear all your events and tasks to a clean slate?')) {
+                    if (onClearAllData) {
+                      onClearAllData();
+                    } else {
+                      onResetDefaults();
+                    }
                   }
                 }}
-                className="p-2.5 rounded-xl border border-red-200 dark:border-red-900/60 hover:bg-red-50 dark:hover:bg-red-950/40 text-xs font-bold text-red-600 transition-colors cursor-pointer"
-                title="Reset to clean slate"
+                className="p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-xs font-bold text-rose-700 dark:text-rose-300 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                title="Clear all events and tasks"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 text-rose-500" />
+                <span>Clear Data (Clean Slate)</span>
               </button>
             </div>
           </div>

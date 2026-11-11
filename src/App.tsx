@@ -23,9 +23,12 @@ import {
   saveLanguage,
   loadActiveMode,
   saveActiveMode,
-  loadDemoSampleEvents,
+  loadDemoSampleData,
+  clearAllUserCalendarData,
+  importBackupData,
   DEFAULT_FILTERS,
 } from './utils/storage';
+import { formatDateToLocalYMD, getTodayLocalYMD } from './utils/dateUtils';
 import { getHijriDate, getIslamicOccasionForDate } from './utils/hijri';
 import { INDIAN_FESTIVALS_DATABASE } from './utils/indianFestivals';
 import { exportEventsToIcs } from './utils/icsExport';
@@ -179,7 +182,7 @@ export default function App() {
 
   // Upcoming items calculation
   const upcomingFestivals = useMemo(() => {
-    const todayStr = currentDate.toISOString().slice(0, 10);
+    const todayStr = formatDateToLocalYMD(currentDate);
     return INDIAN_FESTIVALS_DATABASE
       .filter((f) => f.date >= todayStr)
       .sort((a, b) => a.date.localeCompare(b.date))
@@ -245,7 +248,7 @@ export default function App() {
   // Periodic Reminder Engine - Checks every 30 seconds for upcoming events & tasks
   useEffect(() => {
     const checkReminders = () => {
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = getTodayLocalYMD();
 
       // Check Events
       for (const evt of events) {
@@ -330,7 +333,7 @@ export default function App() {
       } else if (key === 'c' || key === 'n') {
         e.preventDefault();
         setSelectedEvent(null);
-        setEventModalDate(currentDate.toISOString().slice(0, 10));
+        setEventModalDate(formatDateToLocalYMD(currentDate));
         setEventModalTime('10:00');
         setIsEventModalOpen(true);
       } else if (key === 'k') {
@@ -394,10 +397,12 @@ export default function App() {
 
   const handleExportBackup = () => {
     const data = {
-      app: 'Almanac Pro Calendar',
-      version: '2.5',
+      app: 'Harmony Calendar',
+      version: '3.0',
       exportDate: new Date().toISOString(),
       activeMode: calendarMode,
+      language,
+      theme,
       events,
       tasks,
       filters,
@@ -406,28 +411,25 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `almanac_calendar_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `harmony_calendar_backup_${formatDateToLocalYMD(new Date())}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const handleImportBackup = (jsonStr: string) => {
-    try {
-      const data = JSON.parse(jsonStr);
-      if (Array.isArray(data.events)) {
-        handleUpdateEvents(data.events);
-      }
-      if (Array.isArray(data.tasks)) {
-        handleUpdateTasks(data.tasks);
-      }
-      if (data.filters) {
-        handleUpdateFilters(data.filters);
-      }
-      if (data.activeMode) {
-        handleModeChange(data.activeMode);
-      }
-    } catch (e) {
-      console.error('Failed to import backup JSON:', e);
+    const result = importBackupData(jsonStr);
+    if (!result.success) {
+      alert(`Import failed: ${result.message || 'Invalid backup data structure.'}`);
+      return;
+    }
+    if (result.data) {
+      if (result.data.events !== undefined) handleUpdateEvents(result.data.events);
+      if (result.data.tasks !== undefined) handleUpdateTasks(result.data.tasks);
+      if (result.data.filters !== undefined) handleUpdateFilters(result.data.filters);
+      if (result.data.activeMode !== undefined) handleModeChange(result.data.activeMode);
+      if (result.data.language !== undefined) setLanguage(result.data.language);
+      if (result.data.theme !== undefined) setTheme(result.data.theme);
+      alert('Backup data restored successfully!');
     }
   };
 
@@ -471,13 +473,13 @@ export default function App() {
         onOpenQuickAdd={() => setIsQuickAddModalOpen(true)}
         onOpenNewEvent={() => {
           setSelectedEvent(null);
-          setEventModalDate(currentDate.toISOString().slice(0, 10));
+          setEventModalDate(formatDateToLocalYMD(currentDate));
           setEventModalTime('10:00');
           setIsEventModalOpen(true);
         }}
         onOpenNewTask={() => {
           setSelectedTask(null);
-          setTaskModalDate(currentDate.toISOString().slice(0, 10));
+          setTaskModalDate(formatDateToLocalYMD(currentDate));
           setIsTaskModalOpen(true);
         }}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
@@ -531,7 +533,7 @@ export default function App() {
             onToggleTask={handleToggleTask}
             onOpenNewTask={() => {
               setSelectedTask(null);
-              setTaskModalDate(currentDate.toISOString().slice(0, 10));
+              setTaskModalDate(formatDateToLocalYMD(currentDate));
               setIsTaskModalOpen(true);
             }}
             onSelectIslamic={(occ) => {
@@ -639,7 +641,7 @@ export default function App() {
                 onToggleTask={handleToggleTask}
                 onOpenNewTask={() => {
                   setSelectedTask(null);
-                  setTaskModalDate(currentDate.toISOString().slice(0, 10));
+                  setTaskModalDate(formatDateToLocalYMD(currentDate));
                   setIsTaskModalOpen(true);
                 }}
               />
@@ -783,7 +785,14 @@ export default function App() {
           handleUpdateFilters(DEFAULT_FILTERS);
         }}
         onLoadDemoData={() => {
-          handleUpdateEvents(loadDemoSampleEvents());
+          const { events: demoEvts, tasks: demoTasks } = loadDemoSampleData();
+          handleUpdateEvents(demoEvts);
+          handleUpdateTasks(demoTasks);
+        }}
+        onClearAllData={() => {
+          clearAllUserCalendarData();
+          handleUpdateEvents([]);
+          handleUpdateTasks([]);
         }}
       />
 
