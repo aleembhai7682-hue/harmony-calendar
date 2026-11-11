@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { CalendarFilterSettings, Language, Theme, CalendarFaithMode } from '../types/calendar';
 import { translations, INDIAN_STATES } from '../translations/i18n';
 import { INDIAN_CITIES } from '../utils/cities';
@@ -16,7 +16,15 @@ import {
   MapPin,
   Clock,
   Layers,
+  Bell,
+  Volume2,
 } from 'lucide-react';
+import {
+  getNotificationPermissionStatus,
+  requestNotificationPermissionByUser,
+  testNotificationChimeAndAlert,
+  isNotificationSupported,
+} from '../utils/notifications';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -34,6 +42,7 @@ interface SettingsModalProps {
   onResetDefaults: () => void;
   onLoadDemoData: () => void;
   onClearAllData?: () => void;
+  onTestReminder?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -52,9 +61,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetDefaults,
   onLoadDemoData,
   onClearAllData,
+  onTestReminder,
 }) => {
   const t = translations[language] || translations['en'];
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [notificationStatus, setNotificationStatus] = useState<string>(() =>
+    getNotificationPermissionStatus()
+  );
 
   if (!isOpen) return null;
 
@@ -385,6 +398,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </label>
               </>
             )}
+          </div>
+
+          {/* Desktop & In-App Notifications Management */}
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Bell className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Notifications & Sound Chimes</span>
+              </span>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  notificationStatus === 'granted'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : notificationStatus === 'denied'
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                }`}
+              >
+                {notificationStatus === 'granted'
+                  ? 'Browser: Active'
+                  : notificationStatus === 'denied'
+                  ? 'Browser: Blocked'
+                  : notificationStatus === 'unsupported'
+                  ? 'Browser: Unsupported'
+                  : 'Browser: Optional'}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              {notificationStatus === 'granted'
+                ? 'Desktop notifications are active. You will receive gentle alerts before upcoming scheduled events and tasks.'
+                : notificationStatus === 'denied'
+                ? 'Browser notifications are blocked in your browser site permissions. In-app audio chimes and visual toast banners remain active.'
+                : notificationStatus === 'unsupported'
+                ? 'Browser push notifications are not supported in this client. Peaceful in-app synthesizer chimes and visual banners will alert you.'
+                : 'Click below to enable desktop pop-ups. If declined, in-app harmonic audio chimes and visual banners will notify you without pop-ups.'}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {notificationStatus !== 'granted' && isNotificationSupported() && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const status = await requestNotificationPermissionByUser();
+                    setNotificationStatus(status);
+                  }}
+                  className="p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>Enable Desktop Alerts</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (onTestReminder) {
+                    onTestReminder();
+                  } else {
+                    testNotificationChimeAndAlert();
+                  }
+                }}
+                className={`p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  notificationStatus === 'granted' || !isNotificationSupported() ? 'sm:col-span-2' : ''
+                }`}
+              >
+                <Volume2 className="w-4 h-4 text-emerald-500" />
+                <span>Test Audio Chime & Alert</span>
+              </button>
+            </div>
           </div>
 
           {/* Data Backup & Demo Data */}

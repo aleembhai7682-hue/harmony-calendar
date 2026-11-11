@@ -36,7 +36,8 @@ import {
   shouldTriggerReminder,
   playGentleChime,
   triggerNativeNotification,
-  requestNotificationPermission,
+  requestNotificationPermissionByUser,
+  testNotificationChimeAndAlert,
   CalendarReminderItem,
 } from './utils/notifications';
 import { Bell, CheckCircle2, X } from 'lucide-react';
@@ -793,6 +794,13 @@ export default function App() {
           clearAllUserCalendarData();
           handleUpdateEvents([]);
           handleUpdateTasks([]);
+        }}
+        onTestReminder={() => {
+          const item = testNotificationChimeAndAlert();
+          setActiveReminderToast(item);
+          setTimeout(() => {
+            setActiveReminderToast((current) => (current?.id === item.id ? null : current));
+          }, 8000);
         }}
       />
 

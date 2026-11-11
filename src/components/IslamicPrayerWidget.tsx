@@ -425,6 +425,21 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
 
           </div>
 
+          {/* Calculation Basis & Astronomical Disclaimer */}
+          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-3 border-t border-emerald-900/40 flex-wrap gap-2">
+            <span className="flex items-center gap-1.5 text-slate-300">
+              <Compass className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>
+                {language === 'ur'
+                  ? `فلکیاتی حسابی اوقات برائے ${prayerData.cityNameUr} (${prayerData.asrJuristicName})۔ چاند کی رویت اور حتمی تاریخیں مقامی رویتِ ہلال کمیٹی کے فیصلے پر منحصر ہیں۔`
+                  : `Astronomical solar calculation calibrated for ${prayerData.cityName} (${prayerData.asrJuristicName}). Exact Hijri dates and prayer times are mathematical estimates; follow your local Jamia Masjid and verified Hilal sighting committee.`}
+              </span>
+            </span>
+            <span className="text-emerald-400 font-semibold font-mono text-[10px]">
+              {prayerData.coordinates}
+            </span>
+          </div>
+
         </div>
       )}
     </div>

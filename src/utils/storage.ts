@@ -6,7 +6,12 @@ import {
   Language,
   Theme,
 } from '../types/calendar';
-import { formatDateToLocalYMD, getTodayLocalYMD } from './dateUtils';
+import {
+  formatDateToLocalYMD,
+  getTodayLocalYMD,
+  isValidCalendarDateString,
+  isValidTimeString,
+} from './dateUtils';
 
 const STORAGE_KEYS = {
   EVENTS: 'harmony_calendar_events_v3',
@@ -34,6 +39,109 @@ function getSafeStorage(): Storage | null {
   } catch {}
   return null;
 }
+
+/**
+ * Safely migrates existing legacy v2 data to v3.
+ * Preserves user events, tasks, mode, and settings without overwriting any existing v3 data.
+ */
+export function migrateStorageV2ToV3(): { migrated: boolean; summary?: string } {
+  const storage = getSafeStorage();
+  if (!storage) return { migrated: false };
+
+  let didMigrate = false;
+  const migratedItems: string[] = [];
+
+  try {
+    // 1. Events migration (do not overwrite if v3 already exists)
+    const hasV3Events = storage.getItem(STORAGE_KEYS.EVENTS);
+    const v2EventsRaw = storage.getItem(LEGACY_KEYS.EVENTS);
+    if (!hasV3Events && v2EventsRaw) {
+      try {
+        const parsed = JSON.parse(v2EventsRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const valid = parsed.filter(
+            (e: any) => e && typeof e.id === 'string' && typeof e.title === 'string' && isValidCalendarDateString(e.startDate)
+          );
+          if (valid.length > 0) {
+            storage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(valid));
+            didMigrate = true;
+            migratedItems.push(`${valid.length} events`);
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Tasks migration
+    const hasV3Tasks = storage.getItem(STORAGE_KEYS.TASKS);
+    const v2TasksRaw = storage.getItem(LEGACY_KEYS.TASKS);
+    if (!hasV3Tasks && v2TasksRaw) {
+      try {
+        const parsed = JSON.parse(v2TasksRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const valid = parsed.filter(
+            (t: any) => t && typeof t.id === 'string' && typeof t.title === 'string' && isValidCalendarDateString(t.dueDate)
+          );
+          if (valid.length > 0) {
+            storage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(valid));
+            didMigrate = true;
+            migratedItems.push(`${valid.length} tasks`);
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Filters migration
+    const hasV3Filters = storage.getItem(STORAGE_KEYS.FILTERS);
+    const v2FiltersRaw = storage.getItem(LEGACY_KEYS.FILTERS);
+    if (!hasV3Filters && v2FiltersRaw) {
+      try {
+        const parsed = JSON.parse(v2FiltersRaw);
+        if (parsed && typeof parsed === 'object') {
+          storage.setItem(STORAGE_KEYS.FILTERS, JSON.stringify({ ...DEFAULT_FILTERS, ...parsed }));
+          didMigrate = true;
+          migratedItems.push('preferences');
+        }
+      } catch {}
+    }
+
+    // 4. Mode migration
+    const hasV3Mode = storage.getItem(STORAGE_KEYS.MODE);
+    const v2Mode = storage.getItem(LEGACY_KEYS.MODE);
+    if (!hasV3Mode && v2Mode && ['christian', 'hindu', 'muslim'].includes(v2Mode)) {
+      storage.setItem(STORAGE_KEYS.MODE, v2Mode);
+      didMigrate = true;
+      migratedItems.push(`mode (${v2Mode})`);
+    }
+
+    // 5. Theme migration
+    const hasV3Theme = storage.getItem(STORAGE_KEYS.THEME);
+    const v2Theme = storage.getItem(LEGACY_KEYS.THEME);
+    if (!hasV3Theme && v2Theme && ['dark', 'light'].includes(v2Theme)) {
+      storage.setItem(STORAGE_KEYS.THEME, v2Theme);
+      didMigrate = true;
+    }
+
+    // 6. Language migration
+    const hasV3Lang = storage.getItem(STORAGE_KEYS.LANGUAGE);
+    const v2Lang = storage.getItem(LEGACY_KEYS.LANGUAGE);
+    if (!hasV3Lang && v2Lang && ['en', 'hi', 'hinglish', 'ur'].includes(v2Lang)) {
+      storage.setItem(STORAGE_KEYS.LANGUAGE, v2Lang);
+      didMigrate = true;
+    }
+  } catch (err) {
+    console.error('Storage migration failed:', err);
+  }
+
+  return {
+    migrated: didMigrate,
+    summary: didMigrate ? `Migrated ${migratedItems.join(', ')} from v2 to v3` : undefined,
+  };
+}
+
+// Auto-run migration once safely on initialization
+try {
+  migrateStorageV2ToV3();
+} catch {}
 
 export const DEFAULT_FILTERS: CalendarFilterSettings = {
   selectedState: 'all',
@@ -481,7 +589,6 @@ export function importBackupData(jsonString: string): ImportBackupResult {
       return { success: false, message: 'Invalid backup file: root must be a JSON object.' };
     }
 
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
     const validEvents: CalendarEvent[] = [];
     const validTasks: CalendarTask[] = [];
 
@@ -494,20 +601,37 @@ export function importBackupData(jsonString: string): ImportBackupResult {
         if (!e || typeof e !== 'object') continue;
         if (typeof e.id !== 'string' || !e.id.trim()) continue;
         if (typeof e.title !== 'string' || !e.title.trim()) continue;
-        if (typeof e.startDate !== 'string' || !datePattern.test(e.startDate)) continue;
+        if (typeof e.startDate !== 'string' || !isValidCalendarDateString(e.startDate)) continue;
 
         const faithTag = ['universal', 'christian', 'hindu', 'muslim'].includes(e.faithTag)
           ? e.faithTag
           : 'universal';
+
+        const validEndDate =
+          typeof e.endDate === 'string' &&
+          isValidCalendarDateString(e.endDate) &&
+          e.endDate >= e.startDate
+            ? e.endDate
+            : e.startDate;
+
+        const validStartTime =
+          typeof e.startTime === 'string' && isValidTimeString(e.startTime)
+            ? e.startTime
+            : undefined;
+
+        const validEndTime =
+          typeof e.endTime === 'string' && isValidTimeString(e.endTime)
+            ? e.endTime
+            : undefined;
 
         validEvents.push({
           id: String(e.id),
           title: String(e.title).trim(),
           description: typeof e.description === 'string' ? e.description : '',
           startDate: e.startDate,
-          startTime: typeof e.startTime === 'string' ? e.startTime : undefined,
-          endDate: typeof e.endDate === 'string' && datePattern.test(e.endDate) ? e.endDate : e.startDate,
-          endTime: typeof e.endTime === 'string' ? e.endTime : undefined,
+          startTime: validStartTime,
+          endDate: validEndDate,
+          endTime: validEndTime,
           allDay: Boolean(e.allDay),
           category: typeof e.category === 'string' ? e.category : 'personal',
           priority: typeof e.priority === 'string' ? e.priority : 'medium',
@@ -530,18 +654,23 @@ export function importBackupData(jsonString: string): ImportBackupResult {
         if (!t || typeof t !== 'object') continue;
         if (typeof t.id !== 'string' || !t.id.trim()) continue;
         if (typeof t.title !== 'string' || !t.title.trim()) continue;
-        if (typeof t.dueDate !== 'string' || !datePattern.test(t.dueDate)) continue;
+        if (typeof t.dueDate !== 'string' || !isValidCalendarDateString(t.dueDate)) continue;
 
         const faithTag = ['universal', 'christian', 'hindu', 'muslim'].includes(t.faithTag)
           ? t.faithTag
           : 'universal';
+
+        const validDueTime =
+          typeof t.dueTime === 'string' && isValidTimeString(t.dueTime)
+            ? t.dueTime
+            : undefined;
 
         validTasks.push({
           id: String(t.id),
           title: String(t.title).trim(),
           description: typeof t.description === 'string' ? t.description : '',
           dueDate: t.dueDate,
-          dueTime: typeof t.dueTime === 'string' ? t.dueTime : undefined,
+          dueTime: validDueTime,
           completed: Boolean(t.completed),
           priority: typeof t.priority === 'string' ? t.priority : 'medium',
           category: typeof t.category === 'string' ? t.category : 'personal',
