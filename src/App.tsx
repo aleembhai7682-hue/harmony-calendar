@@ -23,11 +23,20 @@ import {
   saveLanguage,
   loadActiveMode,
   saveActiveMode,
+  loadDemoSampleEvents,
   DEFAULT_FILTERS,
 } from './utils/storage';
 import { getHijriDate, getIslamicOccasionForDate } from './utils/hijri';
 import { INDIAN_FESTIVALS_DATABASE } from './utils/indianFestivals';
 import { exportEventsToIcs } from './utils/icsExport';
+import {
+  shouldTriggerReminder,
+  playGentleChime,
+  triggerNativeNotification,
+  requestNotificationPermission,
+  CalendarReminderItem,
+} from './utils/notifications';
+import { Bell, CheckCircle2, X } from 'lucide-react';
 
 // Calendar Views & Components
 import { Navbar } from './components/Navbar';
@@ -55,9 +64,10 @@ export default function App() {
   // Mode Isolation State: 'christian' (default) | 'hindu' | 'muslim'
   const [calendarMode, setCalendarMode] = useState<CalendarFaithMode>(() => loadActiveMode());
 
-  // Calendar State
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date(2026, 10, 10)); // Nov 10, 2026 default
+  // Calendar State - Initialize to actual current date
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [activeReminderToast, setActiveReminderToast] = useState<CalendarReminderItem | null>(null);
   const [language, setLanguage] = useState<Language>(() => {
     const mode = loadActiveMode();
     if (mode === 'christian') return 'en';
@@ -189,11 +199,11 @@ export default function App() {
     return list.slice(0, 8);
   }, [currentDate, filters.hijriAdjustmentDays]);
 
-  // Date navigation
+  // Date navigation with safe month clamping to prevent overflow bugs
   const handleNavigate = useCallback(
     (direction: 'prev' | 'next' | 'today') => {
       if (direction === 'today') {
-        setCurrentDate(new Date(2026, 10, 10));
+        setCurrentDate(new Date());
         return;
       }
 
@@ -203,26 +213,98 @@ export default function App() {
 
         switch (viewMode) {
           case 'month':
+          case 'agenda': {
+            const curDay = d.getDate();
+            d.setDate(1);
             d.setMonth(d.getMonth() + delta);
+            const maxDays = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+            d.setDate(Math.min(curDay, maxDays));
             break;
+          }
           case 'week':
             d.setDate(d.getDate() + delta * 7);
             break;
           case 'day':
             d.setDate(d.getDate() + delta);
             break;
-          case 'year':
+          case 'year': {
+            const curDay = d.getDate();
+            d.setDate(1);
             d.setFullYear(d.getFullYear() + delta);
+            const maxDays = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+            d.setDate(Math.min(curDay, maxDays));
             break;
-          case 'agenda':
-            d.setMonth(d.getMonth() + delta);
-            break;
+          }
         }
         return d;
       });
     },
     [viewMode]
   );
+
+  // Periodic Reminder Engine - Checks every 30 seconds for upcoming events & tasks
+  useEffect(() => {
+    const checkReminders = () => {
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      // Check Events
+      for (const evt of events) {
+        if (
+          evt.startDate === todayStr &&
+          shouldTriggerReminder(
+            `evt-${evt.id}`,
+            evt.startDate,
+            evt.startTime,
+            evt.reminderMinutesBefore || 15
+          )
+        ) {
+          const item: CalendarReminderItem = {
+            id: `evt-${evt.id}`,
+            title: evt.title,
+            timeStr: evt.startTime || 'All Day',
+            type: 'event',
+            category: evt.category,
+            message: evt.description || `Event starting at ${evt.startTime || 'today'}`,
+            timestamp: Date.now(),
+          };
+          playGentleChime();
+          triggerNativeNotification(item);
+          setActiveReminderToast(item);
+          break;
+        }
+      }
+
+      // Check Tasks
+      for (const tsk of tasks) {
+        if (
+          !tsk.completed &&
+          tsk.dueDate === todayStr &&
+          shouldTriggerReminder(`tsk-${tsk.id}`, tsk.dueDate, undefined, 30)
+        ) {
+          const item: CalendarReminderItem = {
+            id: `tsk-${tsk.id}`,
+            title: tsk.title,
+            timeStr: 'Due Today',
+            type: 'task',
+            message: `Task is pending: ${tsk.title}`,
+            timestamp: Date.now(),
+          };
+          playGentleChime();
+          triggerNativeNotification(item);
+          setActiveReminderToast(item);
+          break;
+        }
+      }
+    };
+
+    const interval = setInterval(checkReminders, 30000);
+    const timeout = setTimeout(checkReminders, 2500);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [events, tasks]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
@@ -413,11 +495,21 @@ export default function App() {
             currentDate={currentDate}
             hijriOffset={filters.hijriAdjustmentDays}
             language={language}
+            selectedCity={filters.selectedCity}
+            customLat={filters.customLatitude}
+            customLon={filters.customLongitude}
+            prayerMethod={filters.prayerMethod}
+            asrMethod={filters.asrMethod}
           />
         )}
 
         {calendarMode === 'hindu' && (
-          <HinduPanchangWidget currentDate={currentDate} />
+          <HinduPanchangWidget
+            currentDate={currentDate}
+            selectedCity={filters.selectedCity}
+            customLat={filters.customLatitude}
+            customLon={filters.customLongitude}
+          />
         )}
 
         {calendarMode === 'christian' && (
@@ -683,11 +775,15 @@ export default function App() {
         onLanguageChange={setLanguage}
         theme={theme}
         onThemeChange={setTheme}
+        calendarMode={calendarMode}
         onExportIcs={handleExportIcs}
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
         onResetDefaults={() => {
           handleUpdateFilters(DEFAULT_FILTERS);
+        }}
+        onLoadDemoData={() => {
+          handleUpdateEvents(loadDemoSampleEvents());
         }}
       />
 
@@ -696,6 +792,46 @@ export default function App() {
         onClose={() => setIsShortcutsModalOpen(false)}
         language={language}
       />
+
+      {/* 🔔 In-App Gentle Reminder Toast Notification */}
+      {activeReminderToast && (
+        <aside
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-5 right-5 z-50 max-w-sm w-full bg-slate-900 text-white border border-indigo-500/50 rounded-2xl p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                  {activeReminderToast.type === 'event' ? 'Upcoming Event' : 'Task Reminder'}
+                </span>
+                <span className="text-[11px] font-mono text-slate-400">
+                  {activeReminderToast.timeStr}
+                </span>
+              </div>
+              <h4 className="font-bold text-sm text-white truncate mt-0.5">
+                {activeReminderToast.title}
+              </h4>
+              {activeReminderToast.message && (
+                <p className="text-xs text-slate-300 line-clamp-2 mt-0.5">
+                  {activeReminderToast.message}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setActiveReminderToast(null)}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </aside>
+      )}
 
     </div>
   );

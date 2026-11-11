@@ -13,6 +13,7 @@ import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFesti
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
 import { getHinduPanchang } from '../utils/panchang';
+import { getEventsForDateAndMode } from '../utils/eventUtils';
 import {
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -152,11 +153,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             ? getIslamicOccasionForDate(dayObj, filters.hijriAdjustmentDays)
             : null;
 
-          let dayEvents = events.filter((e) => {
-            if (e.startDate === dateStr) return true;
-            if (e.endDate && e.startDate <= dateStr && dateStr <= e.endDate) return true;
-            return false;
-          });
+          let dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode);
 
           let dayTasks = tasks.filter(
             (t) => t.dueDate === dateStr && isTaskVisibleInMode(t, filters.calendarMode)

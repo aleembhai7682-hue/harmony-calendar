@@ -32,6 +32,7 @@ export interface CalendarEvent {
   color?: string;
   location?: string;
   reminderMinutesBefore?: number;
+  faithTag?: 'universal' | 'muslim' | 'hindu' | 'christian';
   createdAt: number;
 }
 
@@ -131,6 +132,11 @@ export interface PrayerTimes {
 
 export interface CalendarFilterSettings {
   selectedState: string; // 'all' or state code
+  selectedCity: string; // 'mumbai', 'delhi', etc. from INDIAN_CITIES
+  customLatitude?: number;
+  customLongitude?: number;
+  asrMethod: 'hanafi' | 'standard'; // Hanafi (2x shadow) vs Standard (1x shadow)
+  prayerMethod: 'karachi' | 'mwl' | 'makkah' | 'egypt';
   enabledCategories: Record<FestivalCategory, boolean>;
   showGazettedOnly: boolean;
   showHijri: boolean;
@@ -140,5 +146,5 @@ export interface CalendarFilterSettings {
   showTasksOnCalendar: boolean;
   showMoonPhases: boolean;
   muslimOnlyMode: boolean; // Focus on Islamic calendar, prayer times, and Islamic occasions
-  calendarMode: CalendarFaithMode; // 'all' | 'muslim' | 'hindu'
+  calendarMode: CalendarFaithMode; // 'christian' | 'hindu' | 'muslim'
 }

@@ -18,6 +18,9 @@ const STORAGE_KEYS = {
 
 export const DEFAULT_FILTERS: CalendarFilterSettings = {
   selectedState: 'all',
+  selectedCity: 'mumbai',
+  asrMethod: 'hanafi',
+  prayerMethod: 'karachi',
   enabledCategories: {
     hindu: true,
     islamic: true,
@@ -38,7 +41,7 @@ export const DEFAULT_FILTERS: CalendarFilterSettings = {
   calendarMode: 'christian',
 };
 
-const INITIAL_EVENTS: CalendarEvent[] = [
+export const DEMO_SAMPLE_EVENTS: CalendarEvent[] = [
   {
     id: 'evt-1',
     title: 'Diwali Shopping & Home Decor',
@@ -335,14 +338,19 @@ export function loadEvents(): CalendarEvent[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.EVENTS);
     if (!raw) {
-      saveEvents(INITIAL_EVENTS);
-      return INITIAL_EVENTS;
+      return []; // Clean slate for new users, avoid cluttering with misleading sample events
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.error('Failed to load events from storage:', err);
-    return INITIAL_EVENTS;
+    return [];
   }
+}
+
+export function loadDemoSampleEvents(): CalendarEvent[] {
+  saveEvents(DEMO_SAMPLE_EVENTS);
+  return DEMO_SAMPLE_EVENTS;
 }
 
 export function saveEvents(events: CalendarEvent[]): void {
@@ -461,22 +469,47 @@ export function exportBackupData(): string {
   return JSON.stringify(data, null, 2);
 }
 
-export function importBackupData(jsonString: string): boolean {
+export function importBackupData(jsonString: string): { success: boolean; message?: string } {
   try {
     const parsed = JSON.parse(jsonString);
-    if (parsed.events && Array.isArray(parsed.events)) {
-      saveEvents(parsed.events);
+    if (!parsed || typeof parsed !== 'object') {
+      return { success: false, message: 'Invalid backup file: not a JSON object.' };
     }
-    if (parsed.tasks && Array.isArray(parsed.tasks)) {
-      saveTasks(parsed.tasks);
+
+    // Validate events array if present
+    if (parsed.events) {
+      if (!Array.isArray(parsed.events)) {
+        return { success: false, message: 'Invalid backup file: events must be a list.' };
+      }
+      const validEvents = parsed.events.filter(
+        (e: any) => e && typeof e.id === 'string' && typeof e.title === 'string' && typeof e.startDate === 'string'
+      );
+      saveEvents(validEvents);
     }
-    if (parsed.filters) {
-      saveFilters(parsed.filters);
+
+    // Validate tasks array if present
+    if (parsed.tasks) {
+      if (!Array.isArray(parsed.tasks)) {
+        return { success: false, message: 'Invalid backup file: tasks must be a list.' };
+      }
+      const validTasks = parsed.tasks.filter(
+        (t: any) => t && typeof t.id === 'string' && typeof t.title === 'string' && typeof t.dueDate === 'string'
+      );
+      saveTasks(validTasks);
     }
-    return true;
-  } catch (err) {
+
+    // Validate filters if present
+    if (parsed.filters && typeof parsed.filters === 'object') {
+      saveFilters({
+        ...DEFAULT_FILTERS,
+        ...parsed.filters,
+      });
+    }
+
+    return { success: true };
+  } catch (err: any) {
     console.error('Import failed:', err);
-    return false;
+    return { success: false, message: err?.message || 'Failed to parse JSON backup.' };
   }
 }
 

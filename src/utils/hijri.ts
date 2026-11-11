@@ -343,46 +343,14 @@ export function getMoonPhase(date: Date): { phase: number; nameEn: string; nameH
   }
 }
 
+import { calculateLocationPrayerTimes } from './prayerTimes';
+
 /**
  * Accurately estimates prayer times and Sehri/Iftar for any date
- * (based on standard South Asia / Delhi / Mumbai coordinates latitude ~28.6N, 77.2E)
+ * (based on standard Subcontinent / Karachi method in IST)
  */
 export function getPrayerTimes(date: Date): PrayerTimes {
-  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
-  
-  // Seasonal variation offset in minutes (-25 to +25 mins across summer/winter)
-  const angle = (2 * Math.PI * (dayOfYear - 80)) / 365;
-  const sunVariation = Math.sin(angle) * 22; // minutes
-
-  // Base prayer times (approx Delhi/Central India)
-  // Summer: Fajr earlier (~04:15), Maghrib later (~19:15)
-  // Winter: Fajr later (~05:35), Maghrib earlier (~17:35)
-  const fajrMin = Math.round(315 - sunVariation * 1.5);
-  const sunriseMin = Math.round(385 - sunVariation * 1.2);
-  const dhuhrMin = 735; // ~12:15 PM
-  const asrMin = Math.round(945 + sunVariation * 0.8); // ~03:45 PM to 04:30 PM
-  const maghribMin = Math.round(1070 + sunVariation * 1.4); // ~05:35 PM to 07:15 PM
-  const ishaMin = Math.round(1145 + sunVariation * 1.3);
-
-  const formatMin = (mins: number) => {
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
-
-  const fajrStr = formatMin(fajrMin);
-  const maghribStr = formatMin(maghribMin);
-
-  return {
-    fajr: fajrStr,
-    sunrise: formatMin(sunriseMin),
-    dhuhr: formatMin(dhuhrMin),
-    asr: formatMin(asrMin),
-    maghrib: maghribStr,
-    isha: formatMin(ishaMin),
-    sehriEnds: formatMin(fajrMin - 10), // 10 mins before Fajr adhan
-    iftarTime: maghribStr,
-  };
+  return calculateLocationPrayerTimes(date, { cityId: 'delhi' }).times;
 }
 
 /**

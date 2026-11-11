@@ -11,6 +11,7 @@ import { translations } from '../translations/i18n';
 import { getHijriDate, getIslamicOccasionForDate } from '../utils/hijri';
 import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
+import { isEventOnDate, isEventVisibleInMode } from '../utils/eventUtils';
 import { Clock, Plus } from 'lucide-react';
 
 interface WeekViewProps {
@@ -200,9 +201,10 @@ export const WeekView: React.FC<WeekViewProps> = ({
                     day.getDate()
                   ).padStart(2, '0')}`;
 
-                  // Find events starting in this hour
+                  // Find events starting in this hour (supporting recurrence & mode filtering)
                   const slotEvents = events.filter((e) => {
-                    if (e.startDate !== dateStr) return false;
+                    if (!isEventVisibleInMode(e, filters.calendarMode)) return false;
+                    if (!isEventOnDate(e, dateStr)) return false;
                     if (!e.startTime) return false;
                     const eventHour = parseInt(e.startTime.split(':')[0], 10);
                     return eventHour === hour;

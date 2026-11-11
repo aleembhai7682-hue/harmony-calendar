@@ -697,13 +697,86 @@ export const INDIAN_FESTIVALS_DATABASE: IndianFestival[] = [
 /**
  * Filter festivals for a specific date, accounting for category toggles and selected state.
  */
+// Fixed-date recurring holidays across all years
+const FIXED_ANNUAL_HOLIDAYS: Omit<IndianFestival, 'id' | 'date'>[] = [
+  {
+    nameEn: 'Republic Day',
+    nameHi: 'गणतंत्र दिवस',
+    category: 'national',
+    holidayType: 'gazetted',
+    descriptionEn: 'Honors the date on which the Constitution of India came into effect in 1950.',
+    descriptionHi: '1950 में भारत का संविधान लागू होने का राष्ट्रीय गौरव दिवस।',
+    significance: 'Democracy, Constitutional rights, Unity in Diversity.',
+    rituals: ['Flag hoisting', 'Grand parade at Kartavya Path', 'Singing National Anthem'],
+  },
+  {
+    nameEn: 'Dr. B.R. Ambedkar Jayanti',
+    nameHi: 'डॉ. बी.आर. अंबेडकर जयंती',
+    category: 'national',
+    holidayType: 'gazetted',
+    descriptionEn: 'Commemorates the birth of Dr. Bhimrao Ramji Ambedkar, principal architect of the Indian Constitution.',
+    descriptionHi: 'भारतीय संविधान के मुख्य निर्माता डॉ. भीमराव रामजी अंबेडकर की पावन जयंती।',
+    significance: 'Social justice, equality, constitutional values.',
+    rituals: ['Offering floral tributes to Babasaheb', 'Seminars on constitutional equality'],
+  },
+  {
+    nameEn: 'Independence Day',
+    nameHi: 'स्वतंत्रता दिवस',
+    category: 'national',
+    holidayType: 'gazetted',
+    descriptionEn: 'Commemorates India\'s freedom from British colonial rule on August 15, 1947.',
+    descriptionHi: '15 अगस्त 1947 को ब्रिटिश हुकूमत से आज़ादी मिलने की याद में मनाया जाने वाला महापर्व।',
+    significance: 'Freedom, sovereignty, paying homage to freedom fighters.',
+    rituals: ['Prime Minister\'s address from Red Fort', 'Kite flying', 'National Flag hoisting'],
+  },
+  {
+    nameEn: 'Mahatma Gandhi Jayanti',
+    nameHi: 'गांधी जयंती',
+    category: 'national',
+    holidayType: 'gazetted',
+    descriptionEn: 'Birth anniversary of Mohandas Karamchand Gandhi, Father of the Nation, and International Day of Non-Violence.',
+    descriptionHi: 'राष्ट्रपिता महात्मा गांधी की जयंती एवं अंतरराष्ट्रीय अहिंसा दिवस।',
+    significance: 'Ahimsa (Non-violence), Truth, Swachhata cleanliness.',
+    rituals: ['Prayers at Raj Ghat', 'Spinning Charkha', 'Swachhata cleanliness drives'],
+  },
+  {
+    nameEn: 'Makar Sankranti / Pongal',
+    nameHi: 'मकर संक्रांति / पोंगल',
+    category: 'hindu',
+    holidayType: 'gazetted',
+    descriptionEn: 'Solar festival celebrating the transit of the Sun into Capricorn and the onset of longer days.',
+    descriptionHi: 'सूर्य का मकर राशि में प्रवेश। उत्तरायण का आरंभ, पतंगबाज़ी और तिल-गुड़ के सेवन का पावन पर्व।',
+    significance: 'Solar transition, harvest thanksgiving, charity.',
+    rituals: ['Holy dip in rivers', 'Kite flying', 'Til-gul laddus', 'Pongal cooking'],
+    applicableStates: ['MH', 'GJ', 'TN', 'UP', 'RJ', 'PB', 'KA', 'AP', 'TS'],
+  },
+  {
+    nameEn: 'Christmas Day',
+    nameHi: 'क्रिसमस (बड़ा दिन)',
+    category: 'christian',
+    holidayType: 'gazetted',
+    descriptionEn: 'Celebrates the Nativity of Jesus Christ, bringing peace, goodwill, and joy to humanity.',
+    descriptionHi: 'प्रभु यीशु मसीह का पावन जन्मोत्सव। प्रेम, शांति और करुणा का पर्व।',
+    significance: 'Love, divine light, charity and family goodwill.',
+    rituals: ['Midnight Mass', 'Christmas tree decoration', 'Exchanging gifts and carols'],
+  },
+];
+
+/**
+ * Filter festivals for a specific date, accounting for category toggles, selected state,
+ * and multi-year coverage without duplicates.
+ */
 export function getFestivalsForDate(
   dateStr: string,
   state: string = 'all',
   enabledCategories?: Record<FestivalCategory, boolean>,
   showGazettedOnly: boolean = false
 ): IndianFestival[] {
-  return INDIAN_FESTIVALS_DATABASE.filter((fest) => {
+  const [yearStr, monthStr, dayStr] = dateStr.split('-');
+  const mmdd = `${monthStr}-${dayStr}`;
+
+  // Match against database
+  const matchedList = INDIAN_FESTIVALS_DATABASE.filter((fest) => {
     if (fest.date !== dateStr && fest.endDate !== dateStr) {
       if (fest.endDate && fest.date <= dateStr && dateStr <= fest.endDate) {
         // spans across days
@@ -711,7 +784,36 @@ export function getFestivalsForDate(
         return false;
       }
     }
+    return true;
+  });
 
+  // If a fixed solar/national holiday occurs on this mm-dd but is not in database for this year, generate it dynamically
+  const fixedMap: Record<string, number> = {
+    '01-26': 0, // Republic Day
+    '04-14': 1, // Ambedkar Jayanti
+    '08-15': 2, // Independence Day
+    '10-02': 3, // Gandhi Jayanti
+    '01-14': 4, // Makar Sankranti
+    '12-25': 5, // Christmas
+  };
+
+  const fixedIdx = fixedMap[mmdd];
+  if (fixedIdx !== undefined) {
+    const template = FIXED_ANNUAL_HOLIDAYS[fixedIdx];
+    const alreadyPresent = matchedList.some(
+      (f) => f.category === template.category && f.nameEn.split(' ')[0] === template.nameEn.split(' ')[0]
+    );
+    if (!alreadyPresent) {
+      matchedList.push({
+        id: `fixed-${template.category}-${dateStr}`,
+        ...template,
+        date: dateStr,
+      });
+    }
+  }
+
+  // Filter by category, gazetted status, and state
+  return matchedList.filter((fest) => {
     if (enabledCategories && !enabledCategories[fest.category]) {
       return false;
     }

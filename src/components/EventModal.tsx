@@ -55,7 +55,8 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
   const [color, setColor] = useState(COLOR_PALETTE[0]);
   const [location, setLocation] = useState('');
-  const [reminderMinutesBefore, setReminderMinutesBefore] = useState(15);
+  const [reminderMinutesBefore, setReminderMinutesBefore] = useState<number>(15);
+  const [faithTag, setFaithTag] = useState<'universal' | 'muslim' | 'hindu' | 'christian'>('universal');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       setColor(initialEvent.color || COLOR_PALETTE[0]);
       setLocation(initialEvent.location || '');
       setReminderMinutesBefore(initialEvent.reminderMinutesBefore || 15);
+      setFaithTag(initialEvent.faithTag || 'universal');
     } else {
       setTitle('');
       setDescription('');
@@ -87,6 +89,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       setColor(COLOR_PALETTE[0]);
       setLocation('');
       setReminderMinutesBefore(15);
+      setFaithTag('universal');
     }
     setError('');
   }, [initialEvent, defaultDate, defaultTime, isOpen]);
@@ -97,6 +100,16 @@ export const EventModal: React.FC<EventModalProps> = ({
     e.preventDefault();
     if (!title.trim()) {
       setError(language === 'en' ? 'Please enter an event title.' : 'कृपया कार्यक्रम का शीर्षक दर्ज करें।');
+      return;
+    }
+
+    if (endDate && startDate > endDate) {
+      setError(language === 'en' ? 'End date cannot be earlier than start date.' : 'समाप्ति तिथि आरंभ तिथि से पहले नहीं हो सकती।');
+      return;
+    }
+
+    if (!allDay && startDate === endDate && startTime && endTime && startTime > endTime) {
+      setError(language === 'en' ? 'End time cannot be earlier than start time.' : 'समाप्ति समय आरंभ समय से पहले नहीं हो सकता।');
       return;
     }
 
@@ -115,6 +128,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       color,
       location: location.trim(),
       reminderMinutesBefore,
+      faithTag,
       createdAt: initialEvent ? initialEvent.createdAt : Date.now(),
     };
 
@@ -297,6 +311,24 @@ export const EventModal: React.FC<EventModalProps> = ({
               <option value="weekly">{t.recurrence.weekly}</option>
               <option value="monthly">{t.recurrence.monthly}</option>
               <option value="yearly">{t.recurrence.yearly}</option>
+            </select>
+          </div>
+
+          {/* Faith Tag / Mode Visibility */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+              <Tag className="w-3.5 h-3.5 text-slate-400" />
+              <span>Religious Mode Visibility</span>
+            </label>
+            <select
+              value={faithTag}
+              onChange={(e) => setFaithTag(e.target.value as any)}
+              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
+            >
+              <option value="universal">🌐 Universal (Visible in all modes)</option>
+              <option value="christian">✝️ Christian Mode Only</option>
+              <option value="hindu">🕉️ Hindu Mode Only</option>
+              <option value="muslim">🌙 Muslim Mode Only</option>
             </select>
           </div>
 

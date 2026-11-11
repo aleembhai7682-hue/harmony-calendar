@@ -12,6 +12,7 @@ import { getHijriDate, getIslamicOccasionForDate, getMoonPhase } from '../utils/
 import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
+import { getEventsForDateAndMode } from '../utils/eventUtils';
 import {
   Clock,
   Plus,
@@ -90,12 +91,8 @@ export const DayView: React.FC<DayViewProps> = ({
     : null;
   const fridayAlert = isMuslimMode ? checkFridayFestivalCoincidence(currentDate) : null;
 
-  // Events for this date
-  const dayEvents = events.filter((e) => {
-    if (e.startDate === dateStr) return true;
-    if (e.endDate && e.startDate <= dateStr && dateStr <= e.endDate) return true;
-    return false;
-  });
+  // Events for this date (supporting recurring events and mode filtering)
+  const dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode);
 
   // Tasks due this date (Strictly mode-filtered)
   const dayTasks = tasks.filter(

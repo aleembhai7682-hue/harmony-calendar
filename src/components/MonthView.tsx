@@ -13,6 +13,7 @@ import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFesti
 import { getHinduPanchang } from '../utils/panchang';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
+import { getEventsForDateAndMode } from '../utils/eventUtils';
 import { Plus, CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
 
 interface MonthViewProps {
@@ -95,8 +96,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
     const moon = isMuslimMode && filters.showMoonPhases ? getMoonPhase(cellDate) : null;
     const fridayAlert = isMuslimMode ? checkFridayFestivalCoincidence(cellDate) : null;
 
-    // Hindu Panchang info (only in Hindu mode)
-    const panchang = isHinduMode ? getHinduPanchang(cellDate) : null;
+    // Hindu Panchang info (only in Hindu mode, location calibrated)
+    const panchang = isHinduMode
+      ? getHinduPanchang(cellDate, filters.selectedCity, filters.customLatitude, filters.customLongitude)
+      : null;
 
     // Festivals (Strictly segregated by active faith mode)
     let dayFestivals: IndianFestival[] = [];
@@ -118,12 +121,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
       ).filter((f) => f.category === 'christian' || f.category === 'national');
     }
 
-    // User Events for this day
-    const dayEvents = events.filter((e) => {
-      if (e.startDate === dateStr) return true;
-      if (e.endDate && e.startDate <= dateStr && dateStr <= e.endDate) return true;
-      return false;
-    });
+    // User Events for this day (supporting recurring events and mode tags)
+    const dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode);
 
     // User Tasks for this day (Strictly filtered by active mode)
     const dayTasks = tasks.filter(
