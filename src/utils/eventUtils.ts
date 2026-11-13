@@ -30,11 +30,6 @@ export function isEventOnDate(event: CalendarEvent, targetDateStr: string): bool
   const startObj = new Date(sYear, sMonth - 1, sDay);
   const targetObj = new Date(tYear, tMonth - 1, tDay);
 
-  // If recurring event has an endDate, check whether targetDateStr is before it
-  if (event.endDate && targetDateStr > event.endDate) {
-    return false;
-  }
-
   switch (event.recurrence) {
     case 'daily':
       return true;

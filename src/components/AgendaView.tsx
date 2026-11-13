@@ -240,7 +240,19 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                       <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 font-semibold">
                         <span>🪔</span>
                         <span>
-                          {getHinduPanchang(dayObj).pakshaHi} • {getHinduPanchang(dayObj).tithiNameHi}
+                          {(() => {
+                            const p = getHinduPanchang(
+                              dayObj,
+                              filters.selectedCity,
+                              filters.customLatitude,
+                              filters.customLongitude,
+                              filters.customLocationName,
+                              undefined,
+                              filters.selectedCountry,
+                              filters.selectedLocationTimezone
+                            );
+                            return `${p.pakshaHi} • ${p.tithiNameHi}`;
+                          })()}
                         </span>
                       </div>
                     ) : (

@@ -343,14 +343,16 @@ export function getMoonPhase(date: Date): { phase: number; nameEn: string; nameH
   }
 }
 
-import { calculateLocationPrayerTimes } from './prayerTimes';
+import { calculateLocationPrayerTimes, PrayerCalculationOptions } from './prayerTimes';
 
 /**
- * Accurately estimates prayer times and Sehri/Iftar for any date
- * (based on standard Subcontinent / Karachi method in IST)
+ * Estimates prayer times and Sehri/Iftar for any date using selected location or device timezone.
  */
-export function getPrayerTimes(date: Date): PrayerTimes {
-  return calculateLocationPrayerTimes(date, { cityId: 'delhi' }).times;
+export function getPrayerTimes(
+  date: Date,
+  options: PrayerCalculationOptions = {}
+): PrayerTimes {
+  return calculateLocationPrayerTimes(date, options).times;
 }
 
 /**

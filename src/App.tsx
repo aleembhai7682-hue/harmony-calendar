@@ -283,14 +283,15 @@ export default function App() {
         if (
           !tsk.completed &&
           tsk.dueDate === todayStr &&
-          shouldTriggerReminder(`tsk-${tsk.id}`, tsk.dueDate, undefined, 30)
+          shouldTriggerReminder(`tsk-${tsk.id}`, tsk.dueDate, tsk.dueTime, 30)
         ) {
           const item: CalendarReminderItem = {
             id: `tsk-${tsk.id}`,
             title: tsk.title,
-            timeStr: 'Due Today',
+            timeStr: tsk.dueTime ? `Due at ${tsk.dueTime}` : 'Due Today',
             type: 'task',
-            message: `Task is pending: ${tsk.title}`,
+            category: tsk.category,
+            message: tsk.description || `Task pending: ${tsk.title}`,
             timestamp: Date.now(),
           };
           playGentleChime();
@@ -487,6 +488,13 @@ export default function App() {
         onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        selectedCity={filters.selectedCity}
+        selectedCountry={filters.selectedCountry}
+        selectedLocationTimezone={filters.selectedLocationTimezone}
+        locationExplicitlyConfirmed={filters.locationExplicitlyConfirmed}
+        customLatitude={filters.customLatitude}
+        customLongitude={filters.customLongitude}
+        customLocationName={filters.customLocationName}
       />
 
       {/* Main Content Area */}
@@ -499,10 +507,16 @@ export default function App() {
             hijriOffset={filters.hijriAdjustmentDays}
             language={language}
             selectedCity={filters.selectedCity}
+            selectedCountry={filters.selectedCountry}
+            selectedLocationTimezone={filters.selectedLocationTimezone}
+            locationExplicitlyConfirmed={filters.locationExplicitlyConfirmed}
             customLat={filters.customLatitude}
             customLon={filters.customLongitude}
+            customName={filters.customLocationName}
             prayerMethod={filters.prayerMethod}
             asrMethod={filters.asrMethod}
+            onLocationChange={(loc) => handleUpdateFilters({ ...filters, ...loc })}
+            onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
         )}
 
@@ -510,8 +524,14 @@ export default function App() {
           <HinduPanchangWidget
             currentDate={currentDate}
             selectedCity={filters.selectedCity}
+            selectedCountry={filters.selectedCountry}
+            selectedLocationTimezone={filters.selectedLocationTimezone}
+            locationExplicitlyConfirmed={filters.locationExplicitlyConfirmed}
             customLat={filters.customLatitude}
             customLon={filters.customLongitude}
+            customName={filters.customLocationName}
+            onLocationChange={(loc) => handleUpdateFilters({ ...filters, ...loc })}
+            onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
         )}
 

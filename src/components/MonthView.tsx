@@ -98,7 +98,16 @@ export const MonthView: React.FC<MonthViewProps> = ({
 
     // Hindu Panchang info (only in Hindu mode, location calibrated)
     const panchang = isHinduMode
-      ? getHinduPanchang(cellDate, filters.selectedCity, filters.customLatitude, filters.customLongitude)
+      ? getHinduPanchang(
+          cellDate,
+          filters.selectedCity,
+          filters.customLatitude,
+          filters.customLongitude,
+          filters.customLocationName,
+          undefined,
+          filters.selectedCountry,
+          filters.selectedLocationTimezone
+        )
       : null;
 
     // Festivals (Strictly segregated by active faith mode)

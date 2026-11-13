@@ -40,112 +40,10 @@ function getSafeStorage(): Storage | null {
   return null;
 }
 
-/**
- * Safely migrates existing legacy v2 data to v3.
- * Preserves user events, tasks, mode, and settings without overwriting any existing v3 data.
- */
-export function migrateStorageV2ToV3(): { migrated: boolean; summary?: string } {
-  const storage = getSafeStorage();
-  if (!storage) return { migrated: false };
-
-  let didMigrate = false;
-  const migratedItems: string[] = [];
-
-  try {
-    // 1. Events migration (do not overwrite if v3 already exists)
-    const hasV3Events = storage.getItem(STORAGE_KEYS.EVENTS);
-    const v2EventsRaw = storage.getItem(LEGACY_KEYS.EVENTS);
-    if (!hasV3Events && v2EventsRaw) {
-      try {
-        const parsed = JSON.parse(v2EventsRaw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed.filter(
-            (e: any) => e && typeof e.id === 'string' && typeof e.title === 'string' && isValidCalendarDateString(e.startDate)
-          );
-          if (valid.length > 0) {
-            storage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(valid));
-            didMigrate = true;
-            migratedItems.push(`${valid.length} events`);
-          }
-        }
-      } catch {}
-    }
-
-    // 2. Tasks migration
-    const hasV3Tasks = storage.getItem(STORAGE_KEYS.TASKS);
-    const v2TasksRaw = storage.getItem(LEGACY_KEYS.TASKS);
-    if (!hasV3Tasks && v2TasksRaw) {
-      try {
-        const parsed = JSON.parse(v2TasksRaw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed.filter(
-            (t: any) => t && typeof t.id === 'string' && typeof t.title === 'string' && isValidCalendarDateString(t.dueDate)
-          );
-          if (valid.length > 0) {
-            storage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(valid));
-            didMigrate = true;
-            migratedItems.push(`${valid.length} tasks`);
-          }
-        }
-      } catch {}
-    }
-
-    // 3. Filters migration
-    const hasV3Filters = storage.getItem(STORAGE_KEYS.FILTERS);
-    const v2FiltersRaw = storage.getItem(LEGACY_KEYS.FILTERS);
-    if (!hasV3Filters && v2FiltersRaw) {
-      try {
-        const parsed = JSON.parse(v2FiltersRaw);
-        if (parsed && typeof parsed === 'object') {
-          storage.setItem(STORAGE_KEYS.FILTERS, JSON.stringify({ ...DEFAULT_FILTERS, ...parsed }));
-          didMigrate = true;
-          migratedItems.push('preferences');
-        }
-      } catch {}
-    }
-
-    // 4. Mode migration
-    const hasV3Mode = storage.getItem(STORAGE_KEYS.MODE);
-    const v2Mode = storage.getItem(LEGACY_KEYS.MODE);
-    if (!hasV3Mode && v2Mode && ['christian', 'hindu', 'muslim'].includes(v2Mode)) {
-      storage.setItem(STORAGE_KEYS.MODE, v2Mode);
-      didMigrate = true;
-      migratedItems.push(`mode (${v2Mode})`);
-    }
-
-    // 5. Theme migration
-    const hasV3Theme = storage.getItem(STORAGE_KEYS.THEME);
-    const v2Theme = storage.getItem(LEGACY_KEYS.THEME);
-    if (!hasV3Theme && v2Theme && ['dark', 'light'].includes(v2Theme)) {
-      storage.setItem(STORAGE_KEYS.THEME, v2Theme);
-      didMigrate = true;
-    }
-
-    // 6. Language migration
-    const hasV3Lang = storage.getItem(STORAGE_KEYS.LANGUAGE);
-    const v2Lang = storage.getItem(LEGACY_KEYS.LANGUAGE);
-    if (!hasV3Lang && v2Lang && ['en', 'hi', 'hinglish', 'ur'].includes(v2Lang)) {
-      storage.setItem(STORAGE_KEYS.LANGUAGE, v2Lang);
-      didMigrate = true;
-    }
-  } catch (err) {
-    console.error('Storage migration failed:', err);
-  }
-
-  return {
-    migrated: didMigrate,
-    summary: didMigrate ? `Migrated ${migratedItems.join(', ')} from v2 to v3` : undefined,
-  };
-}
-
-// Auto-run migration once safely on initialization
-try {
-  migrateStorageV2ToV3();
-} catch {}
-
 export const DEFAULT_FILTERS: CalendarFilterSettings = {
   selectedState: 'all',
-  selectedCity: 'mumbai',
+  selectedCity: '', // Empty means "Location not set"; user selects city/country, enables GPS, or enters coordinates
+  locationExplicitlyConfirmed: false,
   asrMethod: 'hanafi',
   prayerMethod: 'karachi',
   enabledCategories: {
@@ -167,6 +65,156 @@ export const DEFAULT_FILTERS: CalendarFilterSettings = {
   muslimOnlyMode: false,
   calendarMode: 'christian',
 };
+
+/**
+ * Returns true if the saved location is the legacy 'mumbai' value with no record
+ * that the user explicitly confirmed Mumbai.
+ */
+export function needsLegacyMumbaiConfirmation(filters: CalendarFilterSettings): boolean {
+  return (
+    filters.selectedCity?.trim().toLowerCase() === 'mumbai' &&
+    filters.locationExplicitlyConfirmed !== true
+  );
+}
+
+/**
+ * Safely migrates existing legacy v2 data to v3.
+ * Preserves user events, tasks, mode, and settings without overwriting any existing v3 data.
+ * Each category migrates independently so a failure in one category does not prevent others.
+ */
+export function migrateStorageV2ToV3(): { migrated: boolean; summary?: string } {
+  const storage = getSafeStorage();
+  if (!storage) return { migrated: false };
+
+  let didMigrate = false;
+  const migratedItems: string[] = [];
+
+  // 1. Events migration (do not overwrite if v3 already exists)
+  try {
+    const hasV3Events = storage.getItem(STORAGE_KEYS.EVENTS);
+    const v2EventsRaw = storage.getItem(LEGACY_KEYS.EVENTS);
+    if (!hasV3Events && v2EventsRaw) {
+      const parsed = JSON.parse(v2EventsRaw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const valid = parsed.filter(
+          (e: any) =>
+            e &&
+            typeof e.id === 'string' &&
+            typeof e.title === 'string' &&
+            isValidCalendarDateString(e.startDate)
+        );
+        if (valid.length > 0) {
+          storage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(valid));
+          didMigrate = true;
+          migratedItems.push(`${valid.length} events`);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Events migration failed safely:', err);
+  }
+
+  // 2. Tasks migration (do not overwrite if v3 already exists)
+  try {
+    const hasV3Tasks = storage.getItem(STORAGE_KEYS.TASKS);
+    const v2TasksRaw = storage.getItem(LEGACY_KEYS.TASKS);
+    if (!hasV3Tasks && v2TasksRaw) {
+      const parsed = JSON.parse(v2TasksRaw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const valid = parsed.filter(
+          (t: any) =>
+            t &&
+            typeof t.id === 'string' &&
+            typeof t.title === 'string' &&
+            isValidCalendarDateString(t.dueDate)
+        );
+        if (valid.length > 0) {
+          storage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(valid));
+          didMigrate = true;
+          migratedItems.push(`${valid.length} tasks`);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Tasks migration failed safely:', err);
+  }
+
+  // 3. Filters & Preferences migration
+  try {
+    const hasV3Filters = storage.getItem(STORAGE_KEYS.FILTERS);
+    const v2FiltersRaw = storage.getItem(LEGACY_KEYS.FILTERS);
+    if (!hasV3Filters && v2FiltersRaw) {
+      const parsed = JSON.parse(v2FiltersRaw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const mergedCategories = {
+          ...DEFAULT_FILTERS.enabledCategories,
+          ...(parsed.enabledCategories && typeof parsed.enabledCategories === 'object'
+            ? parsed.enabledCategories
+            : {}),
+        };
+        const mergedFilters: CalendarFilterSettings = {
+          ...DEFAULT_FILTERS,
+          ...parsed,
+          enabledCategories: mergedCategories,
+        };
+        storage.setItem(STORAGE_KEYS.FILTERS, JSON.stringify(mergedFilters));
+        didMigrate = true;
+        migratedItems.push('preferences');
+      }
+    }
+  } catch (err) {
+    console.warn('Filters migration failed safely:', err);
+  }
+
+  // 4. Mode migration
+  try {
+    const hasV3Mode = storage.getItem(STORAGE_KEYS.MODE);
+    const v2Mode = storage.getItem(LEGACY_KEYS.MODE);
+    if (!hasV3Mode && v2Mode && ['christian', 'hindu', 'muslim'].includes(v2Mode)) {
+      storage.setItem(STORAGE_KEYS.MODE, v2Mode);
+      didMigrate = true;
+      migratedItems.push(`mode (${v2Mode})`);
+    }
+  } catch (err) {
+    console.warn('Mode migration failed safely:', err);
+  }
+
+  // 5. Theme migration
+  try {
+    const hasV3Theme = storage.getItem(STORAGE_KEYS.THEME);
+    const v2Theme = storage.getItem(LEGACY_KEYS.THEME);
+    if (!hasV3Theme && v2Theme && ['dark', 'light'].includes(v2Theme)) {
+      storage.setItem(STORAGE_KEYS.THEME, v2Theme);
+      didMigrate = true;
+      migratedItems.push(`theme (${v2Theme})`);
+    }
+  } catch (err) {
+    console.warn('Theme migration failed safely:', err);
+  }
+
+  // 6. Language migration
+  try {
+    const hasV3Lang = storage.getItem(STORAGE_KEYS.LANGUAGE);
+    const v2Lang = storage.getItem(LEGACY_KEYS.LANGUAGE);
+    if (!hasV3Lang && v2Lang && ['en', 'hi', 'hinglish', 'ur'].includes(v2Lang)) {
+      storage.setItem(STORAGE_KEYS.LANGUAGE, v2Lang);
+      didMigrate = true;
+      migratedItems.push(`language (${v2Lang})`);
+    }
+  } catch (err) {
+    console.warn('Language migration failed safely:', err);
+  }
+
+  return {
+    migrated: didMigrate,
+    summary: didMigrate ? `Migrated ${migratedItems.join(', ')} from v2 to v3` : undefined,
+  };
+}
+
+// Auto-run migration safely on initialization (DEFAULT_FILTERS is now guaranteed initialized)
+try {
+  migrateStorageV2ToV3();
+} catch {}
 
 /**
  * Generates sample demo events anchored to the current local date.
@@ -442,10 +490,32 @@ export function loadFilters(): CalendarFilterSettings {
       storage.getItem(LEGACY_KEYS.FILTERS);
     if (!raw) return DEFAULT_FILTERS;
     const parsed = JSON.parse(raw);
-    const mode = parsed.calendarMode || (parsed.muslimOnlyMode ? 'muslim' : 'all');
+    const mode = parsed.calendarMode || (parsed.muslimOnlyMode ? 'muslim' : 'christian');
+    const selectedCity = typeof parsed.selectedCity === 'string' ? parsed.selectedCity.trim() : '';
+
+    // Distinguish explicit confirmation from legacy Mumbai default:
+    // - Any city other than 'mumbai' (or valid custom coordinates) was explicitly chosen.
+    // - 'mumbai' without locationExplicitlyConfirmed === true must ask the user once.
+    const hasCustomCoords =
+      typeof parsed.customLatitude === 'number' &&
+      typeof parsed.customLongitude === 'number' &&
+      !isNaN(parsed.customLatitude) &&
+      !isNaN(parsed.customLongitude);
+
+    let locationExplicitlyConfirmed: boolean;
+    if (typeof parsed.locationExplicitlyConfirmed === 'boolean') {
+      locationExplicitlyConfirmed = parsed.locationExplicitlyConfirmed;
+    } else if (selectedCity.toLowerCase() === 'mumbai') {
+      locationExplicitlyConfirmed = false;
+    } else {
+      locationExplicitlyConfirmed = Boolean(selectedCity) || hasCustomCoords;
+    }
+
     return {
       ...DEFAULT_FILTERS,
       ...parsed,
+      selectedCity,
+      locationExplicitlyConfirmed,
       calendarMode: mode,
       muslimOnlyMode: mode === 'muslim',
     };
@@ -589,6 +659,11 @@ export function importBackupData(jsonString: string): ImportBackupResult {
       return { success: false, message: 'Invalid backup file: root must be a JSON object.' };
     }
 
+    const ALLOWED_CATEGORIES = ['personal', 'work', 'spiritual', 'festival', 'health', 'family'];
+    const ALLOWED_PRIORITIES = ['low', 'medium', 'high'];
+    const ALLOWED_RECURRENCES = ['none', 'daily', 'weekly', 'monthly', 'yearly'];
+    const HEX_COLOR_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
     const validEvents: CalendarEvent[] = [];
     const validTasks: CalendarTask[] = [];
 
@@ -624,8 +699,36 @@ export function importBackupData(jsonString: string): ImportBackupResult {
             ? e.endTime
             : undefined;
 
+        const validCategory =
+          typeof e.category === 'string' && ALLOWED_CATEGORIES.includes(e.category)
+            ? e.category
+            : 'personal';
+
+        const validPriority =
+          typeof e.priority === 'string' && ALLOWED_PRIORITIES.includes(e.priority)
+            ? e.priority
+            : 'medium';
+
+        const validRecurrence =
+          typeof e.recurrence === 'string' && ALLOWED_RECURRENCES.includes(e.recurrence)
+            ? e.recurrence
+            : 'none';
+
+        const validReminderMinutes =
+          typeof e.reminderMinutesBefore === 'number' &&
+          !isNaN(e.reminderMinutesBefore) &&
+          e.reminderMinutesBefore >= 0 &&
+          e.reminderMinutesBefore <= 1440
+            ? Math.round(e.reminderMinutesBefore)
+            : 15;
+
+        const validColor =
+          typeof e.color === 'string' && HEX_COLOR_REGEX.test(e.color)
+            ? e.color
+            : '#4f46e5';
+
         validEvents.push({
-          id: String(e.id),
+          id: String(e.id).trim(),
           title: String(e.title).trim(),
           description: typeof e.description === 'string' ? e.description : '',
           startDate: e.startDate,
@@ -633,14 +736,14 @@ export function importBackupData(jsonString: string): ImportBackupResult {
           endDate: validEndDate,
           endTime: validEndTime,
           allDay: Boolean(e.allDay),
-          category: typeof e.category === 'string' ? e.category : 'personal',
-          priority: typeof e.priority === 'string' ? e.priority : 'medium',
-          recurrence: typeof e.recurrence === 'string' ? e.recurrence : 'none',
-          color: typeof e.color === 'string' ? e.color : '#4f46e5',
-          location: typeof e.location === 'string' ? e.location : undefined,
-          reminderMinutesBefore: typeof e.reminderMinutesBefore === 'number' ? e.reminderMinutesBefore : 15,
+          category: validCategory as any,
+          priority: validPriority as any,
+          recurrence: validRecurrence as any,
+          color: validColor,
+          location: typeof e.location === 'string' && e.location.trim() ? e.location.trim() : undefined,
+          reminderMinutesBefore: validReminderMinutes,
           faithTag,
-          createdAt: typeof e.createdAt === 'number' ? e.createdAt : Date.now(),
+          createdAt: typeof e.createdAt === 'number' && !isNaN(e.createdAt) ? e.createdAt : Date.now(),
         });
       }
     }
@@ -665,17 +768,27 @@ export function importBackupData(jsonString: string): ImportBackupResult {
             ? t.dueTime
             : undefined;
 
+        const validCategory =
+          typeof t.category === 'string' && ALLOWED_CATEGORIES.includes(t.category)
+            ? t.category
+            : 'personal';
+
+        const validPriority =
+          typeof t.priority === 'string' && ALLOWED_PRIORITIES.includes(t.priority)
+            ? t.priority
+            : 'medium';
+
         validTasks.push({
-          id: String(t.id),
+          id: String(t.id).trim(),
           title: String(t.title).trim(),
           description: typeof t.description === 'string' ? t.description : '',
           dueDate: t.dueDate,
           dueTime: validDueTime,
           completed: Boolean(t.completed),
-          priority: typeof t.priority === 'string' ? t.priority : 'medium',
-          category: typeof t.category === 'string' ? t.category : 'personal',
+          priority: validPriority as any,
+          category: validCategory as any,
           faithTag,
-          createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
+          createdAt: typeof t.createdAt === 'number' && !isNaN(t.createdAt) ? t.createdAt : Date.now(),
         });
       }
     }
@@ -705,14 +818,97 @@ export function importBackupData(jsonString: string): ImportBackupResult {
       validTheme = parsed.theme;
     }
 
-    // Validate Filters
+    // Deep Validate Filters & Nested Settings
     let validFilters: CalendarFilterSettings | undefined;
-    if (parsed.filters && typeof parsed.filters === 'object') {
+    if (parsed.filters && typeof parsed.filters === 'object' && !Array.isArray(parsed.filters)) {
+      const rawF = parsed.filters;
+      const targetMode = validMode || DEFAULT_FILTERS.calendarMode;
+
+      const validatedCategories = {
+        hindu: typeof rawF.enabledCategories?.hindu === 'boolean' ? rawF.enabledCategories.hindu : DEFAULT_FILTERS.enabledCategories.hindu,
+        islamic: typeof rawF.enabledCategories?.islamic === 'boolean' ? rawF.enabledCategories.islamic : DEFAULT_FILTERS.enabledCategories.islamic,
+        sikh: typeof rawF.enabledCategories?.sikh === 'boolean' ? rawF.enabledCategories.sikh : DEFAULT_FILTERS.enabledCategories.sikh,
+        christian: typeof rawF.enabledCategories?.christian === 'boolean' ? rawF.enabledCategories.christian : DEFAULT_FILTERS.enabledCategories.christian,
+        jain: typeof rawF.enabledCategories?.jain === 'boolean' ? rawF.enabledCategories.jain : DEFAULT_FILTERS.enabledCategories.jain,
+        buddhist: typeof rawF.enabledCategories?.buddhist === 'boolean' ? rawF.enabledCategories.buddhist : DEFAULT_FILTERS.enabledCategories.buddhist,
+        national: typeof rawF.enabledCategories?.national === 'boolean' ? rawF.enabledCategories.national : DEFAULT_FILTERS.enabledCategories.national,
+      };
+
+      const asrMethod = rawF.asrMethod === 'standard' ? 'standard' : 'hanafi';
+      const prayerMethod = ['karachi', 'mwl', 'makkah', 'egypt'].includes(rawF.prayerMethod)
+        ? rawF.prayerMethod
+        : 'karachi';
+      const hijriAdj =
+        typeof rawF.hijriAdjustmentDays === 'number' &&
+        !isNaN(rawF.hijriAdjustmentDays) &&
+        rawF.hijriAdjustmentDays >= -2 &&
+        rawF.hijriAdjustmentDays <= 2
+          ? Math.round(rawF.hijriAdjustmentDays)
+          : 0;
+
+      const selectedCity =
+        typeof rawF.selectedCity === 'string' && rawF.selectedCity.trim()
+          ? rawF.selectedCity.trim().toLowerCase()
+          : DEFAULT_FILTERS.selectedCity;
+
+      const selectedState =
+        typeof rawF.selectedState === 'string' && rawF.selectedState.trim()
+          ? rawF.selectedState.trim()
+          : DEFAULT_FILTERS.selectedState;
+
+      const customLatitude =
+        typeof rawF.customLatitude === 'number' && !isNaN(rawF.customLatitude)
+          ? rawF.customLatitude
+          : undefined;
+
+      const customLongitude =
+        typeof rawF.customLongitude === 'number' && !isNaN(rawF.customLongitude)
+          ? rawF.customLongitude
+          : undefined;
+
+      const customLocationName =
+        typeof rawF.customLocationName === 'string' && rawF.customLocationName.trim()
+          ? rawF.customLocationName.trim()
+          : undefined;
+
+      const selectedCountry =
+        typeof rawF.selectedCountry === 'string' && rawF.selectedCountry.trim()
+          ? rawF.selectedCountry.trim()
+          : undefined;
+
+      const selectedLocationTimezone =
+        typeof rawF.selectedLocationTimezone === 'string' && rawF.selectedLocationTimezone.trim()
+          ? rawF.selectedLocationTimezone.trim()
+          : undefined;
+
+      const locationExplicitlyConfirmed =
+        typeof rawF.locationExplicitlyConfirmed === 'boolean'
+          ? rawF.locationExplicitlyConfirmed
+          : selectedCity === 'mumbai'
+          ? false
+          : Boolean(selectedCity) || (customLatitude !== undefined && customLongitude !== undefined);
+
       validFilters = {
-        ...DEFAULT_FILTERS,
-        ...parsed.filters,
-        calendarMode: validMode || DEFAULT_FILTERS.calendarMode,
-        muslimOnlyMode: (validMode || DEFAULT_FILTERS.calendarMode) === 'muslim',
+        selectedState,
+        selectedCity,
+        selectedCountry,
+        selectedLocationTimezone,
+        locationExplicitlyConfirmed,
+        customLatitude,
+        customLongitude,
+        customLocationName,
+        asrMethod,
+        prayerMethod,
+        enabledCategories: validatedCategories,
+        showGazettedOnly: Boolean(rawF.showGazettedOnly),
+        showHijri: rawF.showHijri !== undefined ? Boolean(rawF.showHijri) : true,
+        hijriAdjustmentDays: hijriAdj,
+        showPrayerTimes: rawF.showPrayerTimes !== undefined ? Boolean(rawF.showPrayerTimes) : true,
+        highlightFridays: rawF.highlightFridays !== undefined ? Boolean(rawF.highlightFridays) : true,
+        showTasksOnCalendar: rawF.showTasksOnCalendar !== undefined ? Boolean(rawF.showTasksOnCalendar) : true,
+        showMoonPhases: rawF.showMoonPhases !== undefined ? Boolean(rawF.showMoonPhases) : true,
+        calendarMode: targetMode,
+        muslimOnlyMode: targetMode === 'muslim',
       };
     }
 

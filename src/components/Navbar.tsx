@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { ViewMode, Language, Theme, HijriDateInfo, CalendarFaithMode } from '../types/calendar';
 import { translations } from '../translations/i18n';
-import { getNowInIST, formatISTTime } from '../utils/istTime';
+import { getDeviceTimezone } from '../utils/istTime';
+import { getCityLocation, hasExplicitLocation, formatCityCountryLabel } from '../utils/cities';
 
 interface NavbarProps {
   currentDate: Date;
@@ -36,6 +37,13 @@ interface NavbarProps {
   onOpenShortcuts: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  selectedCity?: string;
+  selectedCountry?: string;
+  selectedLocationTimezone?: string;
+  locationExplicitlyConfirmed?: boolean;
+  customLatitude?: number;
+  customLongitude?: number;
+  customLocationName?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -57,14 +65,35 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenShortcuts,
   searchQuery,
   onSearchChange,
+  selectedCity,
+  selectedCountry,
+  selectedLocationTimezone,
+  locationExplicitlyConfirmed,
+  customLatitude,
+  customLongitude,
+  customLocationName,
 }) => {
   const t = translations[language] || translations['en'];
+  const hasLoc = hasExplicitLocation(selectedCity, customLatitude, customLongitude);
+  const needsMumbaiConfirm =
+    selectedCity?.trim().toLowerCase() === 'mumbai' && locationExplicitlyConfirmed !== true;
+  const activeLoc = hasLoc
+    ? getCityLocation(
+        selectedCity,
+        customLatitude,
+        customLongitude,
+        customLocationName,
+        selectedCountry,
+        selectedLocationTimezone
+      )
+    : null;
+  const deviceTz = getDeviceTimezone();
   const [showSearchInput, setShowSearchInput] = useState(false);
-  const [nowIST, setNowIST] = useState<Date>(() => getNowInIST());
+  const [now, setNow] = useState<Date>(() => new Date());
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setNowIST(getNowInIST());
+      setNow(new Date());
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -176,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>{currentDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                 <span className="text-slate-300 dark:text-slate-600">•</span>
                 <span className="font-mono text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
-                  {formatISTTime(nowIST).slice(0, 8)} IST
+                  {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
               </div>
             </div>
@@ -340,10 +369,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </div>
 
-          {/* Active Mode Quick Pill Indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>IST / Mumbai Time</span>
+          {/* Active Location & Device Timezone Pill Indicator */}
+          <div
+            onClick={onOpenSettings}
+            title="Click to configure geographical location or preferences in Settings"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 transition-colors cursor-pointer"
+          >
+            <span className={`w-2 h-2 rounded-full ${hasLoc && !needsMumbaiConfirm ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
+            <span>
+              {needsMumbaiConfirm
+                ? `Confirm location • ${deviceTz.replace(/_/g, ' ')}`
+                : activeLoc
+                ? `${formatCityCountryLabel(activeLoc)} • ${deviceTz.replace(/_/g, ' ')}`
+                : `Location not set • ${deviceTz.replace(/_/g, ' ')}`}
+            </span>
           </div>
 
         </div>

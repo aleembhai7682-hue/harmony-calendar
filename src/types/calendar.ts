@@ -131,10 +131,14 @@ export interface PrayerTimes {
 }
 
 export interface CalendarFilterSettings {
-  selectedState: string; // 'all' or state code
-  selectedCity: string; // 'mumbai', 'delhi', etc. from INDIAN_CITIES
+  selectedState: string; // 'all' or Indian state code for regional holidays
+  selectedCity: string; // '' (Location not set), 'custom', or city id from ALL_CITIES
+  selectedCountry?: string; // Display country for active geographical location
+  selectedLocationTimezone?: string; // IANA timezone of selected geographical location (separate from device timezone)
+  locationExplicitlyConfirmed?: boolean; // True once user explicitly selects/confirms location; false/undefined for legacy defaults
   customLatitude?: number;
   customLongitude?: number;
+  customLocationName?: string;
   asrMethod: 'hanafi' | 'standard'; // Hanafi (2x shadow) vs Standard (1x shadow)
   prayerMethod: 'karachi' | 'mwl' | 'makkah' | 'egypt';
   enabledCategories: Record<FestivalCategory, boolean>;

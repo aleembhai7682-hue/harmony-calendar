@@ -1,19 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Language } from '../types/calendar';
 import { getHijriDate, getDailyWisdom } from '../utils/hijri';
-import { getNowInIST, formatISTTime } from '../utils/istTime';
+import { getDeviceTimezone, getTimePartsInZone } from '../utils/istTime';
+import {
+  ALL_CITIES,
+  INDIAN_CITIES,
+  INTERNATIONAL_CITIES,
+  hasExplicitLocation,
+  getCityLocation,
+} from '../utils/cities';
 import { calculateLocationPrayerTimes, DetailedPrayerInfo } from '../utils/prayerTimes';
 import {
   Clock,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   RotateCcw,
-  Moon,
   BookOpen,
   MapPin,
-  Volume2,
   Compass,
+  Navigation,
+  Globe,
+  Check,
 } from 'lucide-react';
 
 interface IslamicPrayerWidgetProps {
@@ -21,10 +28,24 @@ interface IslamicPrayerWidgetProps {
   hijriOffset?: number;
   language?: Language;
   selectedCity?: string;
+  selectedCountry?: string;
+  selectedLocationTimezone?: string;
+  locationExplicitlyConfirmed?: boolean;
   customLat?: number;
   customLon?: number;
+  customName?: string;
   prayerMethod?: 'karachi' | 'mwl' | 'makkah' | 'egypt';
   asrMethod?: 'hanafi' | 'standard';
+  onLocationChange?: (loc: {
+    selectedCity: string;
+    selectedCountry?: string;
+    selectedLocationTimezone?: string;
+    locationExplicitlyConfirmed?: boolean;
+    customLatitude?: number;
+    customLongitude?: number;
+    customLocationName?: string;
+  }) => void;
+  onOpenSettings?: () => void;
 }
 
 interface PrayerSlot {
@@ -42,33 +63,101 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
   currentDate,
   hijriOffset = 0,
   language = 'en',
-  selectedCity = 'mumbai',
+  selectedCity = '',
+  selectedCountry,
+  selectedLocationTimezone,
+  locationExplicitlyConfirmed,
   customLat,
   customLon,
+  customName,
   prayerMethod = 'karachi',
   asrMethod = 'hanafi',
+  onLocationChange,
+  onOpenSettings,
 }) => {
-  const [nowIST, setNowIST] = useState<Date>(() => getNowInIST());
+  const [now, setNow] = useState<Date>(() => new Date());
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [tasbeehCount, setTasbeehCount] = useState<number>(0);
   const [selectedZikr, setSelectedZikr] = useState<string>('SubhanAllah');
+  const [isLocating, setIsLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
-  // Live timer tick every second strictly synchronized to IST
+  const hasLocation = hasExplicitLocation(selectedCity, customLat, customLon);
+  const needsMumbaiConfirm =
+    selectedCity?.trim().toLowerCase() === 'mumbai' && locationExplicitlyConfirmed !== true;
+  const isLocationReady = hasLocation && !needsMumbaiConfirm;
+  const deviceTz = getDeviceTimezone();
+
+  // Live timer tick every second strictly synchronized to user's device local time
   useEffect(() => {
     const timer = setInterval(() => {
-      setNowIST(getNowInIST());
+      setNow(new Date());
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleEnableGeolocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGeoError(
+        language === 'ur'
+          ? 'آپ کا براؤزر لوکیشن سپورٹ نہیں کرتا۔ براہ کرم نیچے سے شہر منتخب کریں۔'
+          : 'Geolocation is not supported by your browser. Please select a city below.'
+      );
+      return;
+    }
+    setIsLocating(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = parseFloat(pos.coords.latitude.toFixed(4));
+        const lon = parseFloat(pos.coords.longitude.toFixed(4));
+        onLocationChange?.({
+          selectedCity: 'custom',
+          selectedCountry: '',
+          selectedLocationTimezone: deviceTz,
+          locationExplicitlyConfirmed: true,
+          customLatitude: lat,
+          customLongitude: lon,
+          customLocationName: 'Device GPS Location',
+        });
+      },
+      (err) => {
+        setIsLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoError(
+            language === 'ur'
+              ? 'لوکیشن کی اجازت نہیں دی گئی۔ کیلنڈر اور ہجری تاریخ معمول کے مطابق کام کرتے رہیں گے؛ اوقاتِ نماز کے لیے براہ کرم نیچے سے شہر منتخب کریں۔'
+              : 'Location permission denied. Your calendar and Hijri dates remain active; please choose a city below or enter custom coordinates in Settings for prayer times.'
+          );
+        } else {
+          setGeoError(
+            language === 'ur'
+              ? 'مقام تک رسائی ممکن نہیں ہو سکی۔ براہ کرم اپنا شہر منتخب کریں۔'
+              : 'Unable to determine your GPS location. Please choose a city below.'
+          );
+        }
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
 
   // Compute location-aware astronomical prayer times
   const prayerData: DetailedPrayerInfo = calculateLocationPrayerTimes(currentDate, {
     cityId: selectedCity,
     customLat,
     customLon,
+    customLocationName: customName,
+    customCountry: selectedCountry,
+    timezoneName: selectedLocationTimezone,
     prayerMethod,
     asrMethod,
   });
+
+  const activeTimeParts = getTimePartsInZone(
+    isLocationReady ? prayerData.timezoneName : deviceTz,
+    now
+  );
 
   const prayerTimes = prayerData.times;
   const hijri = getHijriDate(currentDate, hijriOffset);
@@ -76,8 +165,9 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
   const isFriday = currentDate.getDay() === 5;
 
   const parseTimeToMinutes = (tStr: string): number => {
-    const [h, m] = tStr.split(':').map(Number);
-    return h * 60 + m;
+    const parts = tStr.split(':').map(Number);
+    if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return 0;
+    return parts[0] * 60 + parts[1];
   };
 
   const slots: PrayerSlot[] = [
@@ -129,8 +219,8 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
     },
   ];
 
-  const currentMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
-  const currentSeconds = nowIST.getSeconds();
+  const currentMinutes = activeTimeParts.hours * 60 + activeTimeParts.minutes;
+  const currentSeconds = activeTimeParts.seconds;
 
   let nextPrayer = slots.find((s) => s.minutesFromMidnight > currentMinutes);
   let isTomorrowFajr = false;
@@ -186,12 +276,27 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
               <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-900/80 text-emerald-200 border border-emerald-700/60 font-bold">
                 {language === 'ur' ? hijri.formattedUr : hijri.formattedEn}
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-emerald-300 border border-emerald-800 font-semibold flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-emerald-400" />
-                <span>
-                  {language === 'ur' ? prayerData.cityNameUr : prayerData.cityName} ({prayerData.coordinates})
+              {isLocationReady ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-emerald-300 border border-emerald-800 font-semibold flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-emerald-400" />
+                  <span>
+                    {language === 'ur' ? prayerData.cityNameUr : prayerData.cityName} ({prayerData.coordinates}) • {prayerData.timezoneName} ({prayerData.timezoneOffsetStr})
+                  </span>
                 </span>
-              </span>
+              ) : (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-700/60 font-semibold flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-amber-400" />
+                  <span>
+                    {needsMumbaiConfirm
+                      ? language === 'ur'
+                        ? 'مقام کی تصدیق درکار ہے (ممبئی)'
+                        : 'Confirm Location • Saved: Mumbai, India'
+                      : language === 'ur'
+                      ? `مقام منتخب نہیں (${deviceTz})`
+                      : `Location not set • ${deviceTz}`}
+                  </span>
+                </span>
+              )}
               {isFriday && (
                 <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/50 font-bold flex items-center gap-1 animate-pulse shadow-xs">
                   <span>✨</span>
@@ -202,7 +307,10 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
             <p className="text-xs text-slate-300 mt-1 font-medium flex items-center gap-2 flex-wrap">
               <span>{prayerData.asrJuristicName}</span>
               <span className="text-slate-500">•</span>
-              <span>IST Time: <strong className="font-mono text-emerald-300">{formatISTTime(nowIST)}</strong></span>
+              <span>
+                {language === 'ur' ? 'وقت' : isLocationReady ? 'City Time' : 'Device Time'}:{' '}
+                <strong className="font-mono text-emerald-300">{activeTimeParts.formatted}</strong>
+              </span>
             </p>
           </div>
         </div>
@@ -231,116 +339,252 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
       {!isCollapsed && (
         <div className="p-5 space-y-4">
           
-          {/* Live Next Prayer Countdown Hero Banner */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-800/60 to-emerald-950/70 border border-emerald-700/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-emerald-600/30 text-emerald-300 border border-emerald-500/40">
-                <Clock className="w-5 h-5 animate-pulse" />
-              </div>
-              <div>
-                <div className="text-[10px] uppercase font-bold text-emerald-300 tracking-wider">
-                  {language === 'ur' ? 'اگلی نماز کا وقت' : 'Next Upcoming Prayer'}
+          {!isLocationReady ? (
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950/60 via-slate-800/70 to-slate-900 border border-emerald-600/50 space-y-3 shadow-md">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white">
+                      {needsMumbaiConfirm
+                        ? language === 'ur'
+                          ? 'اپنے محفوظ کردہ مقام (ممبئی، بھارت) کی تصدیق کریں'
+                          : 'Confirm Your Location (Saved as Mumbai, India)'
+                        : language === 'ur'
+                        ? 'اوقاتِ نماز کے لیے اپنا مقام منتخب کریں یا لوکیشن فعال کریں'
+                        : 'Select or Enable Your Location for Prayer Times'}
+                    </h3>
+                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                      {needsMumbaiConfirm
+                        ? language === 'ur'
+                          ? 'ممبئی پہلے سے بطور ڈیفالٹ محفوظ تھا۔ براہ کرم تصدیق کریں کہ آپ ممبئی میں ہیں یا اپنا اصل شہر منتخب کریں۔'
+                          : 'Mumbai, India was previously saved as the default. Please confirm if you live in Mumbai, or choose your city below.'
+                        : language === 'ur'
+                        ? `درست فجر، ظہر، عصر، مغرب، عشاء اور سحری/افطار کے حساب کے لیے جغرافیائی عرض و طول درکار ہیں۔ (موجودہ ڈیوائس ٹائم زون: ${deviceTz})`
+                        : `Prayer times, Sehri, and Iftar depend on your geographic latitude and longitude. No default city is assumed. (Device timezone: ${deviceTz})`}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-lg font-black text-white flex items-center gap-2">
-                  <span>
-                    {language === 'ur'
-                      ? nextPrayer.nameUr
-                      : language === 'hinglish'
-                      ? nextPrayer.nameHinglish
-                      : nextPrayer.nameEn}
-                  </span>
-                  <span className="text-sm font-mono text-emerald-300 font-bold bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-800/50">
-                    {nextPrayer.timeStr}
-                  </span>
-                  {isTomorrowFajr && (
-                    <span className="text-[10px] text-slate-300 font-normal">
-                      ({language === 'ur' ? 'کل صبح' : 'Tomorrow Morning'})
-                    </span>
-                  )}
-                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3 self-end sm:self-auto">
-              <div className="text-right">
-                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                  {language === 'ur' ? 'باقی وقت' : 'Remaining Time'}
+              {geoError && (
+                <div className="p-2.5 rounded-xl bg-amber-950/60 border border-amber-700/60 text-xs text-amber-200 font-medium">
+                  {geoError}
                 </div>
-                <div className="text-2xl font-black font-mono text-emerald-300 tracking-tight">
-                  {formatCountdown()}
-                </div>
-              </div>
-            </div>
-          </div>
+              )}
 
-          {/* 5 Daily Prayer Cards + Sehri / Iftar */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
-            {slots.map((slot) => {
-              const isNext = slot.id === nextPrayer.id && !isTomorrowFajr;
-              return (
-                <div
-                  key={slot.id}
-                  className={`p-3 rounded-2xl border transition-all ${
-                    isNext
-                      ? 'bg-emerald-900/50 border-emerald-400 ring-1 ring-emerald-400/50 shadow-md'
-                      : 'bg-slate-800/50 border-slate-700/60 hover:border-slate-600'
-                  }`}
+              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                {needsMumbaiConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mumbai = getCityLocation('mumbai');
+                      onLocationChange?.({
+                        selectedCity: 'mumbai',
+                        selectedCountry: mumbai.country,
+                        selectedLocationTimezone: mumbai.timezone,
+                        locationExplicitlyConfirmed: true,
+                        customLatitude: mumbai.latitude,
+                        customLongitude: mumbai.longitude,
+                        customLocationName: mumbai.nameEn,
+                      });
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{language === 'ur' ? 'ممبئی، بھارت کی تصدیق کریں' : 'Confirm Mumbai, India'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleEnableGeolocation}
+                  disabled={isLocating}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
                 >
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 mb-1">
-                    <span>
-                      {language === 'ur' ? slot.nameUr : slot.nameEn}
-                    </span>
-                    <span className="font-serif text-xs text-emerald-400">
-                      {slot.nameAr}
-                    </span>
+                  <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                  <span>
+                    {isLocating
+                      ? language === 'ur'
+                        ? 'تلاش جاری ہے...'
+                        : 'Detecting GPS...'
+                      : language === 'ur'
+                      ? 'میری موجودہ لوکیشن استعمال کریں'
+                      : 'Detect my location'}
+                  </span>
+                </button>
+
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) return;
+                    if (val === 'custom') {
+                      onOpenSettings?.();
+                      return;
+                    }
+                    const city = ALL_CITIES.find((c) => c.id === val);
+                    if (city) {
+                      onLocationChange?.({
+                        selectedCity: city.id,
+                        selectedCountry: city.country,
+                        selectedLocationTimezone: city.timezone,
+                        locationExplicitlyConfirmed: true,
+                        customLatitude: city.latitude,
+                        customLongitude: city.longitude,
+                        customLocationName: city.nameEn,
+                      });
+                    }
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-900 border border-emerald-700/60 text-xs font-semibold text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">
+                    {language === 'ur' ? 'فہرست سے شہر منتخب کریں...' : 'Choose a City Manually...'}
+                  </option>
+                  <optgroup label="India">
+                    {INDIAN_CITIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {language === 'ur' ? `${c.nameUr} (${c.nameEn})` : `${c.nameEn}, ${c.country}`}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="International">
+                    {INTERNATIONAL_CITIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {language === 'ur' ? `${c.nameUr} (${c.nameEn})` : `${c.nameEn}, ${c.country}`}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <option value="custom">Enter Custom Latitude / Longitude...</option>
+                </select>
+
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 cursor-pointer"
+                  >
+                    {language === 'ur' ? 'تلاش / کسٹم کوآرڈینیٹس' : 'Search All Cities / Custom'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Live Next Prayer Countdown Hero Banner */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-800/60 to-emerald-950/70 border border-emerald-700/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-emerald-600/30 text-emerald-300 border border-emerald-500/40">
+                    <Clock className="w-5 h-5 animate-pulse" />
                   </div>
-                  <div className="text-base font-black font-mono text-white">
-                    {slot.timeStr}
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-1">
-                    {slot.isJummah ? 'Jummah Adhan' : 'Adhan Time'}
+                  <div>
+                    <div className="text-[10px] uppercase font-bold text-emerald-300 tracking-wider">
+                      {language === 'ur' ? 'اگلی نماز کا وقت' : 'Next Upcoming Prayer'}
+                    </div>
+                    <div className="text-lg font-black text-white flex items-center gap-2">
+                      <span>
+                        {language === 'ur'
+                          ? nextPrayer.nameUr
+                          : language === 'hinglish'
+                          ? nextPrayer.nameHinglish
+                          : nextPrayer.nameEn}
+                      </span>
+                      <span className="text-sm font-mono text-emerald-300 font-bold bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-800/50">
+                        {nextPrayer.timeStr}
+                      </span>
+                      {isTomorrowFajr && (
+                        <span className="text-[10px] text-slate-300 font-normal">
+                          ({language === 'ur' ? 'کل صبح' : 'Tomorrow Morning'})
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              );
-            })}
 
-            {/* Sehri Ends */}
-            <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-800/40">
-              <div className="text-[11px] font-bold text-amber-300 mb-1">
-                {language === 'ur' ? 'سحری ختم (امساک)' : 'Sehri Ends'}
+                <div className="flex items-center gap-3 self-end sm:self-auto">
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                      {language === 'ur' ? 'باقی وقت' : 'Remaining Time'}
+                    </div>
+                    <div className="text-2xl font-black font-mono text-emerald-300 tracking-tight">
+                      {formatCountdown()}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="text-base font-black font-mono text-amber-200">
-                {prayerTimes.sehriEnds}
-              </div>
-              <div className="text-[10px] text-amber-300/80 mt-1">
-                -10 min precaution
-              </div>
-            </div>
 
-            {/* Iftar Time */}
-            <div className="p-3 rounded-2xl bg-rose-950/30 border border-rose-800/40">
-              <div className="text-[11px] font-bold text-rose-300 mb-1">
-                {language === 'ur' ? 'افطار کا وقت' : 'Iftar Time'}
-              </div>
-              <div className="text-base font-black font-mono text-rose-200">
-                {prayerTimes.iftarTime}
-              </div>
-              <div className="text-[10px] text-rose-300/80 mt-1">
-                At Maghrib Adhan
-              </div>
-            </div>
-          </div>
+              {/* 5 Daily Prayer Cards + Sehri / Iftar */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
+                {slots.map((slot) => {
+                  const isNext = slot.id === nextPrayer.id && !isTomorrowFajr;
+                  return (
+                    <div
+                      key={slot.id}
+                      className={`p-3 rounded-2xl border transition-all ${
+                        isNext
+                          ? 'bg-emerald-900/50 border-emerald-400 ring-1 ring-emerald-400/50 shadow-md'
+                          : 'bg-slate-800/50 border-slate-700/60 hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 mb-1">
+                        <span>
+                          {language === 'ur' ? slot.nameUr : slot.nameEn}
+                        </span>
+                        <span className="font-serif text-xs text-emerald-400">
+                          {slot.nameAr}
+                        </span>
+                      </div>
+                      <div className="text-base font-black font-mono text-white">
+                        {slot.timeStr}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-1">
+                        {slot.isJummah ? 'Jummah Adhan' : 'Adhan Time'}
+                      </div>
+                    </div>
+                  );
+                })}
 
-          {/* Official Mosque Timetable vs Calculated Disclaimer Notice */}
-          <div className="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 flex items-center justify-between gap-2 flex-wrap">
-            <span className="flex items-center gap-1.5">
-              <span>🕌</span>
-              <span>{language === 'ur' ? prayerData.disclaimerUr : prayerData.disclaimer}</span>
-            </span>
-            <span className="text-emerald-400 font-semibold text-[10px]">
-              Method: {prayerData.methodName.split(' ')[0]}
-            </span>
-          </div>
+                {/* Sehri Ends */}
+                <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-800/40">
+                  <div className="text-[11px] font-bold text-amber-300 mb-1">
+                    {language === 'ur' ? 'سحری ختم (امساک)' : 'Sehri Ends'}
+                  </div>
+                  <div className="text-base font-black font-mono text-amber-200">
+                    {prayerTimes.sehriEnds}
+                  </div>
+                  <div className="text-[10px] text-amber-300/80 mt-1">
+                    -10 min precaution
+                  </div>
+                </div>
+
+                {/* Iftar Time */}
+                <div className="p-3 rounded-2xl bg-rose-950/30 border border-rose-800/40">
+                  <div className="text-[11px] font-bold text-rose-300 mb-1">
+                    {language === 'ur' ? 'افطار کا وقت' : 'Iftar Time'}
+                  </div>
+                  <div className="text-base font-black font-mono text-rose-200">
+                    {prayerTimes.iftarTime}
+                  </div>
+                  <div className="text-[10px] text-rose-300/80 mt-1">
+                    At Maghrib Adhan
+                  </div>
+                </div>
+              </div>
+
+              {/* Official Mosque Timetable vs Calculated Disclaimer Notice */}
+              <div className="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 flex items-center justify-between gap-2 flex-wrap">
+                <span className="flex items-center gap-1.5">
+                  <span>🕌</span>
+                  <span>{language === 'ur' ? prayerData.disclaimerUr : prayerData.disclaimer}</span>
+                </span>
+                <span className="text-emerald-400 font-semibold text-[10px]">
+                  Method: {prayerData.methodName.split('(')[0].trim()}
+                </span>
+              </div>
+            </>
+          )}
 
           {/* Inspirational Daily Hadith & Digital Tasbeeh Counter */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 pt-1">
@@ -430,13 +674,17 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
             <span className="flex items-center gap-1.5 text-slate-300">
               <Compass className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span>
-                {language === 'ur'
-                  ? `فلکیاتی حسابی اوقات برائے ${prayerData.cityNameUr} (${prayerData.asrJuristicName})۔ چاند کی رویت اور حتمی تاریخیں مقامی رویتِ ہلال کمیٹی کے فیصلے پر منحصر ہیں۔`
-                  : `Astronomical solar calculation calibrated for ${prayerData.cityName} (${prayerData.asrJuristicName}). Exact Hijri dates and prayer times are mathematical estimates; follow your local Jamia Masjid and verified Hilal sighting committee.`}
+                {isLocationReady
+                  ? language === 'ur'
+                    ? `فلکیاتی حسابی اوقات برائے ${prayerData.cityNameUr} (${prayerData.timezoneName})۔ چاند کی رویت اور حتمی تاریخیں مقامی رویتِ ہلال کمیٹی کے فیصلے پر منحصر ہیں۔`
+                    : `Estimated astronomical calculation calibrated for ${prayerData.cityName} (${prayerData.timezoneName}, ${prayerData.timezoneOffsetStr}, ${prayerData.asrJuristicName}). Calculated Hijri dates and prayer times are mathematical estimates; please verify with your local mosque and Hilal committee.`
+                  : language === 'ur'
+                  ? `چاند کی رویت اور حتمی ہجری تاریخیں مقامی رویتِ ہلال کمیٹی کے فیصلے پر منحصر ہیں۔ (ٹائم زون: ${deviceTz})`
+                  : `Calculated Hijri dates are mathematical astronomical estimates; please verify with your local Hilal moon sighting committee. Select a city or enable location above for prayer times (${deviceTz}).`}
               </span>
             </span>
             <span className="text-emerald-400 font-semibold font-mono text-[10px]">
-              {prayerData.coordinates}
+              {isLocationReady ? `${prayerData.coordinates} • ${prayerData.timezoneOffsetStr}` : deviceTz}
             </span>
           </div>
 

@@ -5,7 +5,7 @@ import {
   getLiturgicalSeason,
   BibleVerse,
 } from '../utils/christianData';
-import { getNowInIST, formatISTTime } from '../utils/istTime';
+import { getDeviceTimezone, formatLocalTime } from '../utils/istTime';
 import {
   Calendar,
   Heart,
@@ -245,13 +245,13 @@ const DoveOfPeaceMotif: React.FC<{ size?: number; className?: string }> = ({
 export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> = ({
   currentDate,
 }) => {
-  const [nowIST, setNowIST] = useState<Date>(() => getNowInIST());
+  const [now, setNow] = useState<Date>(() => new Date());
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Live timer tick strictly synchronized to Indian Standard Time (IST)
+  // Live timer tick strictly synchronized to device local time
   useEffect(() => {
     const timer = setInterval(() => {
-      setNowIST(getNowInIST());
+      setNow(new Date());
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -328,7 +328,7 @@ export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> =
 
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800/90 text-amber-300 border border-amber-500/30 font-semibold flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-amber-400" />
-                <span>IST Time Zone</span>
+                <span>{getDeviceTimezone().replace(/_/g, ' ')}</span>
               </span>
 
               {isSunday && (
@@ -347,7 +347,7 @@ export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> =
               <span className="text-slate-500">•</span>
               <span>Spiritual Focus: <strong className="text-indigo-200">{liturgicalSeason.spiritualFocus}</strong></span>
               <span className="text-slate-500">•</span>
-              <span>Current Time: <strong className="font-mono text-amber-300">{formatISTTime(nowIST)}</strong></span>
+              <span>Current Time: <strong className="font-mono text-amber-300">{formatLocalTime(now)}</strong></span>
             </p>
           </div>
         </div>
@@ -390,7 +390,7 @@ export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> =
               </div>
               <div className="relative z-10 text-xs font-bold text-amber-200 bg-slate-900/90 px-3.5 py-1.5 rounded-xl border border-amber-400/40 shadow-xs flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Sunday Morning Service: 09:30 AM IST</span>
+                <span>Sunday Morning Service: 09:30 AM</span>
               </div>
             </div>
           ) : (
@@ -398,7 +398,7 @@ export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> =
               <div className="flex items-center gap-2.5">
                 <Calendar className="w-4 h-4 text-amber-400" />
                 <span>
-                  <strong className="text-white">Weekend & Sunday Church Planner:</strong> Next Sunday Worship Service is scheduled for Sunday at 09:30 AM IST.
+                  <strong className="text-white">Weekend & Sunday Church Planner:</strong> Next Sunday Worship Service is scheduled for Sunday at 09:30 AM.
                 </span>
               </div>
               <span className="text-[11px] text-amber-300 font-semibold bg-indigo-950/70 px-2.5 py-1 rounded-lg border border-amber-500/30 flex items-center gap-1">

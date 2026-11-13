@@ -56,8 +56,9 @@ export const IslamicPrayerCountdown: React.FC<IslamicPrayerCountdownProps> = ({
 
   // Convert "HH:mm" to minutes from midnight
   const parseTimeToMinutes = (tStr: string): number => {
-    const [h, m] = tStr.split(':').map(Number);
-    return h * 60 + m;
+    const parts = tStr.split(':').map(Number);
+    if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return 0;
+    return parts[0] * 60 + parts[1];
   };
 
   const slots: PrayerSlot[] = [

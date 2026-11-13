@@ -1,20 +1,28 @@
 /**
  * Hindu Panchang & Vedic Astronomical Engine (Drik Ganita / Lahiri Siddhanta)
- * Provides high-precision calculation of Tithi, Paksha, Nakshatra, Yoga, Karana,
- * Vikram & Shaka Samvat, Solar Sunrise, Sunset, Abhijit Muhurat, and Rahu Kaal
- * calibrated to the user's selected Indian geographical location.
+ * Calculates Tithi, Paksha, Nakshatra, Yoga, Karana, Vikram & Shaka Samvat,
+ * and location-calibrated Solar Sunrise, Sunset, Abhijit Muhurat, and Rahu Kaal.
  *
  * NOTE: Language rule strictly enforces Hindi, Sanskrit, and English only.
- * Absolutely zero Urdu text or typography is included in this module.
+ * Zero Urdu text or typography is included in this module.
  */
 
-import { getCityLocation, CityLocation } from './cities';
+import { getCityLocation, CityLocation, isValidCoordinatePair, formatCityCountryLabel } from './cities';
+import {
+  getDeviceTimezone,
+  getTimezoneOffsetHoursForZone,
+  formatUtcOffset,
+} from './istTime';
 
 export interface HinduPanchangInfo {
+  hasLocation: boolean;
   cityName: string;
+  countryName: string;
   coordinates: string;
-  sunriseTime: string; // "06:42 AM"
-  sunsetTime: string;  // "06:05 PM"
+  timezoneName: string;
+  timezoneOffsetStr: string;
+  sunriseTime: string; // "06:42 AM" or "Location required"
+  sunsetTime: string;  // "06:05 PM" or "Location required"
   solarNoonTime: string;
   vikramSamvat: number;
   shakaSamvat: number;
@@ -206,77 +214,50 @@ function getJulianDay(date: Date, utcHour: number = 0.5): number {
 /**
  * Calculates Solar and Lunar Ecliptic Longitude and Panchang parameters
  * for any given date and geographical coordinates.
+ * Never silently falls back to Mumbai or IST.
  */
 export function getHinduPanchang(
   date: Date,
-  cityId: string = 'mumbai',
+  cityId?: string,
   customLat?: number,
-  customLon?: number
+  customLon?: number,
+  customName?: string,
+  customTzOffsetHours?: number,
+  customCountry?: string,
+  customTimezone?: string
 ): HinduPanchangInfo {
-  const city: CityLocation = getCityLocation(cityId);
-  const lat = customLat !== undefined ? customLat : city.latitude;
-  const lon = customLon !== undefined ? customLon : city.longitude;
+  const city: CityLocation = getCityLocation(
+    cityId,
+    customLat,
+    customLon,
+    customName,
+    customCountry,
+    customTimezone
+  );
+  const hasLocation = city.id !== 'unset' && isValidCoordinatePair(city.latitude, city.longitude);
 
   const year = date.getFullYear();
   const month = date.getMonth();
   const day = date.getDate();
+  const noonUtc = new Date(Date.UTC(year, month, day, 12, 0, 0));
 
-  // Day of year for solar calculations
-  const startOfYear = new Date(year, 0, 0);
-  const dayOfYear = Math.floor((date.getTime() - startOfYear.getTime()) / 86400000);
+  const tzName = customTimezone || (hasLocation ? city.timezone : getDeviceTimezone()) || getDeviceTimezone();
+  const tzOffsetHours =
+    customTzOffsetHours !== undefined
+      ? customTzOffsetHours
+      : getTimezoneOffsetHoursForZone(tzName, noonUtc);
 
-  // Solar declination & Equation of Time (EoT)
-  const b = (2 * Math.PI * (dayOfYear - 81)) / 365;
-  const eot = 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
-  const declination = 23.45 * Math.sin(b);
+  const tzOffsetStr = formatUtcOffset(tzOffsetHours);
 
-  // Solar Noon in Indian Standard Time (IST, Meridian 82.5° E)
-  // Longitude correction: (82.5 - longitude) * 4 minutes
-  const lonCorrectionMin = (82.5 - lon) * 4;
-  const solarNoonMin = 12 * 60 + lonCorrectionMin - eot;
-
-  // Sunrise and Sunset calculation using horizon altitude -0.833°
-  const latRad = (lat * Math.PI) / 180;
-  const decRad = (declination * Math.PI) / 180;
-  const altRad = (-0.8333 * Math.PI) / 180;
-
-  let cosHA =
-    (Math.sin(altRad) - Math.sin(latRad) * Math.sin(decRad)) /
-    (Math.cos(latRad) * Math.cos(decRad));
-  if (cosHA > 1) cosHA = 1;
-  if (cosHA < -1) cosHA = -1;
-  const haHours = (Math.acos(cosHA) * 180) / Math.PI / 15; // in hours
-
-  const sunriseMin = solarNoonMin - haHours * 60;
-  const sunsetMin = solarNoonMin + haHours * 60;
-  const dayDurationMin = Math.max(600, sunsetMin - sunriseMin);
-
-  const formatMinToTime = (min: number): string => {
-    let m = Math.round(min);
-    if (m < 0) m += 1440;
-    if (m >= 1440) m -= 1440;
-    let h = Math.floor(m / 60);
-    const mins = m % 60;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12;
-    if (h === 0) h = 12;
-    return `${String(h).padStart(2, '0')}:${String(mins).padStart(2, '0')} ${ampm}`;
-  };
-
-  const sunriseStr = formatMinToTime(sunriseMin);
-  const sunsetStr = formatMinToTime(sunsetMin);
-  const solarNoonStr = formatMinToTime(solarNoonMin);
-
-  // Astronomical Julian Day at standard sunrise epoch (06:00 IST = 00:30 UTC)
-  const jd = getJulianDay(date, 0.5);
+  // Astronomical Julian Day at local morning epoch (approx 06:00 local time converted to UTC)
+  const sunriseUtcHour = ((6 - tzOffsetHours) % 24 + 24) % 24;
+  const jd = getJulianDay(date, sunriseUtcHour);
   const T = (jd - 2451545.0) / 36525; // centuries from J2000
 
   // Geometric Mean Longitude of the Sun
   const L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;
-  // Mean Anomaly of the Sun
   const M_sun = 357.52911 + 35999.05029 * T - 0.0001537 * T * T;
   const M_sunRad = (M_sun * Math.PI) / 180;
-  // Sun Equation of the Center
   const C_sun =
     (1.914602 - 0.004817 * T) * Math.sin(M_sunRad) +
     (0.019993 - 0.000101 * T) * Math.sin(2 * M_sunRad) +
@@ -293,7 +274,6 @@ export function getHinduPanchang(
   const DRad = (D * Math.PI) / 180;
   const FRad = (F * Math.PI) / 180;
 
-  // Major periodic lunar perturbations
   const moonPerturbations =
     6.288774 * Math.sin(MmRad) +
     1.274027 * Math.sin(2 * DRad - MmRad) +
@@ -304,57 +284,44 @@ export function getHinduPanchang(
 
   const moonLongSayana = normalizeDeg(Lp + moonPerturbations);
 
-  // Standard Lahiri (Chitrapaksha) Ayanamsha: 23° 51' in 2000 + precession
+  // Lahiri (Chitrapaksha) Ayanamsha
   const ayanamsha = 23.856 + 1.396 * T;
-
-  // Sidereal (Nirayana) longitudes for Vedic Astrology / Panchang
   const sunLongNirayana = normalizeDeg(sunLongSayana - ayanamsha);
   const moonLongNirayana = normalizeDeg(moonLongSayana - ayanamsha);
 
-  // Lunar Elongation (Moon - Sun angle)
+  // Tithi, Nakshatra, Yoga, Karana
   const elongation = normalizeDeg(moonLongSayana - sunLongSayana);
-
-  // Tithi calculation: 1 Tithi = 12 degrees of elongation
   const tithiIndex = Math.min(29, Math.floor(elongation / 12));
-  const tithiNum = tithiIndex + 1; // 1 to 30
+  const tithiNum = tithiIndex + 1;
   const isShukla = tithiNum <= 15;
   const tithiMeta = TITHIS_META[tithiIndex] || TITHIS_META[0];
 
-  // Nakshatra calculation: 1 Nakshatra = 13° 20' = 13.333333° of Nirayana Moon
   const nakshatraIndex = Math.min(26, Math.floor(moonLongNirayana / (360 / 27)));
   const nakshatraMeta = NAKSHATRAS_META[nakshatraIndex] || NAKSHATRAS_META[0];
 
-  // Yoga calculation: (Nirayana Sun + Nirayana Moon) / 13° 20'
   const yogaIndex = Math.min(
     26,
     Math.floor(normalizeDeg(sunLongNirayana + moonLongNirayana) / (360 / 27))
   );
   const yogaMeta = YOGAS_META[yogaIndex] || YOGAS_META[0];
 
-  // Karana calculation: 1 Karana = 6 degrees of elongation (half a Tithi)
   const karanaIndexTotal = Math.min(59, Math.floor(elongation / 6));
   let karanaMeta: { en: string; hi: string };
   if (karanaIndexTotal === 0) {
-    karanaMeta = KARANAS_NAMES[10]; // Kintughna
+    karanaMeta = KARANAS_NAMES[10];
   } else if (karanaIndexTotal >= 57) {
-    // Fixed Karanas: 57=Shakuni, 58=Chatushpada, 59=Naga
     karanaMeta = KARANAS_NAMES[7 + (karanaIndexTotal - 57)] || KARANAS_NAMES[0];
   } else {
-    // 7 recurring Karanas (Bava to Vishti/Bhadra)
-    const cyclic = (karanaIndexTotal - 1) % 7;
-    karanaMeta = KARANAS_NAMES[cyclic];
+    karanaMeta = KARANAS_NAMES[(karanaIndexTotal - 1) % 7];
   }
 
-  // Vikram Samvat & Shaka Samvat
   const isAfterChaitra = month > 2 || (month === 2 && day >= 22);
   const vikramSamvat = year + (isAfterChaitra ? 57 : 56);
   const shakaSamvat = year - (isAfterChaitra ? 78 : 79);
 
-  // Hindu Lunar Month estimate based on solar transit / sidereal sun
   const solarRashiIndex = Math.floor(sunLongNirayana / 30);
   const hinduMonth = HINDU_MONTHS[solarRashiIndex] || HINDU_MONTHS[0];
 
-  // Fasting days
   const isEkadashi = tithiNum === 11 || tithiNum === 26;
   const isPurnima = tithiNum === 15;
   const isAmavasya = tithiNum === 30;
@@ -377,35 +344,88 @@ export function getHinduPanchang(
     auspiciousTagHi = 'प्रदोष व्रत (संध्या कालीन शिव आराधना)';
   }
 
-  // 🌟 Dynamic Rahu Kaal Calculation from Actual Sunrise & Sunset
-  // The daytime is divided into 8 equal parts (Ashtama-Bhagas)
-  const partDurationMin = dayDurationMin / 8;
-  const dayOfWeek = date.getDay(); // 0 Sun, 1 Mon, 2 Tue, 3 Wed, 4 Thu, 5 Fri, 6 Sat
+  // Solar Timings (only computed when explicit location coordinates exist)
+  let sunriseStr = 'Location required';
+  let sunsetStr = 'Location required';
+  let solarNoonStr = 'Location required';
+  let rahuKaalStr = 'Requires location';
+  let abhijitStr = 'Requires location';
+  let coordLabel = 'Not set';
 
-  // Weekday to 1-based Ashtama-Bhaga index:
-  // Sun: 8, Mon: 2, Tue: 7, Wed: 5, Thu: 6, Fri: 4, Sat: 1
-  const rahuKaalParts = [8, 2, 7, 5, 6, 4, 1];
-  const partNum = rahuKaalParts[dayOfWeek];
-  const rahuStartMin = sunriseMin + (partNum - 1) * partDurationMin;
-  const rahuEndMin = sunriseMin + partNum * partDurationMin;
-  const rahuKaalStr = `${formatMinToTime(rahuStartMin)} - ${formatMinToTime(rahuEndMin)}`;
+  if (hasLocation) {
+    const lat = city.latitude;
+    const lon = city.longitude;
+    coordLabel = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}`;
 
-  // 🌟 Dynamic Abhijit Muhurat Calculation from Actual Solar Noon
-  // Abhijit is the 8th Muhurta of the day, centered exactly on Solar Noon
-  // Duration is approx 1/15th of the day (2 Ghatis = 48 minutes on equinox)
-  const abhijitHalfDuration = dayDurationMin / 30;
-  const abhijitStartMin = solarNoonMin - abhijitHalfDuration;
-  const abhijitEndMin = solarNoonMin + abhijitHalfDuration;
+    const dayOfYear = Math.round(
+      (Date.UTC(year, month, day) - Date.UTC(year, 0, 0)) / 86400000
+    );
 
-  // On Wednesdays, Abhijit is traditionally considered less suitable due to planetary clash
-  const isWednesday = dayOfWeek === 3;
-  const abhijitStr = isWednesday
-    ? `${formatMinToTime(abhijitStartMin)} - ${formatMinToTime(abhijitEndMin)} (Subdued on Wed)`
-    : `${formatMinToTime(abhijitStartMin)} - ${formatMinToTime(abhijitEndMin)} (Auspicious)`;
+    const b = (2 * Math.PI * (dayOfYear - 81)) / 365;
+    const eot = 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
+    const declination = 23.45 * Math.sin(b);
+
+    const standardMeridian = tzOffsetHours * 15;
+    const lonCorrectionMin = (standardMeridian - lon) * 4;
+    const solarNoonMin = 12 * 60 + lonCorrectionMin - eot;
+
+    const latRad = (lat * Math.PI) / 180;
+    const decRad = (declination * Math.PI) / 180;
+    const altRad = (-0.8333 * Math.PI) / 180;
+
+    let cosHA =
+      (Math.sin(altRad) - Math.sin(latRad) * Math.sin(decRad)) /
+      (Math.cos(latRad) * Math.cos(decRad));
+    if (cosHA > 1) cosHA = 1;
+    if (cosHA < -1) cosHA = -1;
+    const haHours = (Math.acos(cosHA) * 180) / Math.PI / 15;
+
+    const sunriseMin = solarNoonMin - haHours * 60;
+    const sunsetMin = solarNoonMin + haHours * 60;
+    const dayDurationMin = Math.max(360, sunsetMin - sunriseMin);
+
+    const formatMinToTime = (min: number): string => {
+      let m = Math.round(min);
+      while (m < 0) m += 1440;
+      while (m >= 1440) m -= 1440;
+      let h = Math.floor(m / 60);
+      const mins = m % 60;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12;
+      if (h === 0) h = 12;
+      return `${String(h).padStart(2, '0')}:${String(mins).padStart(2, '0')} ${ampm}`;
+    };
+
+    sunriseStr = formatMinToTime(sunriseMin);
+    sunsetStr = formatMinToTime(sunsetMin);
+    solarNoonStr = formatMinToTime(solarNoonMin);
+
+    const partDurationMin = dayDurationMin / 8;
+    const dayOfWeek = date.getDay();
+    const rahuKaalParts = [8, 2, 7, 5, 6, 4, 1];
+    const partNum = rahuKaalParts[dayOfWeek];
+    const rahuStartMin = sunriseMin + (partNum - 1) * partDurationMin;
+    const rahuEndMin = sunriseMin + partNum * partDurationMin;
+    rahuKaalStr = `${formatMinToTime(rahuStartMin)} - ${formatMinToTime(rahuEndMin)}`;
+
+    const abhijitHalfDuration = dayDurationMin / 30;
+    const abhijitStartMin = solarNoonMin - abhijitHalfDuration;
+    const abhijitEndMin = solarNoonMin + abhijitHalfDuration;
+    const isWednesday = dayOfWeek === 3;
+    abhijitStr = isWednesday
+      ? `${formatMinToTime(abhijitStartMin)} - ${formatMinToTime(abhijitEndMin)} (Subdued on Wed)`
+      : `${formatMinToTime(abhijitStartMin)} - ${formatMinToTime(abhijitEndMin)} (Auspicious)`;
+  }
+
+  const displayLabel = hasLocation ? formatCityCountryLabel(city) : 'Location not set';
 
   return {
-    cityName: city.nameEn,
-    coordinates: `${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`,
+    hasLocation,
+    cityName: displayLabel,
+    countryName: city.country,
+    coordinates: coordLabel,
+    timezoneName: tzName,
+    timezoneOffsetStr: tzOffsetStr,
     sunriseTime: sunriseStr,
     sunsetTime: sunsetStr,
     solarNoonTime: solarNoonStr,
@@ -437,6 +457,8 @@ export function getHinduPanchang(
     auspiciousTagHi,
     abhijitMuhurat: abhijitStr,
     rahuKaal: rahuKaalStr,
-    calculationBasis: `Astronomical Vedic Ephemeris (Drik Siddhanta, Lahiri Ayanamsha) calibrated for ${city.nameEn}. Subject to local temple Panchangam horizon variations.`,
+    calculationBasis: hasLocation
+      ? `Calculated astronomical estimate (Drik Siddhanta, Lahiri Ayanamsha) for ${displayLabel} (${tzName}, ${tzOffsetStr}). Regional temple observances and local Panchang traditions may differ slightly; consult your local temple Panchang for verified observance timings.`
+      : `Calculated astronomical lunar estimate (Drik Siddhanta, Lahiri Ayanamsha) in ${tzName} (${tzOffsetStr}). Select a location for sunrise, sunset, Abhijit Muhurat, and Rahu Kaal.`,
   };
 }

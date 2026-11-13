@@ -16,18 +16,22 @@ export interface CalendarReminderItem {
   timestamp: number;
 }
 
-// In-memory set backed by sessionStorage for session persistence across hot reloads
+// In-memory set backed by sessionStorage for session persistence across hot reloads and restricted environments
 const SESSION_NOTIFIED_KEY = 'harmony_session_notified_alerts_v3';
+const inMemoryNotifiedSet = new Set<string>();
 
 function getNotifiedSet(): Set<string> {
-  const set = new Set<string>();
+  const set = new Set<string>(inMemoryNotifiedSet);
   try {
     if (typeof window !== 'undefined' && window.sessionStorage) {
       const stored = window.sessionStorage.getItem(SESSION_NOTIFIED_KEY);
       if (stored) {
         const arr = JSON.parse(stored);
         if (Array.isArray(arr)) {
-          arr.forEach((k) => set.add(k));
+          arr.forEach((k) => {
+            set.add(k);
+            inMemoryNotifiedSet.add(k);
+          });
         }
       }
     }
@@ -36,6 +40,7 @@ function getNotifiedSet(): Set<string> {
 }
 
 function recordNotifiedKey(key: string): void {
+  inMemoryNotifiedSet.add(key);
   try {
     const set = getNotifiedSet();
     set.add(key);
@@ -91,6 +96,10 @@ export function playGentleChime(): void {
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
 
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
     const playTone = (freq: number, start: number, duration: number) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -111,6 +120,11 @@ export function playGentleChime(): void {
     playTone(659.25, 0, 1.2);
     playTone(830.61, 0.15, 1.2);
     playTone(987.77, 0.3, 1.5);
+
+    // Close AudioContext resources safely after chimes finish to prevent resource exhaustion
+    setTimeout(() => {
+      ctx.close().catch(() => {});
+    }, 2000);
   } catch {
     // Audio context may be restricted before user gesture, ignore safely
   }
@@ -164,13 +178,18 @@ export function shouldTriggerReminder(
     return false;
   }
 
-  const [tHour, tMin] = targetTimeStr.split(':').map(Number);
+  const parts = targetTimeStr.split(':');
+  if (parts.length < 2) return false;
+  const tHour = Number(parts[0]);
+  const tMin = Number(parts[1]);
+  if (isNaN(tHour) || isNaN(tMin)) return false;
+
   const targetTotalMinutes = tHour * 60 + tMin;
   const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-  // Trigger if we are within [target - reminderMinutesBefore, target] window
+  // Trigger if we are within [target - reminderMinutesBefore, target + 5] window
   const diff = targetTotalMinutes - currentTotalMinutes;
-  if (diff >= 0 && diff <= reminderMinutesBefore) {
+  if (diff >= -5 && diff <= reminderMinutesBefore) {
     recordNotifiedKey(dedupeKey);
     return true;
   }

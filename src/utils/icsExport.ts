@@ -20,7 +20,7 @@ export function exportEventsToIcs(events: CalendarEvent[], calendarTitle = 'Harm
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${calendarTitle}`,
-    'X-WR-TIMEZONE:Asia/Kolkata',
+    `X-WR-TIMEZONE:${typeof Intl !== 'undefined' && Intl.DateTimeFormat ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' : 'UTC'}`,
   ];
 
   events.forEach((evt) => {

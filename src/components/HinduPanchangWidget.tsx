@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { getHinduPanchang, HinduPanchangInfo } from '../utils/panchang';
 import { getDailyGitaVerse, GitaVerse } from '../utils/gitaData';
-import { getNowInIST, formatISTTime } from '../utils/istTime';
+import { getDeviceTimezone, getTimePartsInZone } from '../utils/istTime';
+import {
+  ALL_CITIES,
+  INDIAN_CITIES,
+  INTERNATIONAL_CITIES,
+  hasExplicitLocation,
+  getCityLocation,
+} from '../utils/cities';
 import {
   Sun,
   Moon,
@@ -12,39 +19,114 @@ import {
   Clock,
   Compass,
   BookOpen,
+  Navigation,
+  Globe,
+  Check,
 } from 'lucide-react';
 
 interface HinduPanchangWidgetProps {
   currentDate: Date;
   selectedCity?: string;
+  selectedCountry?: string;
+  selectedLocationTimezone?: string;
+  locationExplicitlyConfirmed?: boolean;
   customLat?: number;
   customLon?: number;
+  customName?: string;
+  onLocationChange?: (loc: {
+    selectedCity: string;
+    selectedCountry?: string;
+    selectedLocationTimezone?: string;
+    locationExplicitlyConfirmed?: boolean;
+    customLatitude?: number;
+    customLongitude?: number;
+    customLocationName?: string;
+  }) => void;
+  onOpenSettings?: () => void;
 }
 
 export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
   currentDate,
-  selectedCity = 'mumbai',
+  selectedCity = '',
+  selectedCountry,
+  selectedLocationTimezone,
+  locationExplicitlyConfirmed,
   customLat,
   customLon,
+  customName,
+  onLocationChange,
+  onOpenSettings,
 }) => {
-  const [nowIST, setNowIST] = useState<Date>(() => getNowInIST());
+  const [now, setNow] = useState<Date>(() => new Date());
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
-  // Live timer tick strictly synchronized to IST
+  const hasLocation = hasExplicitLocation(selectedCity, customLat, customLon);
+  const needsMumbaiConfirm =
+    selectedCity?.trim().toLowerCase() === 'mumbai' && locationExplicitlyConfirmed !== true;
+  const isLocationReady = hasLocation && !needsMumbaiConfirm;
+  const deviceTz = getDeviceTimezone();
+
+  // Live timer tick strictly synchronized to user's device local time
   useEffect(() => {
     const timer = setInterval(() => {
-      setNowIST(getNowInIST());
+      setNow(new Date());
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleEnableGeolocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGeoError('Geolocation is not supported by your browser. Please select a city below.');
+      return;
+    }
+    setIsLocating(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = parseFloat(pos.coords.latitude.toFixed(4));
+        const lon = parseFloat(pos.coords.longitude.toFixed(4));
+        onLocationChange?.({
+          selectedCity: 'custom',
+          selectedCountry: '',
+          selectedLocationTimezone: deviceTz,
+          locationExplicitlyConfirmed: true,
+          customLatitude: lat,
+          customLongitude: lon,
+          customLocationName: 'Device GPS Location',
+        });
+      },
+      (err) => {
+        setIsLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoError(
+            'Location permission denied. Calendar, Tithi, Nakshatra, and events continue working normally; select a city below or enter custom coordinates in Settings for Sunrise, Sunset, Abhijit Muhurat, and Rahu Kaal.'
+          );
+        } else {
+          setGeoError('Unable to determine your GPS location. Please choose a city below.');
+        }
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
 
   const panchang: HinduPanchangInfo = getHinduPanchang(
     currentDate,
     selectedCity,
     customLat,
-    customLon
+    customLon,
+    customName,
+    undefined,
+    selectedCountry,
+    selectedLocationTimezone
   );
   const gitaVerse: GitaVerse = getDailyGitaVerse(currentDate);
+  const activeTime = getTimePartsInZone(
+    isLocationReady ? panchang.timezoneName : deviceTz,
+    now
+  );
 
   return (
     <div className="rounded-3xl bg-gradient-to-br from-[#16120c] via-slate-900 to-[#181108] border border-amber-600/35 text-slate-100 shadow-xl overflow-hidden transition-all">
@@ -62,10 +144,21 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
               <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-900/80 text-amber-200 border border-amber-600/50 font-bold">
                 {panchang.pakshaHi} • {panchang.tithiNameHi}
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-amber-500/40 font-semibold flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-amber-400" />
-                <span>{panchang.cityName} ({panchang.coordinates})</span>
-              </span>
+              {isLocationReady ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-amber-500/40 font-semibold flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-amber-400" />
+                  <span>
+                    {panchang.cityName} ({panchang.coordinates}) • {panchang.timezoneName} ({panchang.timezoneOffsetStr})
+                  </span>
+                </span>
+              ) : (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-600/50 font-semibold flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-amber-400" />
+                  <span>
+                    {needsMumbaiConfirm ? `Confirm location • Saved: Mumbai, India` : `Location not set • ${deviceTz}`}
+                  </span>
+                </span>
+              )}
               {panchang.auspiciousTag && (
                 <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/50 font-bold flex items-center gap-1 animate-pulse shadow-xs">
                   <span>🪔</span>
@@ -78,7 +171,7 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
               <span className="text-slate-500">•</span>
               <span>मास: <strong className="text-amber-200">{panchang.hinduMonthHi} ({panchang.hinduMonthEn})</strong></span>
               <span className="text-slate-500">•</span>
-              <span>IST Time: <strong className="font-mono text-amber-300">{formatISTTime(nowIST)}</strong></span>
+              <span>{isLocationReady ? 'City Time' : 'Device Time'}: <strong className="font-mono text-amber-300">{activeTime.formatted}</strong></span>
             </p>
           </div>
         </div>
@@ -164,12 +257,20 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                 <Sun className="w-3.5 h-3.5 text-amber-400" />
                 <span>Sunrise & Sunset (सूर्योदय / सूर्यास्त)</span>
               </div>
-              <div className="text-xs font-mono font-bold text-white mt-1">
-                🌅 {panchang.sunriseTime} | 🌇 {panchang.sunsetTime}
-              </div>
-              <div className="text-[10px] text-amber-300/80 mt-0.5 font-mono">
-                Noon: {panchang.solarNoonTime}
-              </div>
+              {isLocationReady ? (
+                <>
+                  <div className="text-xs font-mono font-bold text-white mt-1">
+                    🌅 {panchang.sunriseTime} | 🌇 {panchang.sunsetTime}
+                  </div>
+                  <div className="text-[10px] text-amber-300/80 mt-0.5 font-mono">
+                    Noon: {panchang.solarNoonTime}
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-amber-200/90 mt-1 font-medium">
+                  {needsMumbaiConfirm ? 'Confirm location below' : 'Select location below'}
+                </div>
+              )}
             </div>
 
             {/* Paksha */}
@@ -190,12 +291,20 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
               <div className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1 tracking-wider">
                 <span>✨ Abhijit Muhurat (अभिजीत मुहूर्त)</span>
               </div>
-              <div className="text-xs sm:text-sm font-black font-mono text-emerald-200 mt-1">
-                {panchang.abhijitMuhurat}
-              </div>
-              <div className="text-[10px] text-emerald-300/80 mt-0.5">
-                Ideal for starting positive ventures & prayer
-              </div>
+              {isLocationReady ? (
+                <>
+                  <div className="text-xs sm:text-sm font-black font-mono text-emerald-200 mt-1">
+                    {panchang.abhijitMuhurat}
+                  </div>
+                  <div className="text-[10px] text-emerald-300/80 mt-0.5">
+                    Ideal for starting positive ventures & prayer
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-emerald-200/80 mt-1 font-medium">
+                  Requires confirmed city or GPS coordinates
+                </div>
+              )}
             </div>
 
             {/* Rahu Kaal */}
@@ -203,24 +312,151 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
               <div className="text-[10px] uppercase font-bold text-rose-400 flex items-center gap-1 tracking-wider">
                 <span>⚠️ Rahu Kaal (राहु काल)</span>
               </div>
-              <div className="text-xs sm:text-sm font-black font-mono text-rose-200 mt-1">
-                {panchang.rahuKaal}
-              </div>
-              <div className="text-[10px] text-rose-300/80 mt-0.5">
-                Calculated dynamically from local sunrise & sunset
-              </div>
+              {isLocationReady ? (
+                <>
+                  <div className="text-xs sm:text-sm font-black font-mono text-rose-200 mt-1">
+                    {panchang.rahuKaal}
+                  </div>
+                  <div className="text-[10px] text-rose-300/80 mt-0.5">
+                    Calculated dynamically from local sunrise & sunset
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-rose-200/80 mt-1 font-medium">
+                  Requires confirmed city or GPS coordinates
+                </div>
+              )}
             </div>
 
           </div>
+
+          {/* Interactive Location Selection / Legacy Confirmation Prompt */}
+          {!isLocationReady && (
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-950/60 via-slate-800/70 to-slate-900 border border-amber-500/50 space-y-3 shadow-md">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-amber-600/20 text-amber-300 border border-amber-500/40 shrink-0">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">
+                    {needsMumbaiConfirm
+                      ? 'Confirm Your Location (Saved as Mumbai, India)'
+                      : 'Select or Enable Location for Sunrise, Sunset, Rahu Kaal & Abhijit Muhurat'}
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                    {needsMumbaiConfirm
+                      ? 'Mumbai, India was previously saved as the default. Please confirm if you live in Mumbai, or choose your city below.'
+                      : `Solar Panchang timings depend on your geographic latitude and longitude. No default city is assumed. (Device timezone: ${deviceTz})`}
+                  </p>
+                </div>
+              </div>
+
+              {geoError && (
+                <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-700/60 text-xs text-rose-200 font-medium">
+                  {geoError}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                {needsMumbaiConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mumbai = getCityLocation('mumbai');
+                      onLocationChange?.({
+                        selectedCity: 'mumbai',
+                        selectedCountry: mumbai.country,
+                        selectedLocationTimezone: mumbai.timezone,
+                        locationExplicitlyConfirmed: true,
+                        customLatitude: mumbai.latitude,
+                        customLongitude: mumbai.longitude,
+                        customLocationName: mumbai.nameEn,
+                      });
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Confirm Mumbai, India</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleEnableGeolocation}
+                  disabled={isLocating}
+                  className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                >
+                  <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                  <span>{isLocating ? 'Detecting GPS...' : 'Detect my location'}</span>
+                </button>
+
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) return;
+                    if (val === 'custom') {
+                      onOpenSettings?.();
+                      return;
+                    }
+                    const city = ALL_CITIES.find((c) => c.id === val);
+                    if (city) {
+                      onLocationChange?.({
+                        selectedCity: city.id,
+                        selectedCountry: city.country,
+                        selectedLocationTimezone: city.timezone,
+                        locationExplicitlyConfirmed: true,
+                        customLatitude: city.latitude,
+                        customLongitude: city.longitude,
+                        customLocationName: city.nameEn,
+                      });
+                    }
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-900 border border-amber-600/50 text-xs font-semibold text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="">Choose a City Manually...</option>
+                  <optgroup label="India">
+                    {INDIAN_CITIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nameHi} ({c.nameEn}, {c.country})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="International">
+                    {INTERNATIONAL_CITIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nameHi} ({c.nameEn}, {c.country})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <option value="custom">Enter Custom Latitude / Longitude...</option>
+                </select>
+
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 cursor-pointer"
+                  >
+                    Search All Cities / Custom
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Calculation Basis Disclaimer */}
           <div className="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between gap-2 flex-wrap">
             <span className="flex items-center gap-1.5">
               <span>🔭</span>
-              <span>{panchang.calculationBasis}</span>
+              <span>
+                {isLocationReady
+                  ? panchang.calculationBasis
+                  : `Calculated astronomical lunar estimate (Drik Siddhanta, Lahiri Ayanamsha). Select a city or enable GPS above for location-calibrated Sunrise, Sunset, Rahu Kaal & Abhijit Muhurat (${deviceTz}).`}
+              </span>
             </span>
             <span className="text-amber-400 font-semibold">
-              Location: {panchang.cityName}
+              {isLocationReady ? `${panchang.cityName} • ${panchang.timezoneName} (${panchang.timezoneOffsetStr})` : deviceTz}
             </span>
           </div>
 

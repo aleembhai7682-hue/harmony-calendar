@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { CalendarFilterSettings, Language, Theme, CalendarFaithMode } from '../types/calendar';
 import { translations, INDIAN_STATES } from '../translations/i18n';
-import { INDIAN_CITIES } from '../utils/cities';
+import { LocationSelector } from './LocationSelector';
 import {
   X,
   Moon,
@@ -9,13 +9,8 @@ import {
   Download,
   Upload,
   RotateCcw,
-  Palette,
-  Check,
   FileDown,
   Sparkles,
-  MapPin,
-  Clock,
-  Layers,
   Bell,
   Volume2,
 } from 'lucide-react';
@@ -116,47 +111,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         <div className="mt-5 space-y-5">
           
-          {/* Geographical Location (Indian City) for Accurate Sunrise, Panchang & Prayer Times */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-emerald-500" />
-              <span>
-                {isChristianMode
-                  ? 'City Location (for Sunrise, Sunset & Ephemeris)'
-                  : isHinduMode
-                  ? 'शहर / स्थान (सूर्योदय, सूर्यास्त व पंचांग गणना हेतु)'
-                  : language === 'ur'
-                  ? 'شہر کا انتخاب (اوقاتِ نماز اور طلوع و غروبِ آفتاب کے لیے)'
-                  : 'City Location (for Sunrise, Sunset & Prayer Times)'}
-              </span>
-            </label>
-            <select
-              value={filters.selectedCity || 'mumbai'}
-              onChange={(e) => onFilterChange({ ...filters, selectedCity: e.target.value })}
-              className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-            >
-              {INDIAN_CITIES.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {isChristianMode
-                    ? `${c.nameEn} (${c.latitude.toFixed(2)}°N, ${c.longitude.toFixed(2)}°E)`
-                    : isHinduMode
-                    ? `${c.nameHi} (${c.nameEn})`
-                    : language === 'ur'
-                    ? `${c.nameUr} (${c.nameEn})`
-                    : `${c.nameEn} (${c.latitude.toFixed(2)}°N, ${c.longitude.toFixed(2)}°E)`}
-                </option>
-              ))}
-            </select>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-              {isChristianMode
-                ? 'All astronomical calculations strictly synchronize with Indian Standard Time (IST UTC+5:30).'
-                : isHinduMode
-                ? 'सूर्योदय, सूर्यास्त, अभिजीत मुहूर्त एवं राहु काल चयनित शहर के अक्षांश-देशांतर से निर्धारित होते हैं।'
-                : language === 'ur'
-                ? 'اوقاتِ نماز، طلوع و غروب اور سحری و افطار کا تعین اسی شہر کے عرض بلد سے ہوتا ہے۔'
-                : 'All astronomical calculations strictly synchronize with Indian Standard Time (IST UTC+5:30).'}
-            </p>
-          </div>
+          {/* Global Geographical Location & Device Timezone Section */}
+          <LocationSelector
+            filters={filters}
+            onLocationUpdate={(updates) => onFilterChange({ ...filters, ...updates })}
+            calendarMode={calendarMode}
+            language={language}
+          />
 
           {/* Regional Indian State Selection for Holidays */}
           <div>

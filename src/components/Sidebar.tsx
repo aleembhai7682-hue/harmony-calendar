@@ -9,7 +9,7 @@ import {
 } from '../types/calendar';
 import { translations, INDIAN_STATES } from '../translations/i18n';
 import { getCategoryBadgeStyle } from '../utils/indianFestivals';
-import { getPrayerTimes, getDailyWisdom } from '../utils/hijri';
+import { getDailyWisdom } from '../utils/hijri';
 import { filterTasksByMode } from '../utils/taskFilter';
 import {
   CheckCircle2,
@@ -94,7 +94,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
   };
 
-  const prayerTimes = getPrayerTimes(currentDate);
   const dailyWisdom = getDailyWisdom(currentDate);
 
   return (
