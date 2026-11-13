@@ -1122,6 +1122,34 @@ export const INTERNATIONAL_CITIES: CityLocation[] = [
     timezone: 'Australia/Melbourne',
   },
   {
+    id: 'adelaide',
+    nameEn: 'Adelaide',
+    nameHi: 'एडिलेड',
+    nameUr: 'ایڈیلیڈ',
+    country: 'Australia',
+    countryCode: 'AU',
+    stateCode: 'SA',
+    stateOrRegion: 'South Australia',
+    latitude: -34.9285,
+    longitude: 138.6007,
+    elevationM: 50,
+    timezone: 'Australia/Adelaide',
+  },
+  {
+    id: 'st_johns',
+    nameEn: "St. John's",
+    nameHi: 'सेंट जॉन्स',
+    nameUr: 'سینٹ جانز',
+    country: 'Canada',
+    countryCode: 'CA',
+    stateCode: 'NL',
+    stateOrRegion: 'Newfoundland and Labrador',
+    latitude: 47.5615,
+    longitude: -52.7126,
+    elevationM: 140,
+    timezone: 'America/St_Johns',
+  },
+  {
     id: 'berlin',
     nameEn: 'Berlin',
     nameHi: 'बर्लिन',
@@ -1357,20 +1385,40 @@ export function formatCityCountryLabel(city: CityLocation): string {
 }
 
 /**
- * Filters the local verified database by city name, state/region, or country.
+ * Returns sorted list of unique countries available in the verified local directory.
  */
-export function searchLocalCities(query: string): CityLocation[] {
+export function getSupportedCountries(): { code: string; name: string }[] {
+  const map = new Map<string, string>();
+  for (const c of ALL_CITIES) {
+    if (c.countryCode && c.country && !map.has(c.countryCode)) {
+      map.set(c.countryCode, c.country);
+    }
+  }
+  return Array.from(map.entries())
+    .map(([code, name]) => ({ code, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Filters the local verified database by city name, state/region, country, and optional countryCode.
+ */
+export function searchLocalCities(query: string, countryCode?: string): CityLocation[] {
   const q = query.trim().toLowerCase();
-  if (!q) return ALL_CITIES;
-  return ALL_CITIES.filter(
-    (c) =>
+  const code = countryCode?.trim().toUpperCase();
+  return ALL_CITIES.filter((c) => {
+    if (code && code !== 'ALL' && c.countryCode.toUpperCase() !== code) {
+      return false;
+    }
+    if (!q) return true;
+    return (
       c.nameEn.toLowerCase().includes(q) ||
       c.nameHi.toLowerCase().includes(q) ||
       c.nameUr.toLowerCase().includes(q) ||
       c.country.toLowerCase().includes(q) ||
       c.stateOrRegion.toLowerCase().includes(q) ||
       c.stateCode.toLowerCase().includes(q)
-  );
+    );
+  });
 }
 
 /**

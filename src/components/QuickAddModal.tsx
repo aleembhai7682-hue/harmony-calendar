@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CalendarEvent, CalendarFaithMode, Language, EventCategory } from '../types/calendar';
 import { translations } from '../translations/i18n';
 import { formatDateToLocalYMD } from '../utils/dateUtils';
+import { getDeviceTimezone } from '../utils/istTime';
 import { Sparkles, X, Clock } from 'lucide-react';
 
 interface QuickAddModalProps {
@@ -10,6 +11,7 @@ interface QuickAddModalProps {
   onAddEvent: (event: CalendarEvent) => void;
   language: Language;
   calendarMode?: CalendarFaithMode;
+  activeTimeZone?: string;
 }
 
 interface QuickTemplate {
@@ -26,8 +28,10 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   onAddEvent,
   language,
   calendarMode = 'christian',
+  activeTimeZone,
 }) => {
   const t = translations[language];
+  const resolvedTz = activeTimeZone || getDeviceTimezone();
   const [input, setInput] = useState('');
   const [selectedCategory] = useState<EventCategory>('personal');
 
@@ -164,6 +168,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       recurrence: 'none',
       color,
       faithTag: 'universal',
+      timeZone: resolvedTz,
       createdAt: Date.now(),
     };
 
@@ -188,6 +193,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       recurrence: 'none',
       color: tmpl.color,
       faithTag: tmpl.faithTag,
+      timeZone: resolvedTz,
       createdAt: Date.now(),
     };
 

@@ -32,7 +32,9 @@ import { formatDateToLocalYMD, getTodayLocalYMD } from './utils/dateUtils';
 import { isEventOnDate, isEventVisibleInMode } from './utils/eventUtils';
 import { isTaskVisibleInMode } from './utils/taskFilter';
 import { getHijriDate, getIslamicOccasionForDate } from './utils/hijri';
-import { INDIAN_FESTIVALS_DATABASE } from './utils/indianFestivals';
+import { getUpcomingGlobalHolidays } from './utils/globalHolidays';
+import { getDeviceTimezone } from './utils/istTime';
+import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from './utils/timezoneService';
 import { exportEventsToIcs } from './utils/icsExport';
 import {
   shouldTriggerReminder,
@@ -183,14 +185,13 @@ export default function App() {
     saveFilters(newFilters);
   };
 
-  // Upcoming items calculation
+  const effectiveTz = useMemo(() => getEffectiveCalendarTimezone(filters), [filters]);
+
+  // Upcoming items calculation (country-aware national holidays + religious festivals)
   const upcomingFestivals = useMemo(() => {
     const todayStr = formatDateToLocalYMD(currentDate);
-    return INDIAN_FESTIVALS_DATABASE
-      .filter((f) => f.date >= todayStr)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 8);
-  }, [currentDate]);
+    return getUpcomingGlobalHolidays(currentDate, todayStr, filters.selectedCountryCode).slice(0, 8);
+  }, [currentDate, filters.selectedCountryCode]);
 
   const upcomingIslamic = useMemo(() => {
     const list: IslamicOccasion[] = [];
@@ -252,26 +253,28 @@ export default function App() {
   useEffect(() => {
     const checkReminders = () => {
       const todayStr = getTodayLocalYMD();
+      const deviceTz = getDeviceTimezone();
 
-      // Check Events (strictly filtered by active faith mode)
+      // Check Events (strictly filtered by active faith mode & converted to device local TZ when timed)
       for (const evt of events) {
+        const display = getEventDisplayInTimezone(evt, deviceTz);
         if (
           isEventVisibleInMode(evt, calendarMode) &&
-          isEventOnDate(evt, todayStr) &&
+          isEventOnDate(evt, todayStr, deviceTz) &&
           shouldTriggerReminder(
             `evt-${evt.id}`,
             todayStr,
-            evt.startTime,
+            display.startTime,
             evt.reminderMinutesBefore || 15
           )
         ) {
           const item: CalendarReminderItem = {
             id: `evt-${evt.id}`,
             title: evt.title,
-            timeStr: evt.startTime || 'All Day',
+            timeStr: display.startTime || 'All Day',
             type: 'event',
             category: evt.category,
-            message: evt.description || `Event starting at ${evt.startTime || 'today'}`,
+            message: evt.description || `Event starting at ${display.startTime || 'today'}`,
             timestamp: Date.now(),
           };
           playGentleChime();
@@ -398,7 +401,7 @@ export default function App() {
   };
 
   const handleExportIcs = () => {
-    exportEventsToIcs(events);
+    exportEventsToIcs(events, 'Harmony Calendar', effectiveTz);
   };
 
   const handleExportBackup = () => {
@@ -494,11 +497,15 @@ export default function App() {
         onSearchChange={setSearchQuery}
         selectedCity={filters.selectedCity}
         selectedCountry={filters.selectedCountry}
+        selectedCountryCode={filters.selectedCountryCode}
         selectedLocationTimezone={filters.selectedLocationTimezone}
+        locationSource={filters.locationSource}
         locationExplicitlyConfirmed={filters.locationExplicitlyConfirmed}
         customLatitude={filters.customLatitude}
         customLongitude={filters.customLongitude}
         customLocationName={filters.customLocationName}
+        timeFormat={filters.timeFormat}
+        dateFormat={filters.dateFormat}
       />
 
       {/* Main Content Area */}
@@ -512,13 +519,16 @@ export default function App() {
             language={language}
             selectedCity={filters.selectedCity}
             selectedCountry={filters.selectedCountry}
+            selectedCountryCode={filters.selectedCountryCode}
             selectedLocationTimezone={filters.selectedLocationTimezone}
+            locationSource={filters.locationSource}
             locationExplicitlyConfirmed={filters.locationExplicitlyConfirmed}
             customLat={filters.customLatitude}
             customLon={filters.customLongitude}
             customName={filters.customLocationName}
             prayerMethod={filters.prayerMethod}
             asrMethod={filters.asrMethod}
+            timeFormat={filters.timeFormat}
             onLocationChange={(loc) => handleUpdateFilters({ ...filters, ...loc })}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
@@ -529,18 +539,26 @@ export default function App() {
             currentDate={currentDate}
             selectedCity={filters.selectedCity}
             selectedCountry={filters.selectedCountry}
+            selectedCountryCode={filters.selectedCountryCode}
             selectedLocationTimezone={filters.selectedLocationTimezone}
+            locationSource={filters.locationSource}
             locationExplicitlyConfirmed={filters.locationExplicitlyConfirmed}
             customLat={filters.customLatitude}
             customLon={filters.customLongitude}
             customName={filters.customLocationName}
+            timeFormat={filters.timeFormat}
             onLocationChange={(loc) => handleUpdateFilters({ ...filters, ...loc })}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
         )}
 
         {calendarMode === 'christian' && (
-          <ChristianLifestyleWidget currentDate={currentDate} />
+          <ChristianLifestyleWidget
+            currentDate={currentDate}
+            selectedCountryCode={filters.selectedCountryCode}
+            timeFormat={filters.timeFormat}
+            dateFormat={filters.dateFormat}
+          />
         )}
 
         {/* ⚡ Lifestyle & Daily Routine Productivity Focus Timer */}
@@ -730,6 +748,7 @@ export default function App() {
         defaultDate={eventModalDate}
         defaultTime={eventModalTime}
         language={language}
+        activeTimeZone={effectiveTz}
       />
 
       <TaskModal
@@ -792,6 +811,7 @@ export default function App() {
         onAddEvent={handleSaveEvent}
         language={language}
         calendarMode={calendarMode}
+        activeTimeZone={effectiveTz}
       />
 
       <SettingsModal

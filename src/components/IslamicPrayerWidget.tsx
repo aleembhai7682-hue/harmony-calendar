@@ -8,8 +8,9 @@ import {
   INTERNATIONAL_CITIES,
   hasExplicitLocation,
   getCityLocation,
-  resolveTimezoneFromCoordinates,
 } from '../utils/cities';
+import { detectDeviceGpsLocation } from '../utils/locationService';
+import { formatTimePreference, TimeFormatOption } from '../utils/localization';
 import { calculateLocationPrayerTimes, DetailedPrayerInfo } from '../utils/prayerTimes';
 import {
   Clock,
@@ -30,17 +31,23 @@ interface IslamicPrayerWidgetProps {
   language?: Language;
   selectedCity?: string;
   selectedCountry?: string;
+  selectedCountryCode?: string;
   selectedLocationTimezone?: string;
+  locationSource?: 'detected' | 'manual';
   locationExplicitlyConfirmed?: boolean;
   customLat?: number;
   customLon?: number;
   customName?: string;
+  timeFormat?: TimeFormatOption;
   prayerMethod?: 'karachi' | 'mwl' | 'makkah' | 'egypt';
   asrMethod?: 'hanafi' | 'standard';
   onLocationChange?: (loc: {
     selectedCity: string;
     selectedCountry?: string;
+    selectedCountryCode?: string;
+    selectedRegion?: string;
     selectedLocationTimezone?: string;
+    locationSource?: 'detected' | 'manual';
     locationExplicitlyConfirmed?: boolean;
     customLatitude?: number;
     customLongitude?: number;
@@ -66,11 +73,14 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
   language = 'en',
   selectedCity = '',
   selectedCountry,
+  selectedCountryCode,
   selectedLocationTimezone,
+  locationSource,
   locationExplicitlyConfirmed,
   customLat,
   customLon,
   customName,
+  timeFormat = 'auto',
   prayerMethod = 'karachi',
   asrMethod = 'hanafi',
   onLocationChange,
@@ -97,58 +107,42 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const handleEnableGeolocation = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+  const handleEnableGeolocation = async () => {
+    setIsLocating(true);
+    setGeoError(null);
+    const detected = await detectDeviceGpsLocation();
+    setIsLocating(false);
+
+    if (!detected.success || detected.latitude === undefined || detected.longitude === undefined) {
       setGeoError(
-        language === 'ur'
-          ? 'آپ کا براؤزر لوکیشن سپورٹ نہیں کرتا۔ براہ کرم نیچے سے شہر منتخب کریں۔'
-          : 'Geolocation is not supported by your browser. Please select a city below.'
+        detected.errorMessage ||
+          (language === 'ur'
+            ? 'مقام تک رسائی ممکن نہیں ہو سکی۔ براہ کرم اپنا شہر منتخب کریں۔'
+            : 'Unable to determine your GPS location. Please choose a city below.')
       );
       return;
     }
-    setIsLocating(true);
-    setGeoError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setIsLocating(false);
-        const lat = parseFloat(pos.coords.latitude.toFixed(4));
-        const lon = parseFloat(pos.coords.longitude.toFixed(4));
-        const resolvedTz = resolveTimezoneFromCoordinates(lat, lon);
-        if (!resolvedTz) {
-          setGeoError(
-            language === 'ur'
-              ? 'GPS کوآرڈینیٹس مل گئے لیکن جغرافیائی ٹائم زون معلوم نہیں ہو سکا۔ براہ کرم نیچے دستی طور پر IANA ٹائم زون منتخب کریں۔'
-              : 'GPS coordinates were detected, but the geographical timezone could not be determined automatically. Please select your IANA timezone manually below.'
-          );
-        }
-        onLocationChange?.({
-          selectedCity: 'custom',
-          selectedCountry: '',
-          selectedLocationTimezone: resolvedTz || '',
-          locationExplicitlyConfirmed: true,
-          customLatitude: lat,
-          customLongitude: lon,
-          customLocationName: 'Device GPS Location',
-        });
-      },
-      (err) => {
-        setIsLocating(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setGeoError(
-            language === 'ur'
-              ? 'لوکیشن کی اجازت نہیں دی گئی۔ کیلنڈر اور ہجری تاریخ معمول کے مطابق کام کرتے رہیں گے؛ اوقاتِ نماز کے لیے براہ کرم نیچے سے شہر منتخب کریں۔'
-              : 'Location permission denied. Your calendar and Hijri dates remain active; please choose a city below or enter custom coordinates in Settings for prayer times.'
-          );
-        } else {
-          setGeoError(
-            language === 'ur'
-              ? 'مقام تک رسائی ممکن نہیں ہو سکی۔ براہ کرم اپنا شہر منتخب کریں۔'
-              : 'Unable to determine your GPS location. Please choose a city below.'
-          );
-        }
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
+
+    if (!detected.timezone) {
+      setGeoError(
+        language === 'ur'
+          ? 'GPS کوآرڈینیٹس مل گئے لیکن جغرافیائی ٹائم زون معلوم نہیں ہو سکا۔ براہ کرم نیچے دستی طور پر IANA ٹائم زون منتخب کریں۔'
+          : 'GPS coordinates were detected, but the geographical timezone could not be determined automatically. Please select your IANA timezone manually below.'
+      );
+    }
+
+    onLocationChange?.({
+      selectedCity: 'custom',
+      selectedCountry: detected.place?.country || undefined,
+      selectedCountryCode: detected.place?.countryCode || undefined,
+      selectedRegion: detected.place?.region || undefined,
+      selectedLocationTimezone: detected.timezone || '',
+      locationSource: 'detected',
+      locationExplicitlyConfirmed: true,
+      customLatitude: detected.latitude,
+      customLongitude: detected.longitude,
+      customLocationName: detected.place?.city || 'GPS Coordinates',
+    });
   };
 
   // Compute location-aware astronomical prayer times
@@ -297,7 +291,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                   <span>
                     {needsManualTimezone
                       ? `${prayerData.cityName} (${prayerData.coordinates}) • Timezone required`
-                      : `${language === 'ur' ? prayerData.cityNameUr : prayerData.cityName} (${prayerData.coordinates}) • ${prayerData.timezoneName} (${prayerData.timezoneOffsetStr})`}
+                      : `${language === 'ur' ? prayerData.cityNameUr : prayerData.cityName} (${locationSource === 'detected' ? 'GPS' : 'Manual'} • ${prayerData.coordinates}) • ${prayerData.timezoneName} (${prayerData.timezoneOffsetStr})`}
                   </span>
                 </span>
               ) : (
@@ -401,7 +395,10 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                       onLocationChange?.({
                         selectedCity: 'mumbai',
                         selectedCountry: mumbai.country,
+                        selectedCountryCode: mumbai.countryCode,
+                        selectedRegion: mumbai.stateOrRegion,
                         selectedLocationTimezone: mumbai.timezone,
+                        locationSource: 'manual',
                         locationExplicitlyConfirmed: true,
                         customLatitude: mumbai.latitude,
                         customLongitude: mumbai.longitude,
@@ -447,7 +444,10 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                       onLocationChange?.({
                         selectedCity: city.id,
                         selectedCountry: city.country,
+                        selectedCountryCode: city.countryCode,
+                        selectedRegion: city.stateOrRegion,
                         selectedLocationTimezone: city.timezone,
+                        locationSource: 'manual',
                         locationExplicitlyConfirmed: true,
                         customLatitude: city.latitude,
                         customLongitude: city.longitude,
@@ -575,7 +575,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                           : nextPrayer.nameEn}
                       </span>
                       <span className="text-sm font-mono text-emerald-300 font-bold bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-800/50">
-                        {nextPrayer.timeStr}
+                        {formatTimePreference(nextPrayer.timeStr, timeFormat, selectedCountryCode)}
                       </span>
                       {isTomorrowFajr && (
                         <span className="text-[10px] text-slate-300 font-normal">
@@ -620,7 +620,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                         </span>
                       </div>
                       <div className="text-base font-black font-mono text-white">
-                        {slot.timeStr}
+                        {formatTimePreference(slot.timeStr, timeFormat, selectedCountryCode)}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-1">
                         {slot.isJummah ? 'Jummah Adhan' : 'Adhan Time'}
@@ -635,7 +635,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                     {language === 'ur' ? 'سحری ختم (امساک)' : 'Sehri Ends'}
                   </div>
                   <div className="text-base font-black font-mono text-amber-200">
-                    {prayerTimes.sehriEnds}
+                    {formatTimePreference(prayerTimes.sehriEnds, timeFormat, selectedCountryCode)}
                   </div>
                   <div className="text-[10px] text-amber-300/80 mt-1">
                     -10 min precaution
@@ -648,7 +648,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                     {language === 'ur' ? 'افطار کا وقت' : 'Iftar Time'}
                   </div>
                   <div className="text-base font-black font-mono text-rose-200">
-                    {prayerTimes.iftarTime}
+                    {formatTimePreference(prayerTimes.iftarTime, timeFormat, selectedCountryCode)}
                   </div>
                   <div className="text-[10px] text-rose-300/80 mt-1">
                     At Maghrib Adhan

@@ -8,7 +8,8 @@ import {
 } from '../types/calendar';
 import { translations } from '../translations/i18n';
 import { getTodayLocalYMD } from '../utils/dateUtils';
-import { X, Trash2, Calendar, Clock, MapPin, Tag, AlertCircle } from 'lucide-react';
+import { getDeviceTimezone } from '../utils/istTime';
+import { X, Trash2, Calendar, Clock, MapPin, Tag, AlertCircle, Globe } from 'lucide-react';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface EventModalProps {
   defaultDate?: string;
   defaultTime?: string;
   language: Language;
+  activeTimeZone?: string;
 }
 
 const COLOR_PALETTE = [
@@ -41,8 +43,10 @@ export const EventModal: React.FC<EventModalProps> = ({
   defaultDate,
   defaultTime,
   language,
+  activeTimeZone,
 }) => {
   const t = translations[language];
+  const resolvedTz = initialEvent?.timeZone || activeTimeZone || getDeviceTimezone();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -130,6 +134,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       location: location.trim(),
       reminderMinutesBefore,
       faithTag,
+      timeZone: allDay ? undefined : resolvedTz,
       createdAt: initialEvent ? initialEvent.createdAt : Date.now(),
     };
 
@@ -255,6 +260,10 @@ export const EventModal: React.FC<EventModalProps> = ({
                   onChange={(e) => setEndTime(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                 />
+              </div>
+              <div className="sm:col-span-2 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                <Globe className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span>Event Timezone: <strong className="text-slate-700 dark:text-slate-200">{resolvedTz.replace(/_/g, ' ')}</strong></span>
               </div>
             </div>
           )}

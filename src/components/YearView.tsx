@@ -5,10 +5,13 @@ import {
   Language,
 } from '../types/calendar';
 import { translations } from '../translations/i18n';
-import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getGlobalHolidaysForDate } from '../utils/globalHolidays';
 import { getIslamicOccasionForDate } from '../utils/hijri';
 import { getChristianObservancesForDate } from '../utils/christianData';
 import { isEventOnDate, isEventVisibleInMode } from '../utils/eventUtils';
+import { resolveWeekStartDay, getWeekdayOrder } from '../utils/localization';
+import { getEffectiveCalendarTimezone } from '../utils/timezoneService';
 
 interface YearViewProps {
   currentDate: Date;
@@ -29,6 +32,9 @@ export const YearView: React.FC<YearViewProps> = ({
 }) => {
   const t = translations[language];
   const year = currentDate.getFullYear();
+  const effectiveTz = getEffectiveCalendarTimezone(filters);
+  const weekStartDay = resolveWeekStartDay(filters.weekStartDay, filters.selectedCountryCode);
+  const weekdayOrder = getWeekdayOrder(weekStartDay);
 
   const months = Array.from({ length: 12 }).map((_, i) => i);
 
@@ -72,7 +78,7 @@ export const YearView: React.FC<YearViewProps> = ({
         {/* 12 Months Grid (3x4 or 4x3) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
           {months.map((monthIndex) => {
-            const firstDay = new Date(year, monthIndex, 1).getDay();
+            const firstDay = (new Date(year, monthIndex, 1).getDay() - weekStartDay + 7) % 7;
             const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
             return (
@@ -103,9 +109,9 @@ export const YearView: React.FC<YearViewProps> = ({
 
                 {/* Days of week */}
                 <div className="grid grid-cols-7 gap-1 text-center mb-1">
-                  {t.daysMin.map((d, i) => (
-                    <span key={i} className="text-[10px] font-bold text-slate-400">
-                      {d}
+                  {weekdayOrder.map((dow) => (
+                    <span key={dow} className="text-[10px] font-bold text-slate-400">
+                      {t.daysMin[dow]}
                     </span>
                   ))}
                 </div>
@@ -126,23 +132,23 @@ export const YearView: React.FC<YearViewProps> = ({
                     const isHinduMode = filters.calendarMode === 'hindu';
                     const isChristianMode = filters.calendarMode === 'christian';
 
-                    let dayFestivals: ReturnType<typeof getFestivalsForDate> = [];
+                    let dayFestivals: ReturnType<typeof getGlobalHolidaysForDate> = [];
                     if (isMuslimMode) {
                       dayFestivals = [];
                     } else if (isHinduMode) {
-                      dayFestivals = getFestivalsForDate(
-                        dateStr,
-                        filters.selectedState,
-                        filters.enabledCategories,
-                        filters.showGazettedOnly
-                      ).filter((f) => f.category === 'hindu' || f.category === 'national');
+                      dayFestivals = getGlobalHolidaysForDate(dateStr, {
+                        countryCode: filters.selectedCountryCode,
+                        state: filters.selectedState,
+                        enabledCategories: filters.enabledCategories,
+                        showGazettedOnly: filters.showGazettedOnly,
+                      }).filter((f) => f.category === 'hindu' || f.category === 'national');
                     } else if (isChristianMode) {
-                      dayFestivals = getFestivalsForDate(
-                        dateStr,
-                        filters.selectedState,
-                        filters.enabledCategories,
-                        filters.showGazettedOnly
-                      ).filter((f) => f.category === 'christian' || f.category === 'national');
+                      dayFestivals = getGlobalHolidaysForDate(dateStr, {
+                        countryCode: filters.selectedCountryCode,
+                        state: filters.selectedState,
+                        enabledCategories: filters.enabledCategories,
+                        showGazettedOnly: filters.showGazettedOnly,
+                      }).filter((f) => f.category === 'christian' || f.category === 'national');
                     }
 
                     const cellDateObj = new Date(year, monthIndex, dayNum);
@@ -154,7 +160,7 @@ export const YearView: React.FC<YearViewProps> = ({
                     const hasEvents = events.some(
                       (e) =>
                         isEventVisibleInMode(e, filters.calendarMode) &&
-                        isEventOnDate(e, dateStr)
+                        isEventOnDate(e, dateStr, effectiveTz)
                     );
 
                     return (

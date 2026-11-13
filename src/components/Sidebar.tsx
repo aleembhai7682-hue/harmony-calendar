@@ -20,10 +20,17 @@ import {
   Sparkles,
   Compass,
   Moon,
-  Info,
+  Globe,
   CalendarCheck2,
-  SlidersHorizontal,
 } from 'lucide-react';
+import {
+  getLocaleTag,
+  resolveWeekStartDay,
+  getWeekdayOrder,
+  formatDateLocalized,
+  formatNumberLocalized,
+} from '../utils/localization';
+import { getCountryHolidaySummary } from '../utils/globalHolidays';
 
 interface SidebarProps {
   currentDate: Date;
@@ -61,7 +68,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const miniYear = miniCalMonth.getFullYear();
   const miniMonthIndex = miniCalMonth.getMonth();
   const daysInMiniMonth = new Date(miniYear, miniMonthIndex + 1, 0).getDate();
-  const firstDayOfWeek = new Date(miniYear, miniMonthIndex, 1).getDay();
+  const locale = getLocaleTag(language, filters.selectedCountryCode);
+  const weekStartDay = resolveWeekStartDay(filters.weekStartDay, filters.selectedCountryCode);
+  const weekdayOrder = getWeekdayOrder(weekStartDay);
+  const firstDayRaw = new Date(miniYear, miniMonthIndex, 1).getDay();
+  const firstDayOfWeek = (firstDayRaw - weekStartDay + 7) % 7;
 
   const handleMiniMonthChange = (offset: number) => {
     setMiniCalMonth(new Date(miniYear, miniMonthIndex + offset, 1));
@@ -123,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 : 'font-bold text-slate-700 dark:text-slate-300'
             }`}
           >
-            {t.months[miniMonthIndex]} {miniYear}
+            {t.months[miniMonthIndex]} {formatNumberLocalized(miniYear, locale)}
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -143,9 +154,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Days of week header */}
         <div className="grid grid-cols-7 gap-1 text-center mb-1">
-          {t.daysMin.map((d, i) => (
-            <span key={i} className="text-[10px] font-bold text-slate-400">
-              {d}
+          {weekdayOrder.map((dow) => (
+            <span key={dow} className="text-[10px] font-bold text-slate-400">
+              {t.daysMin[dow]}
             </span>
           ))}
         </div>
@@ -190,26 +201,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Regional State Holidays Selector */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-          <span className="flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 text-indigo-500" />
-            <span>Regional Holidays & State</span>
-          </span>
-        </div>
-        <select
-          value={filters.selectedState}
-          onChange={(e) => onFilterChange({ ...filters, selectedState: e.target.value })}
-          className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          {INDIAN_STATES.map((st) => (
-            <option key={st.code} value={st.code}>
-              {st.nameEn} ({st.code.toUpperCase()})
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Regional State Holidays Selector (India) or Active Country Holiday Notice */}
+      {(() => {
+        const countrySummary = getCountryHolidaySummary(filters.selectedCountryCode);
+        if (filters.selectedCountryCode === 'IN') {
+          return (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                <span className="flex items-center gap-1.5">
+                  <Compass className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Regional Holidays & State</span>
+                </span>
+              </div>
+              <select
+                value={filters.selectedState}
+                onChange={(e) => onFilterChange({ ...filters, selectedState: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {INDIAN_STATES.map((st) => (
+                  <option key={st.code} value={st.code}>
+                    {st.nameEn} ({st.code.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        }
+        return (
+          <div className="rounded-xl p-3 bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/70 text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
+              <Globe className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span>
+                {countrySummary.countryName ? `${countrySummary.countryName} Holidays` : 'Global Holidays'}
+              </span>
+            </div>
+            <p className="leading-relaxed text-[10.5px] opacity-90">{countrySummary.notice}</p>
+          </div>
+        );
+      })()}
 
       {/* Hijri Moon Sighting Adjustment - visible in Muslim Mode */}
       {filters.calendarMode === 'muslim' && (
@@ -271,7 +300,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 cursor-pointer hover:shadow-xs transition-all group"
               >
                 <div className="flex items-center justify-between text-[11px] font-bold text-emerald-800 dark:text-emerald-400 mb-0.5">
-                  <span>{occ.estimatedDate}</span>
+                  <span>{formatDateLocalized(occ.estimatedDate, filters.dateFormat || 'auto', locale, 'medium')}</span>
                   <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-200/80 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 font-bold">
                     {occ.hijriDay}{' '}
                     {occ.hijriMonth === 9
@@ -306,7 +335,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={`p-2.5 rounded-xl border ${style.border} ${style.bg} cursor-pointer hover:shadow-xs transition-all group`}
                   >
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
-                      <span>{f.date}</span>
+                      <span>{formatDateLocalized(f.date, filters.dateFormat || 'auto', locale, 'medium')}</span>
                       <span className="capitalize text-[10px] px-1 rounded bg-white/70 dark:bg-black/30 font-bold">
                         {f.category}
                       </span>
@@ -333,7 +362,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className="p-3 rounded-xl border border-[#E4DDD0] dark:border-slate-700/80 bg-gradient-to-br from-white to-[#F7F9FD] dark:from-[#101D36] dark:to-[#0C1629] cursor-pointer hover:border-[#C69C44]/60 dark:hover:border-sky-500/50 transition-all group"
                 >
                   <div className="flex items-center justify-between text-[11px] font-mono-tabular text-slate-500 dark:text-slate-400 mb-1">
-                    <span>{f.date}</span>
+                    <span>{formatDateLocalized(f.date, filters.dateFormat || 'auto', locale, 'medium')}</span>
                     <span className="capitalize font-sans text-[10px] font-semibold text-[#8C6418] dark:text-amber-300">
                       {f.category === 'christian' ? 'Christian Feast' : 'National Holiday'}
                     </span>

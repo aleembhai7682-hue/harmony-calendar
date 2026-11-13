@@ -17,6 +17,7 @@ import { ViewMode, Language, Theme, HijriDateInfo, CalendarFaithMode } from '../
 import { translations } from '../translations/i18n';
 import { getDeviceTimezone } from '../utils/istTime';
 import { getCityLocation, hasExplicitLocation, formatCityCountryLabel } from '../utils/cities';
+import { getLocaleTag, formatClockInZone, formatDateLocalized, TimeFormatOption, DateFormatOption } from '../utils/localization';
 
 interface NavbarProps {
   currentDate: Date;
@@ -39,11 +40,15 @@ interface NavbarProps {
   onSearchChange: (q: string) => void;
   selectedCity?: string;
   selectedCountry?: string;
+  selectedCountryCode?: string;
   selectedLocationTimezone?: string;
+  locationSource?: 'detected' | 'manual';
   locationExplicitlyConfirmed?: boolean;
   customLatitude?: number;
   customLongitude?: number;
   customLocationName?: string;
+  timeFormat?: TimeFormatOption;
+  dateFormat?: DateFormatOption;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -67,13 +72,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSearchChange,
   selectedCity,
   selectedCountry,
+  selectedCountryCode,
   selectedLocationTimezone,
+  locationSource,
   locationExplicitlyConfirmed,
   customLatitude,
   customLongitude,
   customLocationName,
+  timeFormat = 'auto',
+  dateFormat = 'auto',
 }) => {
   const t = translations[language] || translations['en'];
+  const locale = getLocaleTag(language, selectedCountryCode);
   const hasLoc = hasExplicitLocation(selectedCity, customLatitude, customLongitude);
   const needsMumbaiConfirm =
     selectedCity?.trim().toLowerCase() === 'mumbai' && locationExplicitlyConfirmed !== true;
@@ -220,7 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {monthName} {yearNum}
               </h1>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                <span>{currentDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                <span>{formatDateLocalized(currentDate, dateFormat, locale, 'medium')}</span>
                 <span className="text-slate-300 dark:text-slate-600">•</span>
                 <span
                   className={`font-mono-tabular text-[11px] font-bold ${
@@ -229,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       : 'text-emerald-600 dark:text-emerald-400'
                   }`}
                 >
-                  {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  {formatClockInZone(now, deviceTz, timeFormat, selectedCountryCode, locale, true)}
                 </span>
               </div>
             </div>
@@ -412,9 +422,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             />
             <span>
               {needsMumbaiConfirm
-                ? `Confirm location • ${deviceTz.replace(/_/g, ' ')}`
+                ? `Confirm location • Device: ${deviceTz.replace(/_/g, ' ')}`
                 : activeLoc
-                ? `${formatCityCountryLabel(activeLoc)} • ${deviceTz.replace(/_/g, ' ')}`
+                ? `${formatCityCountryLabel(activeLoc)} (${locationSource === 'detected' ? 'GPS' : 'Manual'}) • ${
+                    activeLoc.timezone
+                      ? activeLoc.timezone.replace(/_/g, ' ')
+                      : 'TZ Needed'
+                  }`
                 : `Location not set • ${deviceTz.replace(/_/g, ' ')}`}
             </span>
           </div>

@@ -9,13 +9,21 @@ import {
 } from '../types/calendar';
 import { translations } from '../translations/i18n';
 import { getHijriDate, getIslamicOccasionForDate, getMoonPhase } from '../utils/hijri';
-import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getGlobalHolidaysForDate } from '../utils/globalHolidays';
 import { getHinduPanchang } from '../utils/panchang';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
 import { getEventsForDateAndMode } from '../utils/eventUtils';
 import { getChristianObservancesForDate } from '../utils/christianData';
-import { Plus, CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
+import {
+  getLocaleTag,
+  resolveWeekStartDay,
+  getWeekdayOrder,
+  formatTimePreference,
+} from '../utils/localization';
+import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
+import { Plus, CheckCircle2 } from 'lucide-react';
 
 interface MonthViewProps {
   currentDate: Date;
@@ -45,6 +53,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
   onToggleTask,
 }) => {
   const t = translations[language];
+  const locale = getLocaleTag(language, filters.selectedCountryCode);
+  const effectiveTz = getEffectiveCalendarTimezone(filters);
+  const weekStartDay = resolveWeekStartDay(filters.weekStartDay, filters.selectedCountryCode);
+  const weekdayOrder = getWeekdayOrder(weekStartDay);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -52,7 +64,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
   // Calendar calculations
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
-  const startingDayOfWeek = firstDayOfMonth.getDay(); // 0 = Sun
+  const startingDayOfWeek = (firstDayOfMonth.getDay() - weekStartDay + 7) % 7;
   const totalDaysInMonth = lastDayOfMonth.getDate();
 
   // Previous month trailing days
@@ -111,24 +123,24 @@ export const MonthView: React.FC<MonthViewProps> = ({
         )
       : null;
 
-    // Festivals (Strictly segregated by active faith mode)
+    // Festivals & Country Holidays (Strictly segregated by active faith mode)
     let dayFestivals: IndianFestival[] = [];
     if (isMuslimMode) {
       dayFestivals = []; // Strictly NO non-Islamic festivals in Muslim mode
     } else if (isHinduMode) {
-      dayFestivals = getFestivalsForDate(
-        dateStr,
-        filters.selectedState,
-        filters.enabledCategories,
-        filters.showGazettedOnly
-      ).filter((f) => f.category === 'hindu' || f.category === 'national');
+      dayFestivals = getGlobalHolidaysForDate(dateStr, {
+        countryCode: filters.selectedCountryCode,
+        state: filters.selectedState,
+        enabledCategories: filters.enabledCategories,
+        showGazettedOnly: filters.showGazettedOnly,
+      }).filter((f) => f.category === 'hindu' || f.category === 'national');
     } else if (isChristianMode) {
-      dayFestivals = getFestivalsForDate(
-        dateStr,
-        filters.selectedState,
-        filters.enabledCategories,
-        filters.showGazettedOnly
-      ).filter((f) => f.category === 'christian' || f.category === 'national');
+      dayFestivals = getGlobalHolidaysForDate(dateStr, {
+        countryCode: filters.selectedCountryCode,
+        state: filters.selectedState,
+        enabledCategories: filters.enabledCategories,
+        showGazettedOnly: filters.showGazettedOnly,
+      }).filter((f) => f.category === 'christian' || f.category === 'national');
     }
 
     const christianObservances = isChristianMode
@@ -137,8 +149,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
         )
       : [];
 
-    // User Events for this day (supporting recurring events and mode tags)
-    const dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode);
+    // User Events for this day (supporting recurring events, mode tags, and timezone conversion)
+    const dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode, effectiveTz);
 
     // User Tasks for this day (Strictly filtered by active mode)
     const dayTasks = tasks.filter(
@@ -271,7 +283,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 )}
               </div>
               <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                {cellDate.toLocaleDateString('en-US', { weekday: 'short' })}
+                {cellDate.toLocaleDateString(locale, { weekday: 'short' })}
               </span>
             </div>
           )}
@@ -388,40 +400,51 @@ export const MonthView: React.FC<MonthViewProps> = ({
             })}
 
             {/* User Events */}
-            {dayEvents.slice(0, 2).map((evt) => (
-              <div
-                key={evt.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectEvent(evt);
-                }}
-                className={
-                  isChristianMode
-                    ? 'px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-white dark:bg-slate-800/90 text-[#14284B] dark:text-slate-100 border border-[#DFD8CA] dark:border-slate-700 truncate cursor-pointer hover:border-[#1E3A6E]/50 dark:hover:border-sky-500/60 transition-colors flex items-center gap-1.5'
-                    : 'px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800 truncate cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1'
-                }
-                style={
-                  isChristianMode
-                    ? undefined
-                    : {
-                        borderLeftColor: evt.color || '#4f46e5',
-                        borderLeftWidth: '3px',
-                      }
-                }
-                title={`${evt.startTime ? evt.startTime + ' ' : ''}${evt.title}`}
-              >
-                {isChristianMode && (
-                  <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: evt.color || '#1E3A6E' }}
-                  />
-                )}
-                {evt.startTime && !evt.allDay && (
-                  <span className="text-[9px] font-mono-tabular opacity-75">{evt.startTime}</span>
-                )}
-                <span className="truncate">{evt.title}</span>
-              </div>
-            ))}
+            {dayEvents.slice(0, 2).map((evt) => {
+              const display = getEventDisplayInTimezone(evt, effectiveTz);
+              const formattedStart =
+                display.startTime && !evt.allDay
+                  ? formatTimePreference(display.startTime, filters.timeFormat, filters.selectedCountryCode)
+                  : '';
+              return (
+                <div
+                  key={evt.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectEvent(evt);
+                  }}
+                  className={
+                    isChristianMode
+                      ? 'px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-white dark:bg-slate-800/90 text-[#14284B] dark:text-slate-100 border border-[#DFD8CA] dark:border-slate-700 truncate cursor-pointer hover:border-[#1E3A6E]/50 dark:hover:border-sky-500/60 transition-colors flex items-center gap-1.5'
+                      : 'px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800 truncate cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1'
+                  }
+                  style={
+                    isChristianMode
+                      ? undefined
+                      : {
+                          borderLeftColor: evt.color || '#4f46e5',
+                          borderLeftWidth: '3px',
+                        }
+                  }
+                  title={`${formattedStart ? formattedStart + ' ' : ''}${evt.title}${
+                    display.isConverted && display.sourceTimeZone
+                      ? ` (Originally ${evt.startTime} ${display.sourceTimeZone})`
+                      : ''
+                  }`}
+                >
+                  {isChristianMode && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: evt.color || '#1E3A6E' }}
+                    />
+                  )}
+                  {formattedStart && (
+                    <span className="text-[9px] font-mono-tabular opacity-75">{formattedStart}</span>
+                  )}
+                  <span className="truncate">{evt.title}</span>
+                </div>
+              );
+            })}
 
             {/* Tasks preview indicator */}
             {filters.showTasksOnCalendar && dayTasks.length > 0 && (
@@ -479,16 +502,17 @@ export const MonthView: React.FC<MonthViewProps> = ({
             : 'bg-slate-100/70 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800'
         }`}
       >
-        {t.days.map((day, idx) => {
-          const isFriday = idx === 5;
-          const isSundayHeader = idx === 0;
+        {weekdayOrder.map((dow) => {
+          const day = t.days[dow];
+          const isFriday = dow === 5;
+          const isSundayHeader = dow === 0;
           const isMuslimHinglishFriday =
             isFriday && filters.calendarMode === 'muslim' && language === 'hinglish';
           const desktopLabel = isMuslimHinglishFriday ? 'Jumma Mubarak' : day;
-          const mobileLabel = isMuslimHinglishFriday ? 'Juma' : t.daysShort[idx];
+          const mobileLabel = isMuslimHinglishFriday ? 'Juma' : t.daysShort[dow];
           return (
             <div
-              key={day}
+              key={`${dow}-${day}`}
               className={`py-2.5 text-center text-xs font-bold uppercase tracking-wider ${
                 isFriday && filters.highlightFridays && filters.calendarMode === 'muslim'
                   ? 'text-emerald-700 dark:text-emerald-400'

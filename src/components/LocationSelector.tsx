@@ -17,9 +17,11 @@ import {
   formatCityCountryLabel,
   searchLocalCities,
   searchGlobalCitiesOnline,
+  getSupportedCountries,
   isValidCoordinatePair,
   resolveTimezoneFromCoordinates,
 } from '../utils/cities';
+import { detectDeviceGpsLocation } from '../utils/locationService';
 import {
   getDeviceTimezone,
   getTimezoneOffsetHoursForZone,
@@ -45,6 +47,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   compact = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [countryFilter, setCountryFilter] = useState<string>('ALL');
   const [onlineResults, setOnlineResults] = useState<CityLocation[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
   const [onlineSearchNotice, setOnlineSearchNotice] = useState<string | null>(null);
@@ -66,6 +69,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     filters.selectedLocationTimezone || 'auto'
   );
   const supportedTimezones = useMemo(() => getSupportedTimezones(), []);
+  const supportedCountries = useMemo(() => getSupportedCountries(), []);
 
   const hasLocation = hasExplicitLocation(
     filters.selectedCity,
@@ -92,14 +96,20 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       ? formatUtcOffset(getTimezoneOffsetHoursForZone(locationTz))
       : 'Timezone required';
 
-  const localResults = useMemo(() => searchLocalCities(searchQuery), [searchQuery]);
+  const localResults = useMemo(
+    () => searchLocalCities(searchQuery, countryFilter),
+    [searchQuery, countryFilter]
+  );
 
   const handleSelectCity = (city: CityLocation) => {
     const isBuiltIn = !city.id.startsWith('geocoded:');
     onLocationUpdate({
       selectedCity: isBuiltIn ? city.id : 'custom',
       selectedCountry: city.country,
+      selectedCountryCode: city.countryCode || undefined,
+      selectedRegion: city.stateOrRegion || undefined,
       selectedLocationTimezone: city.timezone,
+      locationSource: 'manual',
       customLatitude: city.latitude,
       customLongitude: city.longitude,
       customLocationName: city.nameEn,
@@ -117,7 +127,10 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     onLocationUpdate({
       selectedCity: '',
       selectedCountry: undefined,
+      selectedCountryCode: undefined,
+      selectedRegion: undefined,
       selectedLocationTimezone: undefined,
+      locationSource: undefined,
       customLatitude: undefined,
       customLongitude: undefined,
       customLocationName: undefined,
@@ -135,7 +148,10 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     onLocationUpdate({
       selectedCity: 'mumbai',
       selectedCountry: mumbai.country,
+      selectedCountryCode: mumbai.countryCode,
+      selectedRegion: mumbai.stateOrRegion,
       selectedLocationTimezone: mumbai.timezone,
+      locationSource: 'manual',
       customLatitude: mumbai.latitude,
       customLongitude: mumbai.longitude,
       customLocationName: mumbai.nameEn,
@@ -143,71 +159,63 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     });
   };
 
-  const handleDetectLocation = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+  const handleDetectLocation = async () => {
+    setIsLocating(true);
+    setGeoStatus(null);
+
+    const detected = await detectDeviceGpsLocation();
+    setIsLocating(false);
+
+    if (!detected.success || detected.latitude === undefined || detected.longitude === undefined) {
       setGeoStatus({
-        message:
-          'Geolocation is not supported by your browser. Search for a city below or enter manual coordinates. Standard calendar views, events, and reminders continue working normally.',
+        message: detected.errorMessage || 'Unable to access your device location.',
         isError: true,
       });
       return;
     }
 
-    setIsLocating(true);
-    setGeoStatus(null);
+    const lat = detected.latitude;
+    const lon = detected.longitude;
+    const resolvedTz = detected.timezone;
+    const placeName = detected.place?.city || 'GPS Coordinates';
+    const placeRegion = detected.place?.region || undefined;
+    const placeCountry = detected.place?.country || undefined;
+    const placeCountryCode = detected.place?.countryCode || undefined;
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setIsLocating(false);
-        const lat = Number(pos.coords.latitude.toFixed(4));
-        const lon = Number(pos.coords.longitude.toFixed(4));
-        const resolvedTz = resolveTimezoneFromCoordinates(lat, lon);
-        onLocationUpdate({
-          selectedCity: 'custom',
-          selectedCountry: '',
-          selectedLocationTimezone: resolvedTz || '',
-          customLatitude: lat,
-          customLongitude: lon,
-          customLocationName: 'Device GPS Location',
-          locationExplicitlyConfirmed: true,
-        });
-        setManualLat(String(lat));
-        setManualLon(String(lon));
-        setManualName('Device GPS Location');
-        setManualCountry('');
-        if (resolvedTz) {
-          setManualTimezone(resolvedTz);
-          setGeoStatus({
-            message: `GPS detected: ${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'} • Location Timezone: ${resolvedTz}`,
-            isError: false,
-          });
-        } else {
-          setShowManualCoords(true);
-          setManualTimezone('');
-          setGeoStatus({
-            message:
-              'GPS coordinates detected, but the geographical timezone could not be determined automatically. Please select an IANA timezone manually below before calculating prayer times or Panchang.',
-            isError: true,
-          });
-        }
-      },
-      (err) => {
-        setIsLocating(false);
-        let reason = 'Unable to access your device location.';
-        if (err.code === err.PERMISSION_DENIED) {
-          reason =
-            'Location permission was denied. Your calendar, events, tasks, and reminders remain fully functional; select a city below or enter coordinates for sunrise, sunset, prayer times, and solar Panchang.';
-        } else if (err.code === err.POSITION_UNAVAILABLE) {
-          reason =
-            'Device location is unavailable right now. Please select a city below or enter coordinates manually.';
-        } else if (err.code === err.TIMEOUT) {
-          reason =
-            'Location detection timed out. Please select a city below or enter coordinates manually.';
-        }
-        setGeoStatus({ message: reason, isError: true });
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
+    onLocationUpdate({
+      selectedCity: 'custom',
+      selectedCountry: placeCountry,
+      selectedCountryCode: placeCountryCode,
+      selectedRegion: placeRegion,
+      selectedLocationTimezone: resolvedTz || '',
+      locationSource: 'detected',
+      customLatitude: lat,
+      customLongitude: lon,
+      customLocationName: placeName,
+      locationExplicitlyConfirmed: true,
+    });
+
+    setManualLat(String(lat));
+    setManualLon(String(lon));
+    setManualName(placeName);
+    setManualCountry(placeCountry || '');
+
+    if (resolvedTz) {
+      setManualTimezone(resolvedTz);
+      const label = [placeName, placeRegion, placeCountry].filter(Boolean).join(', ');
+      setGeoStatus({
+        message: `GPS detected: ${label} (${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}) • Location Timezone: ${resolvedTz}`,
+        isError: false,
+      });
+    } else {
+      setShowManualCoords(true);
+      setManualTimezone('');
+      setGeoStatus({
+        message:
+          'GPS coordinates detected, but the geographical timezone could not be determined automatically. Please select an IANA timezone manually below before calculating prayer times or Panchang.',
+        isError: true,
+      });
+    }
   };
 
   const handleOnlineSearch = async () => {
@@ -241,7 +249,10 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     onLocationUpdate({
       selectedCity: 'custom',
       selectedCountry: manualCountry.trim() || undefined,
+      selectedCountryCode: undefined,
+      selectedRegion: undefined,
       selectedLocationTimezone: resolvedTz || '',
+      locationSource: 'manual',
       customLatitude: Number(lat.toFixed(4)),
       customLongitude: Number(lon.toFixed(4)),
       customLocationName: manualName.trim() || undefined,
@@ -337,9 +348,22 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       {/* Separated Status Cards: Current City/Country vs Current Device Timezone */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-            <Globe className="w-3 h-3 text-emerald-500" />
-            <span>Current City & Country</span>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between gap-1">
+            <span className="flex items-center gap-1">
+              <Globe className="w-3 h-3 text-emerald-500" />
+              <span>Current City & Country</span>
+            </span>
+            {hasLocation && (
+              <span
+                className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                  filters.locationSource === 'detected'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                }`}
+              >
+                {filters.locationSource === 'detected' ? 'GPS Detected' : 'Manual'}
+              </span>
+            )}
           </div>
           <div className="font-bold text-slate-900 dark:text-white mt-0.5 truncate">
             {hasLocation ? formatCityCountryLabel(activeLocation) : 'Location not set'}
@@ -417,34 +441,50 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         </div>
       )}
 
-      {/* Searchable City / Country Selector */}
+      {/* Searchable Country & City Selector */}
       <div className="space-y-2">
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setOnlineResults([]);
-              setOnlineSearchNotice(null);
-            }}
-            placeholder="Search city, state, or country (e.g. Kanpur, Mumbai, London, Dubai, New York)..."
-            className="w-full pl-8 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
+        <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-2">
+          <select
+            value={countryFilter}
+            onChange={(e) => setCountryFilter(e.target.value)}
+            aria-label="Filter cities by country"
+            className="w-full px-2.5 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+          >
+            <option value="ALL">All Countries</option>
+            {supportedCountries.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name} ({c.code})
+              </option>
+            ))}
+          </select>
+
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
                 setOnlineResults([]);
                 setOnlineSearchNotice(null);
               }}
-              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
-            >
-              ✕
-            </button>
-          )}
+              placeholder="Search city, region, or country (e.g. Pune, London, New York, Tokyo)..."
+              className="w-full pl-8 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setOnlineResults([]);
+                  setOnlineSearchNotice(null);
+                }}
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Matching Verified Cities List */}

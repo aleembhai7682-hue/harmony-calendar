@@ -33,6 +33,7 @@ export interface CalendarEvent {
   location?: string;
   reminderMinutesBefore?: number;
   faithTag?: 'universal' | 'muslim' | 'hindu' | 'christian';
+  timeZone?: string; // IANA timezone identifier in which timed event was scheduled
   createdAt: number;
 }
 
@@ -76,8 +77,10 @@ export interface IndianFestival {
   descriptionUr?: string;
   significance: string;
   rituals: string[];
-  applicableStates?: string[]; // empty or undefined means all-India
+  applicableStates?: string[]; // empty or undefined means all-India / nationwide
+  countryCode?: string; // ISO-3166-1 alpha-2 country code (e.g. 'IN', 'GB', 'US', 'AE', 'JP', 'AU')
   isTentative?: boolean;
+  regionalVariationNote?: string;
 }
 
 export interface IslamicOccasion {
@@ -134,11 +137,17 @@ export interface CalendarFilterSettings {
   selectedState: string; // 'all' or Indian state code for regional holidays
   selectedCity: string; // '' (Location not set), 'custom', or city id from ALL_CITIES
   selectedCountry?: string; // Display country for active geographical location
+  selectedCountryCode?: string; // ISO-3166-1 alpha-2 country code (e.g. 'IN', 'GB', 'US', 'AE', 'JP', 'AU')
+  selectedRegion?: string; // State / province / region name
   selectedLocationTimezone?: string; // IANA timezone of selected geographical location (separate from device timezone)
+  locationSource?: 'detected' | 'manual'; // Distinguishes GPS-detected vs manually selected location
   locationExplicitlyConfirmed?: boolean; // True once user explicitly selects/confirms location; false/undefined for legacy defaults
   customLatitude?: number;
   customLongitude?: number;
   customLocationName?: string;
+  weekStartDay?: 'auto' | 0 | 1 | 6; // 'auto' (locale-based), 0 (Sunday), 1 (Monday), 6 (Saturday)
+  timeFormat?: 'auto' | '12h' | '24h'; // Clock display format
+  dateFormat?: 'auto' | 'DMY' | 'MDY' | 'YMD'; // Date order preference
   asrMethod: 'hanafi' | 'standard'; // Hanafi (2x shadow) vs Standard (1x shadow)
   prayerMethod: 'karachi' | 'mwl' | 'makkah' | 'egypt';
   enabledCategories: Record<FestivalCategory, boolean>;

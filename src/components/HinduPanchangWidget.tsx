@@ -8,8 +8,9 @@ import {
   INTERNATIONAL_CITIES,
   hasExplicitLocation,
   getCityLocation,
-  resolveTimezoneFromCoordinates,
 } from '../utils/cities';
+import { detectDeviceGpsLocation } from '../utils/locationService';
+import { formatTimePreference, TimeFormatOption } from '../utils/localization';
 import {
   Sun,
   Moon,
@@ -29,15 +30,21 @@ interface HinduPanchangWidgetProps {
   currentDate: Date;
   selectedCity?: string;
   selectedCountry?: string;
+  selectedCountryCode?: string;
   selectedLocationTimezone?: string;
+  locationSource?: 'detected' | 'manual';
   locationExplicitlyConfirmed?: boolean;
   customLat?: number;
   customLon?: number;
   customName?: string;
+  timeFormat?: TimeFormatOption;
   onLocationChange?: (loc: {
     selectedCity: string;
     selectedCountry?: string;
+    selectedCountryCode?: string;
+    selectedRegion?: string;
     selectedLocationTimezone?: string;
+    locationSource?: 'detected' | 'manual';
     locationExplicitlyConfirmed?: boolean;
     customLatitude?: number;
     customLongitude?: number;
@@ -50,11 +57,14 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
   currentDate,
   selectedCity = '',
   selectedCountry,
+  selectedCountryCode,
   selectedLocationTimezone,
+  locationSource,
   locationExplicitlyConfirmed,
   customLat,
   customLon,
   customName,
+  timeFormat = 'auto',
   onLocationChange,
   onOpenSettings,
 }) => {
@@ -77,46 +87,37 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const handleEnableGeolocation = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGeoError('Geolocation is not supported by your browser. Please select a city below.');
-      return;
-    }
+  const handleEnableGeolocation = async () => {
     setIsLocating(true);
     setGeoError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setIsLocating(false);
-        const lat = parseFloat(pos.coords.latitude.toFixed(4));
-        const lon = parseFloat(pos.coords.longitude.toFixed(4));
-        const resolvedTz = resolveTimezoneFromCoordinates(lat, lon);
-        if (!resolvedTz) {
-          setGeoError(
-            'GPS coordinates were detected, but the geographical timezone could not be determined automatically. Please select your IANA timezone manually below.'
-          );
-        }
-        onLocationChange?.({
-          selectedCity: 'custom',
-          selectedCountry: '',
-          selectedLocationTimezone: resolvedTz || '',
-          locationExplicitlyConfirmed: true,
-          customLatitude: lat,
-          customLongitude: lon,
-          customLocationName: 'Device GPS Location',
-        });
-      },
-      (err) => {
-        setIsLocating(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setGeoError(
-            'Location permission denied. Calendar, Tithi, Nakshatra, and events continue working normally; select a city below or enter custom coordinates in Settings for Sunrise, Sunset, Abhijit Muhurat, and Rahu Kaal.'
-          );
-        } else {
-          setGeoError('Unable to determine your GPS location. Please choose a city below.');
-        }
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
+    const detected = await detectDeviceGpsLocation();
+    setIsLocating(false);
+
+    if (!detected.success || detected.latitude === undefined || detected.longitude === undefined) {
+      setGeoError(
+        detected.errorMessage || 'Unable to determine your GPS location. Please choose a city below.'
+      );
+      return;
+    }
+
+    if (!detected.timezone) {
+      setGeoError(
+        'GPS coordinates were detected, but the geographical timezone could not be determined automatically. Please select your IANA timezone manually below.'
+      );
+    }
+
+    onLocationChange?.({
+      selectedCity: 'custom',
+      selectedCountry: detected.place?.country || undefined,
+      selectedCountryCode: detected.place?.countryCode || undefined,
+      selectedRegion: detected.place?.region || undefined,
+      selectedLocationTimezone: detected.timezone || '',
+      locationSource: 'detected',
+      locationExplicitlyConfirmed: true,
+      customLatitude: detected.latitude,
+      customLongitude: detected.longitude,
+      customLocationName: detected.place?.city || 'GPS Coordinates',
+    });
   };
 
   const panchang: HinduPanchangInfo = getHinduPanchang(
@@ -162,7 +163,7 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                   <span>
                     {needsManualTimezone
                       ? `${panchang.cityName} (${panchang.coordinates}) • Timezone required`
-                      : `${panchang.cityName} (${panchang.coordinates}) • ${panchang.timezoneName} (${panchang.timezoneOffsetStr})`}
+                      : `${panchang.cityName} (${locationSource === 'detected' ? 'GPS' : 'Manual'} • ${panchang.coordinates}) • ${panchang.timezoneName} (${panchang.timezoneOffsetStr})`}
                   </span>
                 </span>
               ) : (
@@ -274,10 +275,11 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
               {isLocationReady && !needsManualTimezone ? (
                 <>
                   <div className="text-xs font-mono font-bold text-white mt-1">
-                    🌅 {panchang.sunriseTime} | 🌇 {panchang.sunsetTime}
+                    🌅 {formatTimePreference(panchang.sunriseTime, timeFormat, selectedCountryCode)} | 🌇{' '}
+                    {formatTimePreference(panchang.sunsetTime, timeFormat, selectedCountryCode)}
                   </div>
                   <div className="text-[10px] text-amber-300/80 mt-0.5 font-mono">
-                    Noon: {panchang.solarNoonTime}
+                    Noon: {formatTimePreference(panchang.solarNoonTime, timeFormat, selectedCountryCode)}
                   </div>
                 </>
               ) : (
@@ -444,7 +446,10 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                       onLocationChange?.({
                         selectedCity: 'mumbai',
                         selectedCountry: mumbai.country,
+                        selectedCountryCode: mumbai.countryCode,
+                        selectedRegion: mumbai.stateOrRegion,
                         selectedLocationTimezone: mumbai.timezone,
+                        locationSource: 'manual',
                         locationExplicitlyConfirmed: true,
                         customLatitude: mumbai.latitude,
                         customLongitude: mumbai.longitude,
@@ -482,7 +487,10 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                       onLocationChange?.({
                         selectedCity: city.id,
                         selectedCountry: city.country,
+                        selectedCountryCode: city.countryCode,
+                        selectedRegion: city.stateOrRegion,
                         selectedLocationTimezone: city.timezone,
+                        locationSource: 'manual',
                         locationExplicitlyConfirmed: true,
                         customLatitude: city.latitude,
                         customLongitude: city.longitude,

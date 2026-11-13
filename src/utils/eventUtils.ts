@@ -1,30 +1,42 @@
 import { CalendarEvent, CalendarFaithMode } from '../types/calendar';
+import { getEventDisplayInTimezone } from './timezoneService';
 
 /**
  * Checks whether an event occurs on a specific target date (YYYY-MM-DD),
- * accurately accounting for single-day, multi-day spans, and recurring frequencies
- * (daily, weekly, monthly, yearly).
+ * accurately accounting for single-day, multi-day spans, recurring frequencies
+ * (daily, weekly, monthly, yearly), and optional target timezone conversion
+ * for timed events carrying an explicit IANA timezone.
  */
-export function isEventOnDate(event: CalendarEvent, targetDateStr: string): boolean {
-  if (targetDateStr < event.startDate) {
+export function isEventOnDate(
+  event: CalendarEvent,
+  targetDateStr: string,
+  targetTimeZone?: string
+): boolean {
+  const effective = getEventDisplayInTimezone(event, targetTimeZone);
+
+  if (targetDateStr < effective.startDate) {
     return false;
   }
 
   // Exact start date match
-  if (event.startDate === targetDateStr) {
+  if (effective.startDate === targetDateStr) {
     return true;
   }
 
   // Multi-day non-recurring event span
   if (event.recurrence === 'none') {
-    if (event.endDate && event.startDate <= targetDateStr && targetDateStr <= event.endDate) {
+    if (
+      effective.endDate &&
+      effective.startDate <= targetDateStr &&
+      targetDateStr <= effective.endDate
+    ) {
       return true;
     }
     return false;
   }
 
   // Parse dates to compare day of week / day of month
-  const [sYear, sMonth, sDay] = event.startDate.split('-').map(Number);
+  const [sYear, sMonth, sDay] = effective.startDate.split('-').map(Number);
   const [tYear, tMonth, tDay] = targetDateStr.split('-').map(Number);
 
   const startObj = new Date(sYear, sMonth - 1, sDay);
@@ -82,9 +94,12 @@ export function isEventVisibleInMode(
 export function getEventsForDateAndMode(
   events: CalendarEvent[],
   dateStr: string,
-  mode?: CalendarFaithMode
+  mode?: CalendarFaithMode,
+  targetTimeZone?: string
 ): CalendarEvent[] {
   return events.filter(
-    (e) => isEventVisibleInMode(e, mode) && isEventOnDate(e, dateStr)
+    (e) =>
+      isEventVisibleInMode(e, mode) &&
+      isEventOnDate(e, dateStr, targetTimeZone)
   );
 }

@@ -12,6 +12,8 @@ import {
   isValidCalendarDateString,
   isValidTimeString,
 } from './dateUtils';
+import { ALL_CITIES } from './cities';
+import { isValidIanaTimezone } from './istTime';
 
 const STORAGE_KEYS = {
   EVENTS: 'harmony_calendar_events_v3',
@@ -43,7 +45,13 @@ function getSafeStorage(): Storage | null {
 export const DEFAULT_FILTERS: CalendarFilterSettings = {
   selectedState: 'all',
   selectedCity: '', // Empty means "Location not set"; user selects city/country, enables GPS, or enters coordinates
+  selectedCountryCode: undefined,
+  selectedRegion: undefined,
+  locationSource: undefined,
   locationExplicitlyConfirmed: false,
+  weekStartDay: 'auto',
+  timeFormat: 'auto',
+  dateFormat: 'auto',
   asrMethod: 'hanafi',
   prayerMethod: 'karachi',
   enabledCategories: {
@@ -511,10 +519,32 @@ export function loadFilters(): CalendarFilterSettings {
       locationExplicitlyConfirmed = Boolean(selectedCity) || hasCustomCoords;
     }
 
+    const matchedCity = selectedCity
+      ? ALL_CITIES.find((c) => c.id.toLowerCase() === selectedCity.toLowerCase())
+      : undefined;
+
+    const derivedCountryCode =
+      typeof parsed.selectedCountryCode === 'string' && parsed.selectedCountryCode.trim()
+        ? parsed.selectedCountryCode.trim().toUpperCase()
+        : matchedCity?.countryCode || undefined;
+
+    const derivedCountry =
+      typeof parsed.selectedCountry === 'string' && parsed.selectedCountry.trim()
+        ? parsed.selectedCountry.trim()
+        : matchedCity?.country || undefined;
+
+    const derivedRegion =
+      typeof parsed.selectedRegion === 'string' && parsed.selectedRegion.trim()
+        ? parsed.selectedRegion.trim()
+        : matchedCity?.stateOrRegion || undefined;
+
     return {
       ...DEFAULT_FILTERS,
       ...parsed,
       selectedCity,
+      selectedCountry: derivedCountry,
+      selectedCountryCode: derivedCountryCode,
+      selectedRegion: derivedRegion,
       locationExplicitlyConfirmed,
       calendarMode: mode,
       muslimOnlyMode: mode === 'muslim',
@@ -659,7 +689,7 @@ export function importBackupData(jsonString: string): ImportBackupResult {
       return { success: false, message: 'Invalid backup file: root must be a JSON object.' };
     }
 
-    const ALLOWED_CATEGORIES = ['personal', 'work', 'spiritual', 'festival', 'health', 'family'];
+    const ALLOWED_CATEGORIES = ['personal', 'work', 'spiritual', 'festival', 'health', 'family', 'birthday'];
     const ALLOWED_PRIORITIES = ['low', 'medium', 'high'];
     const ALLOWED_RECURRENCES = ['none', 'daily', 'weekly', 'monthly', 'yearly'];
     const HEX_COLOR_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -727,6 +757,11 @@ export function importBackupData(jsonString: string): ImportBackupResult {
             ? e.color
             : '#4f46e5';
 
+        const validTimeZone =
+          typeof e.timeZone === 'string' && isValidIanaTimezone(e.timeZone)
+            ? e.timeZone.trim()
+            : undefined;
+
         validEvents.push({
           id: String(e.id).trim(),
           title: String(e.title).trim(),
@@ -743,6 +778,7 @@ export function importBackupData(jsonString: string): ImportBackupResult {
           location: typeof e.location === 'string' && e.location.trim() ? e.location.trim() : undefined,
           reminderMinutesBefore: validReminderMinutes,
           faithTag,
+          timeZone: validTimeZone,
           createdAt: typeof e.createdAt === 'number' && !isNaN(e.createdAt) ? e.createdAt : Date.now(),
         });
       }
@@ -877,9 +913,38 @@ export function importBackupData(jsonString: string): ImportBackupResult {
           : undefined;
 
       const selectedLocationTimezone =
-        typeof rawF.selectedLocationTimezone === 'string' && rawF.selectedLocationTimezone.trim()
+        typeof rawF.selectedLocationTimezone === 'string' &&
+        isValidIanaTimezone(rawF.selectedLocationTimezone)
           ? rawF.selectedLocationTimezone.trim()
           : undefined;
+
+      const selectedCountryCode =
+        typeof rawF.selectedCountryCode === 'string' && rawF.selectedCountryCode.trim().length === 2
+          ? rawF.selectedCountryCode.trim().toUpperCase()
+          : undefined;
+
+      const selectedRegion =
+        typeof rawF.selectedRegion === 'string' && rawF.selectedRegion.trim()
+          ? rawF.selectedRegion.trim()
+          : undefined;
+
+      const locationSource =
+        rawF.locationSource === 'detected' || rawF.locationSource === 'manual'
+          ? rawF.locationSource
+          : undefined;
+
+      const weekStartDay =
+        rawF.weekStartDay === 0 || rawF.weekStartDay === 1 || rawF.weekStartDay === 6
+          ? rawF.weekStartDay
+          : 'auto';
+
+      const timeFormat =
+        rawF.timeFormat === '12h' || rawF.timeFormat === '24h' ? rawF.timeFormat : 'auto';
+
+      const dateFormat =
+        rawF.dateFormat === 'DMY' || rawF.dateFormat === 'MDY' || rawF.dateFormat === 'YMD'
+          ? rawF.dateFormat
+          : 'auto';
 
       const locationExplicitlyConfirmed =
         typeof rawF.locationExplicitlyConfirmed === 'boolean'
@@ -892,8 +957,14 @@ export function importBackupData(jsonString: string): ImportBackupResult {
         selectedState,
         selectedCity,
         selectedCountry,
+        selectedCountryCode,
+        selectedRegion,
         selectedLocationTimezone,
+        locationSource,
         locationExplicitlyConfirmed,
+        weekStartDay,
+        timeFormat,
+        dateFormat,
         customLatitude,
         customLongitude,
         customLocationName,

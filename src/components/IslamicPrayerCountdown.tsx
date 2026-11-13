@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PrayerTimes, Language } from '../types/calendar';
 import { getPrayerTimes, getDailyWisdom, getHijriDate } from '../utils/hijri';
+import { getLocaleTag } from '../utils/localization';
 import {
   Clock,
   Sparkles,
@@ -208,7 +209,7 @@ export const IslamicPrayerCountdown: React.FC<IslamicPrayerCountdownProps> = ({
             <div className="text-xs text-emerald-200/80 mt-1 flex items-center gap-1.5">
               <span>{hijri.formattedUr}</span>
               <span>•</span>
-              <span>{currentDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
+              <span>{currentDate.toLocaleDateString(getLocaleTag(language), { weekday: 'long', day: 'numeric', month: 'short' })}</span>
             </div>
           </div>
 

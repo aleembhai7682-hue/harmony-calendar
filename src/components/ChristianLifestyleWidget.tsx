@@ -7,11 +7,22 @@ import {
   getChristianObservancesForDate,
   BibleVerse,
 } from '../utils/christianData';
-import { getDeviceTimezone, formatLocalTime } from '../utils/istTime';
+import { getDeviceTimezone } from '../utils/istTime';
+import {
+  getLocaleTag,
+  formatClockInZone,
+  formatDateLocalized,
+  formatTimePreference,
+  TimeFormatOption,
+  DateFormatOption,
+} from '../utils/localization';
 import { Calendar, ChevronDown, ChevronUp, Church, Sun } from 'lucide-react';
 
 interface ChristianLifestyleWidgetProps {
   currentDate: Date;
+  selectedCountryCode?: string;
+  timeFormat?: TimeFormatOption;
+  dateFormat?: DateFormatOption;
 }
 
 /**
@@ -45,6 +56,9 @@ const ArchitecturalCrossMark: React.FC<{ className?: string }> = ({ className = 
 
 export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> = ({
   currentDate,
+  selectedCountryCode,
+  timeFormat = 'auto',
+  dateFormat = 'auto',
 }) => {
   const [now, setNow] = useState<Date>(() => new Date());
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -64,14 +78,11 @@ export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> =
     getNextChristianObservance(currentDate);
   const todayObservances = getChristianObservancesForDate(currentDate);
   const isSunday = currentDate.getDay() === 0;
-  const deviceTz = getDeviceTimezone().replace(/_/g, ' ');
+  const rawDeviceTz = getDeviceTimezone();
+  const deviceTz = rawDeviceTz.replace(/_/g, ' ');
+  const locale = getLocaleTag('en', selectedCountryCode);
 
-  const formattedSelectedDate = currentDate.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const formattedSelectedDate = formatDateLocalized(currentDate, dateFormat, locale, 'long');
 
   // Subtle progress through the liturgical countdown year toward Dec 25
   const christmasProgress = christmasCountdown.isToday
@@ -125,7 +136,7 @@ export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> =
                 ·
               </span>
               <span className="font-mono-tabular text-[#8C6418] dark:text-amber-300 font-medium">
-                {formatLocalTime(now, false)} ({deviceTz})
+                {formatClockInZone(now, rawDeviceTz, timeFormat, selectedCountryCode, locale, false)} ({deviceTz})
               </span>
             </div>
           </div>
@@ -173,7 +184,7 @@ export const ChristianLifestyleWidget: React.FC<ChristianLifestyleWidgetProps> =
                 </p>
               </div>
               <span className="text-xs font-mono-tabular font-semibold text-[#1E3A6E] dark:text-sky-300 whitespace-nowrap">
-                Morning Service · 09:30 AM
+                Morning Service · {formatTimePreference('09:30', timeFormat, selectedCountryCode)}
               </span>
             </div>
           ) : (

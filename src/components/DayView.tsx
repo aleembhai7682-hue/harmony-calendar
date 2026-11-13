@@ -9,11 +9,13 @@ import {
 } from '../types/calendar';
 import { translations } from '../translations/i18n';
 import { getHijriDate, getIslamicOccasionForDate, getMoonPhase } from '../utils/hijri';
-import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getGlobalHolidaysForDate } from '../utils/globalHolidays';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
 import { getEventsForDateAndMode } from '../utils/eventUtils';
 import { getLiturgicalSeason, getChristianObservancesForDate } from '../utils/christianData';
+import { getLocaleTag, formatTimePreference, formatDateLocalized } from '../utils/localization';
+import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
 import {
   Clock,
   Plus,
@@ -54,6 +56,8 @@ export const DayView: React.FC<DayViewProps> = ({
   onOpenNewTask,
 }) => {
   const t = translations[language];
+  const locale = getLocaleTag(language, filters.selectedCountryCode);
+  const effectiveTz = getEffectiveCalendarTimezone(filters);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -72,19 +76,19 @@ export const DayView: React.FC<DayViewProps> = ({
   if (isMuslimMode) {
     dayFestivals = [];
   } else if (isHinduMode) {
-    dayFestivals = getFestivalsForDate(
-      dateStr,
-      filters.selectedState,
-      filters.enabledCategories,
-      filters.showGazettedOnly
-    ).filter((f) => f.category === 'hindu' || f.category === 'national');
+    dayFestivals = getGlobalHolidaysForDate(dateStr, {
+      countryCode: filters.selectedCountryCode,
+      state: filters.selectedState,
+      enabledCategories: filters.enabledCategories,
+      showGazettedOnly: filters.showGazettedOnly,
+    }).filter((f) => f.category === 'hindu' || f.category === 'national');
   } else if (isChristianMode) {
-    dayFestivals = getFestivalsForDate(
-      dateStr,
-      filters.selectedState,
-      filters.enabledCategories,
-      filters.showGazettedOnly
-    ).filter((f) => f.category === 'christian' || f.category === 'national');
+    dayFestivals = getGlobalHolidaysForDate(dateStr, {
+      countryCode: filters.selectedCountryCode,
+      state: filters.selectedState,
+      enabledCategories: filters.enabledCategories,
+      showGazettedOnly: filters.showGazettedOnly,
+    }).filter((f) => f.category === 'christian' || f.category === 'national');
   }
 
   const islamicOccasion = isMuslimMode
@@ -99,8 +103,8 @@ export const DayView: React.FC<DayViewProps> = ({
       )
     : [];
 
-  // Events for this date (supporting recurring events and mode filtering)
-  const dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode);
+  // Events for this date (supporting recurring events, mode filtering, and timezone conversion)
+  const dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode, effectiveTz);
 
   // Tasks due this date (Strictly mode-filtered)
   const dayTasks = tasks.filter(
@@ -149,7 +153,9 @@ export const DayView: React.FC<DayViewProps> = ({
             >
               <span>{t.days[dayOfWeekIndex]}</span>
               <span>·</span>
-              <span className="font-mono-tabular">{dateStr}</span>
+              <span className="font-mono-tabular">
+                {formatDateLocalized(dateStr, filters.dateFormat || 'auto', locale, 'shortNumeric')}
+              </span>
               {isChristianMode && dayOfWeekIndex === 0 && (
                 <>
                   <span>·</span>
@@ -318,10 +324,16 @@ export const DayView: React.FC<DayViewProps> = ({
 
           <div className="space-y-1">
             {hours.map((hour) => {
-              const timeLabel = `${String(hour).padStart(2, '0')}:00`;
+              const timeLabelRaw = `${String(hour).padStart(2, '0')}:00`;
+              const timeLabelDisplay = formatTimePreference(
+                timeLabelRaw,
+                filters.timeFormat,
+                filters.selectedCountryCode
+              );
               const slotEvents = dayEvents.filter((e) => {
-                if (!e.startTime) return false;
-                const h = parseInt(e.startTime.split(':')[0], 10);
+                const display = getEventDisplayInTimezone(e, effectiveTz);
+                if (!display.startTime) return false;
+                const h = parseInt(display.startTime.split(':')[0], 10);
                 return h === hour;
               });
 
@@ -330,45 +342,67 @@ export const DayView: React.FC<DayViewProps> = ({
                   key={hour}
                   className="flex items-start gap-3 py-1.5 border-b border-slate-100 dark:border-slate-800/80 group"
                 >
-                  <div className="w-14 text-right text-xs font-bold text-slate-400 py-1">
-                    {timeLabel}
+                  <div className="w-16 text-right text-xs font-bold text-slate-400 py-1 shrink-0">
+                    {timeLabelDisplay}
                   </div>
 
                   <div
-                    onClick={() => onOpenCreateEventOnDateAndTime(dateStr, timeLabel)}
+                    onClick={() => onOpenCreateEventOnDateAndTime(dateStr, timeLabelRaw)}
                     className="flex-1 min-h-[44px] rounded-xl p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                   >
                     {slotEvents.length === 0 ? (
                       <div className="text-[11px] text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 flex items-center gap-1 font-medium pt-1">
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Click to add event at {timeLabel}</span>
+                        <span>Click to add event at {timeLabelDisplay}</span>
                       </div>
                     ) : (
                       <div className="space-y-1">
-                        {slotEvents.map((evt) => (
-                          <div
-                            key={evt.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectEvent(evt);
-                            }}
-                            className="p-2 rounded-xl text-white shadow-sm flex items-center justify-between cursor-pointer hover:scale-[1.01] transition-transform"
-                            style={{ backgroundColor: evt.color || '#4f46e5' }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-black/20">
-                                {evt.startTime} {evt.endTime ? `- ${evt.endTime}` : ''}
-                              </span>
-                              <span className="text-xs font-bold">{evt.title}</span>
-                            </div>
-                            {evt.location && (
-                              <div className="flex items-center gap-1 text-[11px] opacity-80">
-                                <MapPin className="w-3 h-3" />
-                                <span>{evt.location}</span>
+                        {slotEvents.map((evt) => {
+                          const display = getEventDisplayInTimezone(evt, effectiveTz);
+                          const startFmt = display.startTime
+                            ? formatTimePreference(
+                                display.startTime,
+                                filters.timeFormat,
+                                filters.selectedCountryCode
+                              )
+                            : '';
+                          const endFmt = display.endTime
+                            ? formatTimePreference(
+                                display.endTime,
+                                filters.timeFormat,
+                                filters.selectedCountryCode
+                              )
+                            : '';
+                          return (
+                            <div
+                              key={evt.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectEvent(evt);
+                              }}
+                              className="p-2 rounded-xl text-white shadow-sm flex items-center justify-between cursor-pointer hover:scale-[1.01] transition-transform"
+                              style={{ backgroundColor: evt.color || '#4f46e5' }}
+                            >
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-black/20">
+                                  {startFmt} {endFmt ? `- ${endFmt}` : ''}
+                                </span>
+                                <span className="text-xs font-bold">{evt.title}</span>
+                                {display.isConverted && display.sourceTimeZone && (
+                                  <span className="text-[10px] opacity-85 px-1.5 py-0.5 rounded bg-black/20">
+                                    ({evt.startTime} {display.sourceTimeZone.replace(/_/g, ' ')})
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        ))}
+                              {evt.location && (
+                                <div className="flex items-center gap-1 text-[11px] opacity-80">
+                                  <MapPin className="w-3 h-3" />
+                                  <span>{evt.location}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -431,7 +465,16 @@ export const DayView: React.FC<DayViewProps> = ({
                       </div>
                     )}
                     <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-400">
-                      {task.dueTime && <span>🕒 {task.dueTime}</span>}
+                      {task.dueTime && (
+                        <span>
+                          🕒{' '}
+                          {formatTimePreference(
+                            task.dueTime,
+                            filters.timeFormat,
+                            filters.selectedCountryCode
+                          )}
+                        </span>
+                      )}
                       <span className="capitalize px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-semibold">
                         {task.priority}
                       </span>

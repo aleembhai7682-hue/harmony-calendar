@@ -1,8 +1,16 @@
 import { CalendarEvent } from '../types/calendar';
 import { formatDateToLocalYMD } from './dateUtils';
+import { getDeviceTimezone, isValidIanaTimezone } from './istTime';
 
-export function exportEventsToIcs(events: CalendarEvent[], calendarTitle = 'Harmony Calendar'): void {
-  const pad = (n: number) => String(n).padStart(2, '0');
+export function exportEventsToIcs(
+  events: CalendarEvent[],
+  calendarTitle = 'Harmony Calendar',
+  calendarTimeZone?: string
+): void {
+  const defaultTz =
+    calendarTimeZone && isValidIanaTimezone(calendarTimeZone)
+      ? calendarTimeZone
+      : getDeviceTimezone();
 
   const formatIcsDate = (dateStr: string, timeStr?: string, allDay?: boolean) => {
     const cleanDate = dateStr.replace(/-/g, '');
@@ -20,20 +28,25 @@ export function exportEventsToIcs(events: CalendarEvent[], calendarTitle = 'Harm
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${calendarTitle}`,
-    `X-WR-TIMEZONE:${typeof Intl !== 'undefined' && Intl.DateTimeFormat ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' : 'UTC'}`,
+    `X-WR-TIMEZONE:${defaultTz}`,
   ];
 
   events.forEach((evt) => {
     const start = formatIcsDate(evt.startDate, evt.startTime, evt.allDay);
     const end = formatIcsDate(evt.endDate || evt.startDate, evt.endTime || evt.startTime, evt.allDay);
+    const eventTz =
+      evt.timeZone && isValidIanaTimezone(evt.timeZone) ? evt.timeZone : defaultTz;
 
     ics.push('BEGIN:VEVENT');
     ics.push(`UID:${evt.id}@harmonycalendar.app`);
     ics.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
-    
+
     if (start.isAllDay) {
       ics.push(`DTSTART;VALUE=DATE:${start.value}`);
       ics.push(`DTEND;VALUE=DATE:${end.value}`);
+    } else if (eventTz) {
+      ics.push(`DTSTART;TZID=${eventTz}:${start.value}`);
+      ics.push(`DTEND;TZID=${eventTz}:${end.value}`);
     } else {
       ics.push(`DTSTART:${start.value}`);
       ics.push(`DTEND:${end.value}`);

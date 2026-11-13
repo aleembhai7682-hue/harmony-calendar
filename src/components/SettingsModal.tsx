@@ -13,7 +13,10 @@ import {
   Sparkles,
   Bell,
   Volume2,
+  Globe,
+  CalendarDays,
 } from 'lucide-react';
+import { getCountryHolidaySummary } from '../utils/globalHolidays';
 import {
   getNotificationPermissionStatus,
   requestNotificationPermissionByUser,
@@ -119,37 +122,125 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             language={language}
           />
 
-          {/* Regional Indian State Selection for Holidays */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <Compass className="w-4 h-4 text-indigo-500" />
-              <span>
-                {isChristianMode
-                  ? 'Default Indian State for Regional Holidays'
-                  : isHinduMode
-                  ? 'क्षेत्रीय अवकाश हेतु भारतीय राज्य'
-                  : language === 'ur'
-                  ? 'ریاستی تعطیلات کے لیے صوبہ / ریاست'
-                  : 'Default Indian State for Regional Holidays'}
-              </span>
-            </label>
-            <select
-              value={filters.selectedState}
-              onChange={(e) => onFilterChange({ ...filters, selectedState: e.target.value })}
-              className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-            >
-              {INDIAN_STATES.map((st) => (
-                <option key={st.code} value={st.code}>
-                  {isChristianMode
-                    ? st.nameEn
-                    : isHinduMode
-                    ? st.nameHi
-                    : language === 'ur'
-                    ? (st.nameUr || st.nameEn)
-                    : st.nameEn}
-                </option>
-              ))}
-            </select>
+          {/* Country / Regional Holiday Notice & State Selector (India Only) */}
+          {(() => {
+            const countrySummary = getCountryHolidaySummary(filters.selectedCountryCode);
+            if (filters.selectedCountryCode === 'IN') {
+              return (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <Compass className="w-4 h-4 text-indigo-500" />
+                    <span>
+                      {isChristianMode
+                        ? 'Indian State for Regional Holidays'
+                        : isHinduMode
+                        ? 'क्षेत्रीय अवकाश हेतु भारतीय राज्य'
+                        : language === 'ur'
+                        ? 'ریاستی تعطیلات کے لیے صوبہ / ریاست'
+                        : 'Indian State for Regional Holidays'}
+                    </span>
+                  </label>
+                  <select
+                    value={filters.selectedState}
+                    onChange={(e) => onFilterChange({ ...filters, selectedState: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    {INDIAN_STATES.map((st) => (
+                      <option key={st.code} value={st.code}>
+                        {isChristianMode
+                          ? st.nameEn
+                          : isHinduMode
+                          ? st.nameHi
+                          : language === 'ur'
+                          ? (st.nameUr || st.nameEn)
+                          : st.nameEn}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            }
+            return (
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5">
+                <Globe className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-slate-800 dark:text-slate-200">
+                    Public Holidays {countrySummary.countryName ? `(${countrySummary.countryName})` : ''}
+                  </div>
+                  <div className="text-[11px] mt-0.5 leading-relaxed">{countrySummary.notice}</div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Regional & Format Preferences (Week Start, Clock 12h/24h, Date Order) */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+              <CalendarDays className="w-4 h-4 text-indigo-500" />
+              <span>Regional Calendar Formats</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                  First Day of Week
+                </label>
+                <select
+                  value={filters.weekStartDay === undefined ? 'auto' : String(filters.weekStartDay)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    onFilterChange({
+                      ...filters,
+                      weekStartDay: v === 'auto' ? 'auto' : (Number(v) as 0 | 1 | 6),
+                    });
+                  }}
+                  className="w-full px-2.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
+                >
+                  <option value="auto">Auto (Country/Locale)</option>
+                  <option value="0">Sunday</option>
+                  <option value="1">Monday</option>
+                  <option value="6">Saturday</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                  Time Format
+                </label>
+                <select
+                  value={filters.timeFormat || 'auto'}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filters,
+                      timeFormat: e.target.value as 'auto' | '12h' | '24h',
+                    })
+                  }
+                  className="w-full px-2.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
+                >
+                  <option value="auto">Auto (Locale)</option>
+                  <option value="12h">12-Hour (AM/PM)</option>
+                  <option value="24h">24-Hour</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                  Date Format
+                </label>
+                <select
+                  value={filters.dateFormat || 'auto'}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filters,
+                      dateFormat: e.target.value as 'auto' | 'DMY' | 'MDY' | 'YMD',
+                    })
+                  }
+                  className="w-full px-2.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
+                >
+                  <option value="auto">Auto (Locale)</option>
+                  <option value="DMY">DD/MM/YYYY</option>
+                  <option value="MDY">MM/DD/YYYY</option>
+                  <option value="YMD">YYYY-MM-DD</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           {/* Muslim Mode Specific: Moon Sighting Offset & Prayer Methods */}

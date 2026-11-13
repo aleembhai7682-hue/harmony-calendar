@@ -9,12 +9,15 @@ import {
 } from '../types/calendar';
 import { translations } from '../translations/i18n';
 import { getHijriDate, getIslamicOccasionForDate, getMoonPhase } from '../utils/hijri';
-import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getGlobalHolidaysForDate } from '../utils/globalHolidays';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
 import { getHinduPanchang } from '../utils/panchang';
 import { getEventsForDateAndMode } from '../utils/eventUtils';
 import { getChristianObservancesForDate, getLiturgicalSeason } from '../utils/christianData';
+import { getLocaleTag, formatTimePreference } from '../utils/localization';
+import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
 import {
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -54,6 +57,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
   searchQuery = '',
 }) => {
   const t = translations[language];
+  const locale = getLocaleTag(language, filters.selectedCountryCode);
+  const effectiveTz = getEffectiveCalendarTimezone(filters);
   const [filterType, setFilterType] = useState<'all' | 'festivals' | 'islamic' | 'events' | 'tasks'>('all');
 
   // Generate 45 days starting from the selected date (or start of month)
@@ -150,19 +155,19 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           if (isMuslimMode) {
             dayFestivals = [];
           } else if (isHinduMode) {
-            dayFestivals = getFestivalsForDate(
-              dateStr,
-              filters.selectedState,
-              filters.enabledCategories,
-              filters.showGazettedOnly
-            ).filter((f) => f.category === 'hindu' || f.category === 'national');
+            dayFestivals = getGlobalHolidaysForDate(dateStr, {
+              countryCode: filters.selectedCountryCode,
+              state: filters.selectedState,
+              enabledCategories: filters.enabledCategories,
+              showGazettedOnly: filters.showGazettedOnly,
+            }).filter((f) => f.category === 'hindu' || f.category === 'national');
           } else if (isChristianMode) {
-            dayFestivals = getFestivalsForDate(
-              dateStr,
-              filters.selectedState,
-              filters.enabledCategories,
-              filters.showGazettedOnly
-            ).filter((f) => f.category === 'christian' || f.category === 'national');
+            dayFestivals = getGlobalHolidaysForDate(dateStr, {
+              countryCode: filters.selectedCountryCode,
+              state: filters.selectedState,
+              enabledCategories: filters.enabledCategories,
+              showGazettedOnly: filters.showGazettedOnly,
+            }).filter((f) => f.category === 'christian' || f.category === 'national');
           }
 
           let christianObs = isChristianMode
@@ -175,7 +180,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             ? getIslamicOccasionForDate(dayObj, filters.hijriAdjustmentDays)
             : null;
 
-          let dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode);
+          let dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode, effectiveTz);
 
           let dayTasks = tasks.filter(
             (t) => t.dueDate === dateStr && isTaskVisibleInMode(t, filters.calendarMode)
@@ -308,7 +313,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                         <span>
                           {dayOfWeekIndex === 0
                             ? "The Lord's Day · Sunday Worship"
-                            : dayObj.toLocaleDateString('en-US', { weekday: 'long' })}
+                            : dayObj.toLocaleDateString(locale, { weekday: 'long' })}
                         </span>
                         <span aria-hidden="true" className="text-slate-400">
                           ·
@@ -487,44 +492,68 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                 })}
 
                 {/* Personal Events */}
-                {dayEvents.map((evt) => (
-                  <div
-                    key={evt.id}
-                    onClick={() => onSelectEvent(evt)}
-                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-all flex items-center justify-between gap-3"
-                    style={{ borderLeftColor: evt.color || '#4f46e5', borderLeftWidth: '4px' }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900 dark:text-white">
-                          {evt.title}
-                        </span>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 capitalize">
-                          {evt.category}
-                        </span>
+                {dayEvents.map((evt) => {
+                  const display = getEventDisplayInTimezone(evt, effectiveTz);
+                  const startFmt = display.startTime
+                    ? formatTimePreference(
+                        display.startTime,
+                        filters.timeFormat,
+                        filters.selectedCountryCode
+                      )
+                    : '';
+                  const endFmt = display.endTime
+                    ? formatTimePreference(
+                        display.endTime,
+                        filters.timeFormat,
+                        filters.selectedCountryCode
+                      )
+                    : '';
+                  return (
+                    <div
+                      key={evt.id}
+                      onClick={() => onSelectEvent(evt)}
+                      className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-all flex items-center justify-between gap-3"
+                      style={{ borderLeftColor: evt.color || '#4f46e5', borderLeftWidth: '4px' }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">
+                            {evt.title}
+                          </span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 capitalize">
+                            {evt.category}
+                          </span>
+                        </div>
+                        {evt.description && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                            {evt.description}
+                          </p>
+                        )}
                       </div>
-                      {evt.description && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
-                          {evt.description}
-                        </p>
-                      )}
+                      <div className="flex flex-col items-end gap-1 text-xs text-slate-500">
+                        {startFmt && (
+                          <div className="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>
+                              {startFmt} {endFmt ? `- ${endFmt}` : ''}
+                            </span>
+                            {display.isConverted && display.sourceTimeZone && (
+                              <span className="text-[10px] text-slate-400">
+                                ({evt.startTime} {display.sourceTimeZone.replace(/_/g, ' ')})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {evt.location && (
+                          <div className="flex items-center gap-1 text-[11px]">
+                            <MapPin className="w-3 h-3" />
+                            <span>{evt.location}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 text-xs text-slate-500">
-                      {evt.startTime && (
-                        <div className="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{evt.startTime} {evt.endTime ? `- ${evt.endTime}` : ''}</span>
-                        </div>
-                      )}
-                      {evt.location && (
-                        <div className="flex items-center gap-1 text-[11px]">
-                          <MapPin className="w-3 h-3" />
-                          <span>{evt.location}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Tasks */}
                 {dayTasks.map((task) => (

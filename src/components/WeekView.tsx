@@ -9,10 +9,13 @@ import {
 } from '../types/calendar';
 import { translations } from '../translations/i18n';
 import { getHijriDate, getIslamicOccasionForDate } from '../utils/hijri';
-import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getCategoryBadgeStyle } from '../utils/indianFestivals';
+import { getGlobalHolidaysForDate } from '../utils/globalHolidays';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isEventOnDate, isEventVisibleInMode } from '../utils/eventUtils';
 import { getChristianObservancesForDate } from '../utils/christianData';
+import { resolveWeekStartDay, formatTimePreference } from '../utils/localization';
+import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
 import { Clock, Plus } from 'lucide-react';
 
 interface WeekViewProps {
@@ -40,11 +43,14 @@ export const WeekView: React.FC<WeekViewProps> = ({
   onSelectIslamic,
 }) => {
   const t = translations[language];
+  const effectiveTz = getEffectiveCalendarTimezone(filters);
+  const weekStartDay = resolveWeekStartDay(filters.weekStartDay, filters.selectedCountryCode);
 
-  // Calculate start of week (Sunday)
+  // Calculate start of week respecting user/country weekStartDay preference
   const currentDayOfWeek = currentDate.getDay();
+  const offsetFromStart = (currentDayOfWeek - weekStartDay + 7) % 7;
   const startOfWeek = new Date(currentDate);
-  startOfWeek.setDate(currentDate.getDate() - currentDayOfWeek);
+  startOfWeek.setDate(currentDate.getDate() - offsetFromStart);
 
   const weekDays = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date(startOfWeek);
@@ -100,19 +106,19 @@ export const WeekView: React.FC<WeekViewProps> = ({
           if (isMuslimMode) {
             dayFestivals = [];
           } else if (isHinduMode) {
-            dayFestivals = getFestivalsForDate(
-              dateStr,
-              filters.selectedState,
-              filters.enabledCategories,
-              filters.showGazettedOnly
-            ).filter((f) => f.category === 'hindu' || f.category === 'national');
+            dayFestivals = getGlobalHolidaysForDate(dateStr, {
+              countryCode: filters.selectedCountryCode,
+              state: filters.selectedState,
+              enabledCategories: filters.enabledCategories,
+              showGazettedOnly: filters.showGazettedOnly,
+            }).filter((f) => f.category === 'hindu' || f.category === 'national');
           } else if (isChristianMode) {
-            dayFestivals = getFestivalsForDate(
-              dateStr,
-              filters.selectedState,
-              filters.enabledCategories,
-              filters.showGazettedOnly
-            ).filter((f) => f.category === 'christian' || f.category === 'national');
+            dayFestivals = getGlobalHolidaysForDate(dateStr, {
+              countryCode: filters.selectedCountryCode,
+              state: filters.selectedState,
+              enabledCategories: filters.enabledCategories,
+              showGazettedOnly: filters.showGazettedOnly,
+            }).filter((f) => f.category === 'christian' || f.category === 'national');
           }
           const christianObs = isChristianMode
             ? getChristianObservancesForDate(day).filter(
@@ -145,10 +151,14 @@ export const WeekView: React.FC<WeekViewProps> = ({
                 className={`text-[11px] font-bold uppercase ${
                   isChristianMode && day.getDay() === 0
                     ? 'text-[#1E40AF] dark:text-sky-300'
+                    : isMuslimMode && day.getDay() === 5 && filters.highlightFridays
+                    ? 'text-emerald-700 dark:text-emerald-400'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                {isMuslimMode && language === 'hinglish' && idx === 5 ? 'Juma' : t.daysShort[idx]}
+                {isMuslimMode && language === 'hinglish' && day.getDay() === 5
+                  ? 'Juma'
+                  : t.daysShort[day.getDay()]}
               </div>
               <div className="flex items-center justify-center gap-1 my-0.5">
                 <span
@@ -238,13 +248,18 @@ export const WeekView: React.FC<WeekViewProps> = ({
       <div className="flex-1 overflow-y-auto max-h-[calc(100vh-230px)]">
         <div className="grid grid-cols-[60px_repeat(7,1fr)]">
           {hours.map((hour) => {
-            const timeLabel = `${String(hour).padStart(2, '0')}:00`;
+            const timeLabelRaw = `${String(hour).padStart(2, '0')}:00`;
+            const timeLabelDisplay = formatTimePreference(
+              timeLabelRaw,
+              filters.timeFormat,
+              filters.selectedCountryCode
+            );
 
             return (
               <React.Fragment key={hour}>
                 {/* Time label */}
                 <div className="p-2 text-right text-[11px] font-semibold text-slate-400 border-b border-r border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/40 select-none">
-                  {timeLabel}
+                  {timeLabelDisplay}
                 </div>
 
                 {/* Day hour cells */}
@@ -253,19 +268,20 @@ export const WeekView: React.FC<WeekViewProps> = ({
                     day.getDate()
                   ).padStart(2, '0')}`;
 
-                  // Find events starting in this hour (supporting recurrence & mode filtering)
+                  // Find events starting in this hour (supporting recurrence, mode filtering, & timezone conversion)
                   const slotEvents = events.filter((e) => {
                     if (!isEventVisibleInMode(e, filters.calendarMode)) return false;
-                    if (!isEventOnDate(e, dateStr)) return false;
-                    if (!e.startTime) return false;
-                    const eventHour = parseInt(e.startTime.split(':')[0], 10);
+                    if (!isEventOnDate(e, dateStr, effectiveTz)) return false;
+                    const display = getEventDisplayInTimezone(e, effectiveTz);
+                    if (!display.startTime) return false;
+                    const eventHour = parseInt(display.startTime.split(':')[0], 10);
                     return eventHour === hour;
                   });
 
                   return (
                     <div
                       key={`${dateStr}-${hour}`}
-                      onClick={() => onOpenCreateEventOnDateAndTime(dateStr, timeLabel)}
+                      onClick={() => onOpenCreateEventOnDateAndTime(dateStr, timeLabelRaw)}
                       className="group relative min-h-[52px] p-1 border-b border-r border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
                     >
                       {/* Plus icon on hover */}
@@ -274,20 +290,35 @@ export const WeekView: React.FC<WeekViewProps> = ({
                       </div>
 
                       {/* Events in slot */}
-                      {slotEvents.map((evt) => (
-                        <div
-                          key={evt.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectEvent(evt);
-                          }}
-                          className="p-1 rounded-md text-[10px] font-semibold bg-indigo-600 text-white shadow-sm truncate hover:scale-[1.02] transition-transform"
-                          style={{ backgroundColor: evt.color || '#4f46e5' }}
-                        >
-                          <span className="font-bold mr-1">{evt.startTime}</span>
-                          <span>{evt.title}</span>
-                        </div>
-                      ))}
+                      {slotEvents.map((evt) => {
+                        const display = getEventDisplayInTimezone(evt, effectiveTz);
+                        const timeTxt = display.startTime
+                          ? formatTimePreference(
+                              display.startTime,
+                              filters.timeFormat,
+                              filters.selectedCountryCode
+                            )
+                          : '';
+                        return (
+                          <div
+                            key={evt.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectEvent(evt);
+                            }}
+                            className="p-1 rounded-md text-[10px] font-semibold bg-indigo-600 text-white shadow-sm truncate hover:scale-[1.02] transition-transform"
+                            style={{ backgroundColor: evt.color || '#4f46e5' }}
+                            title={
+                              display.isConverted && display.sourceTimeZone
+                                ? `${evt.title} (Scheduled ${evt.startTime} in ${display.sourceTimeZone})`
+                                : evt.title
+                            }
+                          >
+                            <span className="font-bold mr-1">{timeTxt}</span>
+                            <span>{evt.title}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
