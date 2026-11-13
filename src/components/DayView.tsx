@@ -13,6 +13,7 @@ import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFesti
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
 import { getEventsForDateAndMode } from '../utils/eventUtils';
+import { getLiturgicalSeason, getChristianObservancesForDate } from '../utils/christianData';
 import {
   Clock,
   Plus,
@@ -91,6 +92,13 @@ export const DayView: React.FC<DayViewProps> = ({
     : null;
   const fridayAlert = isMuslimMode ? checkFridayFestivalCoincidence(currentDate) : null;
 
+  const liturgicalSeason = isChristianMode ? getLiturgicalSeason(currentDate) : null;
+  const christianObservances = isChristianMode
+    ? getChristianObservancesForDate(currentDate).filter(
+        (obs) => !dayFestivals.some((f) => f.nameEn.toLowerCase() === obs.name.toLowerCase())
+      )
+    : [];
+
   // Events for this date (supporting recurring events and mode filtering)
   const dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode);
 
@@ -120,48 +128,94 @@ export const DayView: React.FC<DayViewProps> = ({
       )}
 
       {/* Day Overview Hero Card */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-amber-900 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
+      <div
+        className={`rounded-3xl p-6 relative overflow-hidden transition-colors ${
+          isChristianMode
+            ? 'bg-gradient-to-br from-[#FCFBF8] via-[#F3F8FE] to-[#EAF1FA] dark:from-[#0E1B33] dark:via-[#11203D] dark:to-[#0B1528] border border-[#E4DDD0] dark:border-slate-700/80 text-[#10203B] dark:text-[#FAF7F0] shadow-[0_8px_28px_-12px_rgba(20,40,75,0.1)]'
+            : 'bg-gradient-to-r from-indigo-900 via-indigo-800 to-amber-900 text-white shadow-lg'
+        }`}
+      >
         {/* Background glow & aesthetic motifs */}
         <div className="absolute right-0 top-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">
+            <div
+              className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-1 ${
+                isChristianMode
+                  ? 'text-[#8C6418] dark:text-amber-300'
+                  : 'text-indigo-200'
+              }`}
+            >
               <span>{t.days[dayOfWeekIndex]}</span>
-              <span>•</span>
-              <span>{dateStr}</span>
+              <span>·</span>
+              <span className="font-mono-tabular">{dateStr}</span>
+              {isChristianMode && dayOfWeekIndex === 0 && (
+                <>
+                  <span>·</span>
+                  <span className="text-[#1E40AF] dark:text-sky-300">The Lord&apos;s Day</span>
+                </>
+              )}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h1
+              className={
+                isChristianMode
+                  ? 'font-editorial text-3xl sm:text-4xl font-semibold tracking-tight text-[#10203B] dark:text-[#FAF7F0]'
+                  : 'text-2xl sm:text-3xl font-extrabold tracking-tight'
+              }
+            >
               {t.months[month]} {day}, {year}
             </h1>
             
-            {/* Hijri Banner */}
-            <div className="flex items-center gap-2 mt-2 text-amber-200 text-sm font-semibold">
-              <span className="text-base">{moon.icon}</span>
-              <span>
-                {language === 'en'
-                  ? hijri.formattedEn
-                  : language === 'ur'
-                  ? hijri.formattedUr
-                  : hijri.formattedHi}
-              </span>
-              <span className="text-xs text-amber-300/80 font-normal">
-                ({language === 'en' ? moon.nameEn : language === 'ur' ? moon.nameUr : moon.nameHi})
-              </span>
-            </div>
+            {isChristianMode && liturgicalSeason ? (
+              <div className="flex items-center gap-2 flex-wrap mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                <span
+                  className="w-2 h-2 rounded-full inline-block"
+                  style={{ backgroundColor: liturgicalSeason.colorHex }}
+                />
+                <span className="font-semibold text-[#14284B] dark:text-sky-200">
+                  {liturgicalSeason.seasonName}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{liturgicalSeason.spiritualFocus}</span>
+              </div>
+            ) : (
+              /* Hijri Banner (Hindu & Muslim modes preserved) */
+              <div className="flex items-center gap-2 mt-2 text-amber-200 text-sm font-semibold">
+                <span className="text-base">{moon.icon}</span>
+                <span>
+                  {language === 'en'
+                    ? hijri.formattedEn
+                    : language === 'ur'
+                    ? hijri.formattedUr
+                    : hijri.formattedHi}
+                </span>
+                <span className="text-xs text-amber-300/80 font-normal">
+                  ({language === 'en' ? moon.nameEn : language === 'ur' ? moon.nameUr : moon.nameHi})
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenCreateEventOnDateAndTime(dateStr, '09:00')}
-              className="px-4 py-2 rounded-xl bg-white text-indigo-900 font-bold text-xs hover:bg-indigo-50 shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+              className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+                isChristianMode
+                  ? 'bg-[#14284B] hover:bg-[#1E3A6E] text-white dark:bg-sky-600 dark:hover:bg-sky-500'
+                  : 'bg-white text-indigo-900 hover:bg-indigo-50 shadow-md'
+              }`}
             >
               <Plus className="w-4 h-4" />
               <span>{t.actions.addEvent}</span>
             </button>
             <button
               onClick={onOpenNewTask}
-              className="px-4 py-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+              className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+                isChristianMode
+                  ? 'bg-white/90 hover:bg-white text-[#14284B] border border-[#DED8CA] dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-700'
+                  : 'bg-emerald-500/90 hover:bg-emerald-500 text-white shadow-md'
+              }`}
             >
               <CalendarCheck className="w-4 h-4" />
               <span>{t.actions.addTask}</span>
@@ -170,8 +224,14 @@ export const DayView: React.FC<DayViewProps> = ({
         </div>
 
         {/* Highlighted Occasions on this day */}
-        {(islamicOccasion || dayFestivals.length > 0) && (
-          <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap gap-2.5">
+        {(islamicOccasion || dayFestivals.length > 0 || christianObservances.length > 0) && (
+          <div
+            className={`mt-5 pt-4 border-t flex flex-wrap gap-2.5 ${
+              isChristianMode
+                ? 'border-[#E4DDD0] dark:border-slate-700/80'
+                : 'border-white/10'
+            }`}
+          >
             {islamicOccasion && (
               <div
                 onClick={() => onSelectIslamic(islamicOccasion)}
@@ -189,18 +249,49 @@ export const DayView: React.FC<DayViewProps> = ({
               </div>
             )}
 
+            {christianObservances.map((obs) => (
+              <div
+                key={obs.id}
+                className="bg-[#FBF4E4] dark:bg-amber-950/40 border border-[#E6D3A3] dark:border-amber-700/60 rounded-xl px-3.5 py-2 flex items-center gap-2.5 text-xs"
+              >
+                <BookOpen className="w-4 h-4 text-[#8C6418] dark:text-amber-300 shrink-0" />
+                <div>
+                  <div className="font-bold text-[#14284B] dark:text-amber-200">{obs.name}</div>
+                  <div className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1">
+                    {obs.description}
+                  </div>
+                </div>
+              </div>
+            ))}
+
             {dayFestivals.map((fest) => (
               <div
                 key={fest.id}
                 onClick={() => onSelectFestival(fest)}
-                className="bg-black/30 hover:bg-black/40 border border-amber-300/40 rounded-xl px-3 py-2 cursor-pointer transition-all flex items-center gap-2 text-xs"
+                className={
+                  isChristianMode
+                    ? 'bg-white/90 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 border border-[#D8E2F0] dark:border-sky-800/60 rounded-xl px-3.5 py-2 cursor-pointer transition-all flex items-center gap-2.5 text-xs'
+                    : 'bg-black/30 hover:bg-black/40 border border-amber-300/40 rounded-xl px-3 py-2 cursor-pointer transition-all flex items-center gap-2 text-xs'
+                }
               >
-                <BookOpen className="w-4 h-4 text-amber-300" />
+                <BookOpen
+                  className={`w-4 h-4 shrink-0 ${
+                    isChristianMode ? 'text-[#1E3A6E] dark:text-sky-300' : 'text-amber-300'
+                  }`}
+                />
                 <div>
-                  <div className="font-bold text-amber-100">
-                    {language === 'en' ? fest.nameEn : fest.nameHi}
+                  <div
+                    className={`font-bold ${
+                      isChristianMode ? 'text-[#14284B] dark:text-sky-200' : 'text-amber-100'
+                    }`}
+                  >
+                    {isChristianMode ? fest.nameEn : language === 'en' ? fest.nameEn : fest.nameHi}
                   </div>
-                  <div className="text-[10px] text-amber-200/90 line-clamp-1">
+                  <div
+                    className={`text-[10px] line-clamp-1 ${
+                      isChristianMode ? 'text-slate-600 dark:text-slate-300' : 'text-amber-200/90'
+                    }`}
+                  >
                     {fest.significance}
                   </div>
                 </div>

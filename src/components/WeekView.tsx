@@ -12,6 +12,7 @@ import { getHijriDate, getIslamicOccasionForDate } from '../utils/hijri';
 import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isEventOnDate, isEventVisibleInMode } from '../utils/eventUtils';
+import { getChristianObservancesForDate } from '../utils/christianData';
 import { Clock, Plus } from 'lucide-react';
 
 interface WeekViewProps {
@@ -58,11 +59,25 @@ export const WeekView: React.FC<WeekViewProps> = ({
     today.getDate()
   ).padStart(2, '0')}`;
 
+  const isChristianModeView = filters.calendarMode === 'christian';
+
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+    <div
+      className={`flex-1 flex flex-col rounded-2xl border overflow-hidden transition-colors ${
+        isChristianModeView
+          ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border-[#E4DDD0] dark:border-slate-800 shadow-[0_8px_28px_-12px_rgba(20,40,75,0.08)]'
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm'
+      }`}
+    >
       
       {/* Week Header */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] bg-slate-100/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
+      <div
+        className={`grid grid-cols-[60px_repeat(7,1fr)] border-b sticky top-0 z-20 ${
+          isChristianModeView
+            ? 'bg-[#F6F3EB]/95 dark:bg-[#101D36]/95 border-[#E4DDD0] dark:border-slate-800'
+            : 'bg-slate-100/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-800'
+        }`}
+      >
         <div className="p-3 text-center text-xs font-bold text-slate-400 border-r border-slate-200 dark:border-slate-700 flex items-center justify-center">
           <Clock className="w-4 h-4" />
         </div>
@@ -99,6 +114,11 @@ export const WeekView: React.FC<WeekViewProps> = ({
               filters.showGazettedOnly
             ).filter((f) => f.category === 'christian' || f.category === 'national');
           }
+          const christianObs = isChristianMode
+            ? getChristianObservancesForDate(day).filter(
+                (obs) => !dayFestivals.some((f) => f.nameEn.toLowerCase() === obs.name.toLowerCase())
+              )
+            : [];
           const islamicOccasion = isMuslimMode
             ? getIslamicOccasionForDate(day, filters.hijriAdjustmentDays)
             : null;
@@ -107,18 +127,36 @@ export const WeekView: React.FC<WeekViewProps> = ({
             <div
               key={dateStr}
               onClick={() => onSelectDate(day)}
-              className={`p-2 border-r border-slate-200 dark:border-slate-700 text-center cursor-pointer transition-colors ${
-                isSelected ? 'bg-indigo-50/50 dark:bg-indigo-950/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+              className={`p-2 border-r text-center cursor-pointer transition-colors ${
+                isChristianMode
+                  ? 'border-[#EAE4D7] dark:border-slate-800/80'
+                  : 'border-slate-200 dark:border-slate-700'
+              } ${
+                isSelected
+                  ? isChristianMode
+                    ? 'bg-[#EAF1FA]/90 dark:bg-sky-950/40'
+                    : 'bg-indigo-50/50 dark:bg-indigo-950/40'
+                  : isChristianMode && day.getDay() === 0
+                  ? 'bg-[#F3F8FE]/70 dark:bg-sky-950/20 hover:bg-[#EAF1FA] dark:hover:bg-sky-950/30'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">
+              <div
+                className={`text-[11px] font-bold uppercase ${
+                  isChristianMode && day.getDay() === 0
+                    ? 'text-[#1E40AF] dark:text-sky-300'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
                 {t.daysShort[idx]}
               </div>
               <div className="flex items-center justify-center gap-1 my-0.5">
                 <span
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-mono-tabular font-bold ${
                     isToday
-                      ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300'
+                      ? isChristianMode
+                        ? 'bg-[#14284B] dark:bg-sky-500 text-white shadow-xs ring-2 ring-[#C69C44]/50'
+                        : 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300'
                       : 'text-slate-800 dark:text-slate-200'
                   }`}
                 >
@@ -161,6 +199,15 @@ export const WeekView: React.FC<WeekViewProps> = ({
                     {language === 'ur' ? (islamicOccasion.nameUr || islamicOccasion.nameEn) : islamicOccasion.nameEn}
                   </div>
                 )}
+                {christianObs.slice(0, 1).map((obs) => (
+                  <div
+                    key={obs.id}
+                    className="text-[9px] px-1 py-0.5 rounded font-semibold bg-[#FBF4E4] dark:bg-amber-950/50 text-[#7A5410] dark:text-amber-200 truncate"
+                    title={obs.name}
+                  >
+                    {obs.name}
+                  </div>
+                ))}
                 {dayFestivals.slice(0, 1).map((f) => {
                   const b = getCategoryBadgeStyle(f.category);
                   return (
@@ -170,9 +217,13 @@ export const WeekView: React.FC<WeekViewProps> = ({
                         e.stopPropagation();
                         onSelectFestival(f);
                       }}
-                      className={`text-[9px] px-1 py-0.5 rounded font-bold ${b.bg} ${b.text} truncate`}
+                      className={
+                        isChristianMode
+                          ? 'text-[9px] px-1 py-0.5 rounded font-semibold bg-[#EDF3FC] dark:bg-sky-950/60 text-[#14284B] dark:text-sky-200 truncate'
+                          : `text-[9px] px-1 py-0.5 rounded font-bold ${b.bg} ${b.text} truncate`
+                      }
                     >
-                      {language === 'ur' ? (f.nameUr || f.nameHi) : f.nameEn}
+                      {isChristianMode ? f.nameEn : language === 'ur' ? (f.nameUr || f.nameHi) : f.nameEn}
                     </div>
                   );
                 })}

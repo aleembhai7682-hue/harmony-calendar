@@ -8,6 +8,7 @@ import {
   INTERNATIONAL_CITIES,
   hasExplicitLocation,
   getCityLocation,
+  resolveTimezoneFromCoordinates,
 } from '../utils/cities';
 import {
   Sun,
@@ -88,10 +89,11 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
         setIsLocating(false);
         const lat = parseFloat(pos.coords.latitude.toFixed(4));
         const lon = parseFloat(pos.coords.longitude.toFixed(4));
+        const resolvedTz = resolveTimezoneFromCoordinates(lat, lon);
         onLocationChange?.({
           selectedCity: 'custom',
           selectedCountry: '',
-          selectedLocationTimezone: deviceTz,
+          selectedLocationTimezone: resolvedTz,
           locationExplicitlyConfirmed: true,
           customLatitude: lat,
           customLongitude: lon,

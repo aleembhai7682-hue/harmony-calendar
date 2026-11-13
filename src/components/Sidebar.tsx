@@ -96,13 +96,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const dailyWisdom = getDailyWisdom(currentDate);
 
+  const isChristianMode = filters.calendarMode === 'christian';
+
   return (
-    <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 flex flex-col gap-4 p-4 sm:p-5 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 overflow-y-auto">
+    <aside
+      className={`w-full lg:w-72 xl:w-80 flex-shrink-0 flex flex-col gap-4 p-4 sm:p-5 overflow-y-auto transition-colors ${
+        isChristianMode
+          ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border border-[#E5DFD2] dark:border-slate-800 rounded-2xl shadow-[0_6px_24px_-12px_rgba(20,40,75,0.08)] text-[#13223D] dark:text-slate-200'
+          : 'bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+      }`}
+    >
       
       {/* Mini Calendar Widget */}
-      <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-700/60 shadow-sm">
+      <div
+        className={`rounded-2xl p-4 border shadow-xs ${
+          isChristianMode
+            ? 'bg-gradient-to-b from-[#F8FAFD] to-[#FAF7F0] dark:from-[#11203B] dark:to-[#0C172B] border-[#E5DFD2] dark:border-slate-700/70'
+            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/60 shadow-sm'
+        }`}
+      >
         <div className="flex items-center justify-between mb-3">
-          <span className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">
+          <span
+            className={`text-xs uppercase tracking-wider ${
+              isChristianMode
+                ? 'font-bold text-[#14284B] dark:text-sky-200'
+                : 'font-bold text-slate-700 dark:text-slate-300'
+            }`}
+          >
             {t.months[miniMonthIndex]} {miniYear}
           </span>
           <div className="flex items-center gap-1">
@@ -151,12 +171,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={dayNum}
                 onClick={() => onSelectDate(new Date(miniYear, miniMonthIndex, dayNum))}
-                className={`h-7 w-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-all ${
+                className={`h-7 w-7 rounded-lg text-xs font-semibold font-mono-tabular flex items-center justify-center transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-indigo-600 text-white font-bold shadow-sm'
+                    ? isChristianMode
+                      ? 'bg-[#14284B] dark:bg-sky-500 text-white font-bold shadow-xs'
+                      : 'bg-indigo-600 text-white font-bold shadow-sm'
                     : isToday
-                    ? 'border border-indigo-500 text-indigo-600 dark:text-indigo-400 font-bold'
-                    : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                    ? isChristianMode
+                      ? 'border border-[#C69C44] text-[#8C6418] dark:text-amber-300 font-bold'
+                      : 'border border-indigo-500 text-indigo-600 dark:text-indigo-400 font-bold'
+                    : 'hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               >
                 {dayNum}
@@ -302,29 +326,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
             upcomingFestivals
               .filter((f) => f.category === 'christian' || f.category === 'national')
               .slice(0, 4)
-              .map((f) => {
-                const style = getCategoryBadgeStyle(f.category);
-                return (
-                  <div
-                    key={f.id}
-                    onClick={() => onSelectFestival(f)}
-                    className={`p-2.5 rounded-xl border ${style.border} ${style.bg} cursor-pointer hover:shadow-xs transition-all group`}
-                  >
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
-                      <span>{f.date}</span>
-                      <span className="capitalize text-[10px] px-1 rounded bg-white/70 dark:bg-black/30 font-bold">
-                        {f.category}
-                      </span>
-                    </div>
-                    <div className={`text-xs font-bold ${style.text} group-hover:underline`}>
-                      {f.nameEn}
-                    </div>
-                    <div className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-1 mt-0.5">
-                      {f.descriptionEn}
-                    </div>
+              .map((f) => (
+                <div
+                  key={f.id}
+                  onClick={() => onSelectFestival(f)}
+                  className="p-3 rounded-xl border border-[#E4DDD0] dark:border-slate-700/80 bg-gradient-to-br from-white to-[#F7F9FD] dark:from-[#101D36] dark:to-[#0C1629] cursor-pointer hover:border-[#C69C44]/60 dark:hover:border-sky-500/50 transition-all group"
+                >
+                  <div className="flex items-center justify-between text-[11px] font-mono-tabular text-slate-500 dark:text-slate-400 mb-1">
+                    <span>{f.date}</span>
+                    <span className="capitalize font-sans text-[10px] font-semibold text-[#8C6418] dark:text-amber-300">
+                      {f.category === 'christian' ? 'Christian Feast' : 'National Holiday'}
+                    </span>
                   </div>
-                );
-              })}
+                  <div className="text-xs font-bold text-[#14284B] dark:text-sky-200 group-hover:underline">
+                    {f.nameEn}
+                  </div>
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-1 mt-0.5">
+                    {f.descriptionEn}
+                  </div>
+                </div>
+              ))}
         </div>
       </div>
 

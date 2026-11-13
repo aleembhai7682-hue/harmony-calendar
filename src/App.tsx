@@ -441,7 +441,7 @@ export default function App() {
     <div
       className={`min-h-screen text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors relative overflow-x-hidden ${
         calendarMode === 'christian'
-          ? 'bg-gradient-to-b from-slate-100 via-sky-50/40 to-indigo-50/25 dark:bg-gradient-to-b dark:from-[#070b16] dark:via-[#0c1326] dark:to-slate-950'
+          ? 'bg-gradient-to-b from-[#FAF8F3] via-[#F4F8FD] to-[#EEF3FA] dark:bg-gradient-to-b dark:from-[#070E1D] dark:via-[#0B162C] dark:to-[#081020]'
           : calendarMode === 'hindu'
           ? 'bg-gradient-to-b from-amber-50/40 via-orange-50/20 to-slate-50 dark:bg-gradient-to-b dark:from-slate-950 dark:via-[#191107] dark:to-slate-950'
           : 'bg-slate-50 dark:bg-slate-950'
@@ -449,7 +449,7 @@ export default function App() {
     >
       {/* Ambient background light glow for peaceful Christian / Hindu themes */}
       {calendarMode === 'christian' && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-b from-blue-500/10 via-amber-200/5 to-transparent blur-3xl pointer-events-none -z-0" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-b from-sky-300/18 via-amber-200/12 to-transparent dark:from-sky-500/10 dark:via-amber-300/5 blur-3xl pointer-events-none -z-0" />
       )}
       {calendarMode === 'hindu' && (
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-b from-amber-500/10 via-orange-400/5 to-transparent blur-3xl pointer-events-none -z-0" />

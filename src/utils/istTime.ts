@@ -26,6 +26,68 @@ export function getTimezoneOffsetHours(date: Date = new Date()): number {
 }
 
 /**
+ * Checks whether a string is a valid IANA timezone identifier supported by Intl.
+ */
+export function isValidIanaTimezone(timeZone?: string): boolean {
+  if (!timeZone || typeof timeZone !== 'string') return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timeZone.trim() }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const FALLBACK_IANA_TIMEZONES = [
+  'UTC',
+  'Asia/Kolkata',
+  'Asia/Dubai',
+  'Asia/Riyadh',
+  'Asia/Karachi',
+  'Asia/Dhaka',
+  'Asia/Kathmandu',
+  'Asia/Colombo',
+  'Asia/Singapore',
+  'Asia/Kuala_Lumpur',
+  'Asia/Jakarta',
+  'Asia/Tokyo',
+  'Asia/Muscat',
+  'Asia/Qatar',
+  'Asia/Kuwait',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Istanbul',
+  'Africa/Cairo',
+  'Africa/Johannesburg',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Toronto',
+  'America/Vancouver',
+  'Australia/Sydney',
+  'Australia/Melbourne',
+];
+
+/**
+ * Returns all supported IANA timezones from Intl.supportedValuesOf('timeZone')
+ * with a clean international fallback list for older environments.
+ */
+export function getSupportedTimezones(): string[] {
+  try {
+    const intlAny = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
+    if (typeof intlAny.supportedValuesOf === 'function') {
+      const zones = intlAny.supportedValuesOf('timeZone');
+      if (Array.isArray(zones) && zones.length > 0) {
+        return zones;
+      }
+    }
+  } catch {}
+  return FALLBACK_IANA_TIMEZONES;
+}
+
+/**
  * Computes the exact UTC offset (in hours, including DST) for any IANA timezone string on a given Date.
  * Falls back to device local timezone offset if the timezone string is invalid or unsupported.
  */

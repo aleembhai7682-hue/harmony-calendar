@@ -197,3 +197,172 @@ export function getLiturgicalSeason(date: Date): LiturgicalSeasonInfo {
     spiritualFocus: 'Patience, faithful service, and everyday wisdom',
   };
 }
+
+export interface ChristianObservance {
+  id: string;
+  name: string;
+  dateStr: string; // YYYY-MM-DD
+  season: string;
+  description: string;
+}
+
+function toYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+
+/**
+ * Meeus/Jones/Butcher Gregorian Easter Sunday algorithm.
+ */
+export function getGregorianEasterSunday(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1; // 0-indexed
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month, day);
+}
+
+/**
+ * Computes key fixed and movable Christian calendar observances for a given year.
+ */
+export function getChristianObservancesForYear(year: number): ChristianObservance[] {
+  const easter = getGregorianEasterSunday(year);
+  const addDays = (base: Date, delta: number) =>
+    new Date(base.getFullYear(), base.getMonth(), base.getDate() + delta);
+
+  // First Sunday of Advent: Sunday nearest Nov 30 (Nov 27 .. Dec 3)
+  const nov30 = new Date(year, 10, 30);
+  const dayOfWeek = nov30.getDay(); // 0 = Sun
+  const offsetToSunday = dayOfWeek <= 3 ? -dayOfWeek : 7 - dayOfWeek;
+  const adventSunday = addDays(nov30, offsetToSunday);
+
+  const items: ChristianObservance[] = [
+    {
+      id: `epiphany-${year}`,
+      name: 'Epiphany',
+      dateStr: `${year}-01-06`,
+      season: 'Christmas & Epiphany',
+      description: 'Celebrates the manifestation of Christ to the Magi and the nations.',
+    },
+    {
+      id: `ash-wednesday-${year}`,
+      name: 'Ash Wednesday',
+      dateStr: toYMD(addDays(easter, -46)),
+      season: 'Lent',
+      description: 'First day of the 40-day Lenten season of prayer, reflection, and renewal.',
+    },
+    {
+      id: `palm-sunday-${year}`,
+      name: 'Palm Sunday',
+      dateStr: toYMD(addDays(easter, -7)),
+      season: 'Holy Week',
+      description: 'Marks the beginning of Holy Week and Christ’s triumphant entry into Jerusalem.',
+    },
+    {
+      id: `maundy-thursday-${year}`,
+      name: 'Maundy Thursday',
+      dateStr: toYMD(addDays(easter, -3)),
+      season: 'Holy Week',
+      description: 'Commemorates the Last Supper and the commandment of selfless service.',
+    },
+    {
+      id: `good-friday-${year}`,
+      name: 'Good Friday',
+      dateStr: toYMD(addDays(easter, -2)),
+      season: 'Holy Week',
+      description: 'Solemn remembrance of the crucifixion and sacrifice of Jesus Christ.',
+    },
+    {
+      id: `easter-sunday-${year}`,
+      name: 'Easter Sunday',
+      dateStr: toYMD(easter),
+      season: 'Eastertide',
+      description: 'Celebration of the Resurrection of Jesus Christ and new life.',
+    },
+    {
+      id: `ascension-${year}`,
+      name: 'Ascension Day',
+      dateStr: toYMD(addDays(easter, 39)),
+      season: 'Eastertide',
+      description: 'Commemorates the Ascension of Christ 40 days after Easter.',
+    },
+    {
+      id: `pentecost-${year}`,
+      name: 'Pentecost Sunday',
+      dateStr: toYMD(addDays(easter, 49)),
+      season: 'Pentecost',
+      description: 'Celebrates the descent of the Holy Spirit upon the disciples.',
+    },
+    {
+      id: `all-saints-${year}`,
+      name: "All Saints' Day",
+      dateStr: `${year}-11-01`,
+      season: 'Ordinary Time',
+      description: 'Day of gratitude and remembrance for faithful witnesses across generations.',
+    },
+    {
+      id: `first-advent-${year}`,
+      name: 'First Sunday of Advent',
+      dateStr: toYMD(adventSunday),
+      season: 'Advent',
+      description: 'Beginning of the liturgical year and the season of hopeful preparation.',
+    },
+    {
+      id: `christmas-eve-${year}`,
+      name: 'Christmas Eve',
+      dateStr: `${year}-12-24`,
+      season: 'Advent',
+      description: 'Evening vigil of carols, candlelight services, and quiet anticipation.',
+    },
+    {
+      id: `christmas-day-${year}`,
+      name: 'Christmas Day',
+      dateStr: `${year}-12-25`,
+      season: 'Christmas',
+      description: 'Celebration of the Nativity of Jesus Christ, peace, and goodwill.',
+    },
+  ];
+
+  return items.sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+}
+
+/**
+ * Returns any Christian observance matching the given date.
+ */
+export function getChristianObservancesForDate(date: Date): ChristianObservance[] {
+  const ymd = toYMD(date);
+  return getChristianObservancesForYear(date.getFullYear()).filter((o) => o.dateStr === ymd);
+}
+
+/**
+ * Returns the next upcoming (or today's) Christian observance from a given date.
+ */
+export function getNextChristianObservance(date: Date): {
+  observance: ChristianObservance;
+  daysUntil: number;
+} {
+  const ymd = toYMD(date);
+  const currentYearItems = getChristianObservancesForYear(date.getFullYear());
+  const nextYearItems = getChristianObservancesForYear(date.getFullYear() + 1);
+  const all = [...currentYearItems, ...nextYearItems];
+  const next = all.find((o) => o.dateStr >= ymd) || nextYearItems[0];
+
+  const [ny, nm, nd] = next.dateStr.split('-').map(Number);
+  const targetMidnight = new Date(ny, nm - 1, nd).getTime();
+  const curMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const daysUntil = Math.max(0, Math.round((targetMidnight - curMidnight) / 86400000));
+
+  return { observance: next, daysUntil };
+}
+

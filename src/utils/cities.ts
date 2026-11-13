@@ -6,6 +6,9 @@
  * Strictly avoids silently assuming Mumbai or any other hardcoded default city.
  */
 
+import tzlookup from 'tz-lookup';
+import { getDeviceTimezone, isValidIanaTimezone } from './istTime';
+
 export interface CityLocation {
   id: string;
   nameEn: string;
@@ -1268,6 +1271,24 @@ export function getUnsetLocation(): CityLocation {
 }
 
 /**
+ * Resolves any geographic (latitude, longitude) pair to its real IANA timezone ID
+ * (e.g. 'Europe/London', 'America/New_York', 'Asia/Kolkata', 'Asia/Dubai').
+ * Supports GPS coordinates and manual coordinates independently of the device's own timezone.
+ */
+export function resolveTimezoneFromCoordinates(lat: number, lon: number): string {
+  if (!isValidCoordinatePair(lat, lon)) {
+    return getDeviceTimezone();
+  }
+  try {
+    const resolved = tzlookup(lat, lon);
+    if (resolved && isValidIanaTimezone(resolved)) {
+      return resolved;
+    }
+  } catch {}
+  return getDeviceTimezone();
+}
+
+/**
  * Returns city location for the given cityId or custom coordinates.
  * Never silently assumes Mumbai or any fallback city when unset.
  */
@@ -1297,10 +1318,10 @@ export function getCityLocation(
     const latStr = `${Math.abs(customLat).toFixed(2)}°${customLat >= 0 ? 'N' : 'S'}`;
     const lonStr = `${Math.abs(customLon).toFixed(2)}°${customLon >= 0 ? 'E' : 'W'}`;
     const displayName = customName?.trim() || `Custom Location (${latStr}, ${lonStr})`;
-    const deviceTz =
-      typeof Intl !== 'undefined' && Intl.DateTimeFormat
-        ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-        : 'UTC';
+    const resolvedTz =
+      customTimezone?.trim() && isValidIanaTimezone(customTimezone.trim())
+        ? customTimezone.trim()
+        : resolveTimezoneFromCoordinates(customLat, customLon);
     return {
       id: 'custom',
       nameEn: displayName,
@@ -1313,7 +1334,7 @@ export function getCityLocation(
       latitude: customLat,
       longitude: customLon,
       elevationM: 0,
-      timezone: customTimezone?.trim() || deviceTz,
+      timezone: resolvedTz,
     };
   }
 

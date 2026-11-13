@@ -14,6 +14,7 @@ import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
 import { getHinduPanchang } from '../utils/panchang';
 import { getEventsForDateAndMode } from '../utils/eventUtils';
+import { getChristianObservancesForDate, getLiturgicalSeason } from '../utils/christianData';
 import {
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -66,18 +67,31 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
   }
 
   const query = searchQuery.toLowerCase().trim();
+  const isChristianModeView = filters.calendarMode === 'christian';
 
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+    <div
+      className={`flex-1 flex flex-col rounded-2xl border overflow-hidden transition-colors ${
+        isChristianModeView
+          ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border-[#E4DDD0] dark:border-slate-800 shadow-[0_8px_28px_-12px_rgba(20,40,75,0.08)]'
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm'
+      }`}
+    >
       
       {/* Top Filter Chips */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+      <div
+        className={`p-4 border-b flex flex-wrap items-center justify-between gap-3 ${
+          isChristianModeView
+            ? 'bg-[#F6F3EB]/80 dark:bg-[#101D36]/80 border-[#E4DDD0] dark:border-slate-800'
+            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50'
+        }`}
+      >
         <div className="flex items-center gap-2 overflow-x-auto">
           {(
             filters.calendarMode === 'christian'
               ? [
                   { id: 'all', label: 'All Items' },
-                  { id: 'festivals', label: 'Christian & Holidays' },
+                  { id: 'festivals', label: 'Christian Feasts & Holidays' },
                   { id: 'events', label: 'My Events' },
                   { id: 'tasks', label: 'My Tasks' },
                 ]
@@ -98,9 +112,11 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             <button
               key={chip.id}
               onClick={() => setFilterType(chip.id as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 filterType === chip.id
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? isChristianModeView
+                    ? 'bg-[#14284B] dark:bg-sky-600 text-white shadow-xs'
+                    : 'bg-indigo-600 text-white shadow-sm'
                   : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -109,7 +125,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           ))}
         </div>
 
-        <div className="text-xs font-semibold text-slate-400">
+        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
           Showing next 45 days
         </div>
       </div>
@@ -149,6 +165,12 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             ).filter((f) => f.category === 'christian' || f.category === 'national');
           }
 
+          let christianObs = isChristianMode
+            ? getChristianObservancesForDate(dayObj).filter(
+                (obs) => !dayFestivals.some((f) => f.nameEn.toLowerCase() === obs.name.toLowerCase())
+              )
+            : [];
+
           let islamicOccasion = isMuslimMode
             ? getIslamicOccasionForDate(dayObj, filters.hijriAdjustmentDays)
             : null;
@@ -166,6 +188,12 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                 f.nameEn.toLowerCase().includes(query) ||
                 f.nameHi.includes(query) ||
                 f.descriptionEn.toLowerCase().includes(query)
+            );
+            christianObs = christianObs.filter(
+              (o) =>
+                o.name.toLowerCase().includes(query) ||
+                o.description.toLowerCase().includes(query) ||
+                o.season.toLowerCase().includes(query)
             );
             if (
               islamicOccasion &&
@@ -191,20 +219,24 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             dayTasks = [];
           } else if (filterType === 'islamic') {
             dayFestivals = [];
+            christianObs = [];
             dayEvents = [];
             dayTasks = [];
           } else if (filterType === 'events') {
             dayFestivals = [];
+            christianObs = [];
             islamicOccasion = null;
             dayTasks = [];
           } else if (filterType === 'tasks') {
             dayFestivals = [];
+            christianObs = [];
             islamicOccasion = null;
             dayEvents = [];
           }
 
           const hasContent =
             dayFestivals.length > 0 ||
+            christianObs.length > 0 ||
             islamicOccasion !== null ||
             dayEvents.length > 0 ||
             dayTasks.length > 0;
@@ -214,17 +246,33 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           return (
             <div
               key={dateStr}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+              className={`rounded-2xl border p-4 shadow-xs transition-all ${
+                isChristianMode
+                  ? 'bg-white/90 dark:bg-[#101D36]/90 border-[#E5DFD2] dark:border-slate-700/80 hover:border-[#C69C44]/60 dark:hover:border-sky-500/50'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
             >
               {/* Day Date Header Banner */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
+                  <div
+                    className={`w-12 h-12 rounded-xl border flex flex-col items-center justify-center font-bold ${
+                      isChristianMode
+                        ? 'bg-[#F2F6FC] dark:bg-sky-950/50 border-[#D5E0F0] dark:border-sky-800/60 text-[#14284B] dark:text-sky-200'
+                        : 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400'
+                    }`}
+                  >
                     <span className="text-[10px] uppercase">{t.daysShort[dayOfWeekIndex]}</span>
-                    <span className="text-base leading-none">{dayNum}</span>
+                    <span className="text-base font-mono-tabular leading-none">{dayNum}</span>
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                    <h3
+                      className={`text-slate-900 dark:text-white ${
+                        isChristianMode
+                          ? 'font-editorial text-xl font-semibold text-[#10203B]'
+                          : 'font-bold text-base'
+                      }`}
+                    >
                       {t.months[month]} {dayNum}, {year}
                     </h3>
                     {isMuslimMode ? (
@@ -256,10 +304,17 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                         </span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 font-semibold">
-                        <span>{dayOfWeekIndex === 0 ? '🕊️' : '✝️'}</span>
+                      <div className="flex items-center gap-2 text-xs text-[#1E3A6E] dark:text-sky-300 font-medium">
                         <span>
-                          {dayOfWeekIndex === 0 ? "Lord's Day (Sunday Worship)" : dayObj.toLocaleDateString('en-US', { weekday: 'long' })}
+                          {dayOfWeekIndex === 0
+                            ? "The Lord's Day · Sunday Worship"
+                            : dayObj.toLocaleDateString('en-US', { weekday: 'long' })}
+                        </span>
+                        <span aria-hidden="true" className="text-slate-400">
+                          ·
+                        </span>
+                        <span className="text-[#8C6418] dark:text-amber-300">
+                          {getLiturgicalSeason(dayObj).seasonName}
                         </span>
                       </div>
                     )}
@@ -345,6 +400,31 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                   </div>
                 )}
 
+                {/* Christian Liturgical Observances */}
+                {christianObs.map((obs) => (
+                  <div
+                    key={obs.id}
+                    className="p-3.5 rounded-xl border border-[#E6D3A3] dark:border-amber-700/50 bg-[#FBF6EA] dark:bg-amber-950/30 flex items-start gap-3"
+                  >
+                    <div className="p-2 rounded-lg bg-[#8C6418] dark:bg-amber-600 text-white mt-0.5 shrink-0">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <h4 className="font-editorial text-lg font-semibold text-[#10203B] dark:text-[#FAF7F0]">
+                          {obs.name}
+                        </h4>
+                        <span className="text-[11px] font-semibold text-[#8C6418] dark:text-amber-300">
+                          Christian Observance · {obs.season}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                        {obs.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
                 {/* Indian Festivals */}
                 {dayFestivals.map((fest) => {
                   const badge = getCategoryBadgeStyle(fest.category);
@@ -352,17 +432,33 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                     <div
                       key={fest.id}
                       onClick={() => onSelectFestival(fest)}
-                      className={`p-3.5 rounded-xl border ${badge.border} ${badge.bg} cursor-pointer hover:shadow-md transition-all flex items-start gap-3`}
+                      className={
+                        isChristianMode
+                          ? 'p-3.5 rounded-xl border border-[#D8E2F0] dark:border-sky-800/60 bg-gradient-to-br from-[#F7FAFE] to-[#FCFBF8] dark:from-sky-950/40 dark:to-[#0E1A30] cursor-pointer hover:border-[#1E3A6E]/50 transition-all flex items-start gap-3'
+                          : `p-3.5 rounded-xl border ${badge.border} ${badge.bg} cursor-pointer hover:shadow-md transition-all flex items-start gap-3`
+                      }
                     >
                       <div
-                        className="p-2 rounded-lg text-white mt-0.5"
-                        style={{ backgroundColor: badge.dotColor }}
+                        className="p-2 rounded-lg text-white mt-0.5 shrink-0"
+                        style={{
+                          backgroundColor: isChristianMode
+                            ? fest.category === 'christian'
+                              ? '#8C6418'
+                              : '#14284B'
+                            : badge.dotColor,
+                        }}
                       >
                         <BookOpen className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className={`text-sm font-bold ${badge.text}`}>
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <h4
+                            className={
+                              isChristianMode
+                                ? 'font-editorial text-lg font-semibold text-[#10203B] dark:text-[#FAF7F0]'
+                                : `text-sm font-bold ${badge.text}`
+                            }
+                          >
                             {isChristianMode
                               ? fest.nameEn
                               : isHinduMode
@@ -371,8 +467,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                               ? (fest.nameUr || fest.nameHi)
                               : fest.nameEn}
                           </h4>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/80 dark:bg-black/30 capitalize text-slate-700 dark:text-slate-300">
-                            {fest.category} • {fest.holidayType}
+                          <span className="text-[11px] font-medium capitalize text-slate-500 dark:text-slate-400">
+                            {fest.category} · {fest.holidayType}
                           </span>
                         </div>
                         <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
@@ -382,8 +478,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                             ? (fest.descriptionUr || fest.descriptionEn)
                             : fest.descriptionEn}
                         </p>
-                        <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mt-1.5">
-                          ✨ {fest.significance}
+                        <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400 mt-1.5">
+                          Significance: {fest.significance}
                         </div>
                       </div>
                     </div>

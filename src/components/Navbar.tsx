@@ -137,14 +137,22 @@ export const Navbar: React.FC<NavbarProps> = ({
       id: 'christian',
       label: 'Christian Mode',
       icon: '✝️',
-      colorClasses: 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400',
-      activeBorder: 'border-blue-500',
+      colorClasses: 'bg-[#14284B] text-[#FAF8F3] shadow-sm ring-1 ring-[#C69C44]/50 dark:bg-sky-600 dark:text-white',
+      activeBorder: 'border-[#14284B]',
       badge: 'Bible & Sunday',
     },
   ];
 
+  const isChristianMode = calendarMode === 'christian';
+
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-xs">
+    <header
+      className={`sticky top-0 z-30 backdrop-blur-md transition-colors ${
+        isChristianMode
+          ? 'bg-[#FCFBF8]/92 dark:bg-[#0B1528]/92 border-b border-[#E5DFD2] dark:border-slate-800/80 shadow-[0_2px_12px_rgba(20,40,75,0.04)]'
+          : 'bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 shadow-xs'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Main Header Top Row */}
@@ -157,7 +165,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-2.5 cursor-pointer select-none group"
               onClick={() => onNavigate('today')}
             >
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 via-indigo-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+              <div
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform ${
+                  isChristianMode
+                    ? 'bg-gradient-to-tr from-[#14284B] via-[#1E3A6E] to-[#C69C44] shadow-[#14284B]/20'
+                    : 'bg-gradient-to-tr from-emerald-600 via-indigo-600 to-amber-500 shadow-indigo-500/20'
+                }`}
+              >
                 <CalendarIcon className="w-5 h-5" />
               </div>
               <div className="hidden sm:block">
@@ -198,13 +212,23 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Current Gregorian Date Title */}
             <div className="flex flex-col min-w-0">
-              <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight truncate">
+              <h1
+                className={`text-base sm:text-lg text-slate-900 dark:text-white leading-tight truncate ${
+                  isChristianMode ? 'font-editorial sm:text-xl font-bold tracking-tight text-[#10203B]' : 'font-black'
+                }`}
+              >
                 {monthName} {yearNum}
               </h1>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
                 <span>{currentDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                 <span className="text-slate-300 dark:text-slate-600">•</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
+                <span
+                  className={`font-mono-tabular text-[11px] font-bold ${
+                    isChristianMode
+                      ? 'text-[#8C6418] dark:text-amber-300'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  }`}
+                >
                   {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
               </div>
@@ -285,7 +309,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* New Event Button */}
             <button
               onClick={onOpenNewEvent}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/25 cursor-pointer"
+              className={`inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl active:scale-95 text-white text-xs font-bold transition-all shadow-sm cursor-pointer ${
+                isChristianMode
+                  ? 'bg-[#14284B] hover:bg-[#1D396A] dark:bg-sky-600 dark:hover:bg-sky-500'
+                  : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/25'
+              }`}
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">New Event</span>
@@ -359,7 +387,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => onViewModeChange(v.id)}
                   className={`px-3 py-1 text-xs font-semibold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                     active
-                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold'
+                      ? isChristianMode
+                        ? 'bg-white dark:bg-slate-900 text-[#14284B] dark:text-sky-300 shadow-xs font-bold'
+                        : 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -369,13 +399,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </div>
 
-          {/* Active Location & Device Timezone Pill Indicator */}
+          {/* Active Location & Device Timezone Indicator */}
           <div
             onClick={onOpenSettings}
             title="Click to configure geographical location or preferences in Settings"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 transition-colors cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 transition-colors cursor-pointer whitespace-nowrap shrink-0"
           >
-            <span className={`w-2 h-2 rounded-full ${hasLoc && !needsMumbaiConfirm ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
+            <span
+              className={`w-2 h-2 rounded-full ${
+                hasLoc && !needsMumbaiConfirm ? 'bg-emerald-500' : 'bg-amber-500'
+              } ${isChristianMode ? '' : 'animate-pulse'}`}
+            />
             <span>
               {needsMumbaiConfirm
                 ? `Confirm location • ${deviceTz.replace(/_/g, ' ')}`

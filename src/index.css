@@ -8,6 +8,24 @@
   }
 }
 
+.font-editorial {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.font-mono-tabular {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-celestial-glow,
+  .animate-stained-glass-pulse,
+  .animate-divine-sweep,
+  .animate-cross-float {
+    animation: none !important;
+  }
+}
+
 /* Custom sleek scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

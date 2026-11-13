@@ -14,6 +14,7 @@ import { getHinduPanchang } from '../utils/panchang';
 import { checkFridayFestivalCoincidence } from '../utils/coincidenceAlert';
 import { isTaskVisibleInMode } from '../utils/taskFilter';
 import { getEventsForDateAndMode } from '../utils/eventUtils';
+import { getChristianObservancesForDate } from '../utils/christianData';
 import { Plus, CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
 
 interface MonthViewProps {
@@ -130,6 +131,12 @@ export const MonthView: React.FC<MonthViewProps> = ({
       ).filter((f) => f.category === 'christian' || f.category === 'national');
     }
 
+    const christianObservances = isChristianMode
+      ? getChristianObservancesForDate(cellDate).filter(
+          (obs) => !dayFestivals.some((f) => f.nameEn.toLowerCase() === obs.name.toLowerCase())
+        )
+      : [];
+
     // User Events for this day (supporting recurring events and mode tags)
     const dayEvents = getEventsForDateAndMode(events, dateStr, filters.calendarMode);
 
@@ -138,23 +145,35 @@ export const MonthView: React.FC<MonthViewProps> = ({
       (task) => task.dueDate === dateStr && isTaskVisibleInMode(task, filters.calendarMode)
     );
 
+    const cellSurfaceClass = isChristianMode
+      ? !isCurrentMonth
+        ? 'bg-[#F6F3EC]/60 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600'
+        : isSelected
+        ? 'bg-[#EDF3FC] dark:bg-sky-950/35 ring-1 ring-inset ring-[#1E3A6E]/25 dark:ring-sky-500/30'
+        : isSunday
+        ? 'bg-[#F4F8FE]/80 dark:bg-sky-950/15 hover:bg-[#EBF2FC] dark:hover:bg-sky-950/25'
+        : 'bg-[#FCFBF8] dark:bg-[#0D182D] hover:bg-[#F5F1E8]/80 dark:hover:bg-slate-800/60'
+      : !isCurrentMonth
+      ? 'bg-slate-50/50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600'
+      : isSelected
+      ? 'bg-indigo-50/30 dark:bg-indigo-950/20'
+      : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60';
+
     return (
       <div
         key={dateStr}
         onClick={() => onSelectDate(cellDate)}
-        className={`group relative min-h-[110px] sm:min-h-[125px] p-1.5 sm:p-2 border-b border-r border-slate-200 dark:border-slate-800 transition-all flex flex-col justify-between ${
-          !isCurrentMonth
-            ? 'bg-slate-50/50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600'
-            : isSelected
-            ? 'bg-indigo-50/30 dark:bg-indigo-950/20'
-            : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-        } ${
+        className={`group relative min-h-[110px] sm:min-h-[125px] p-1.5 sm:p-2 border-b border-r transition-all flex flex-col justify-between ${
+          isChristianMode
+            ? 'border-[#EAE4D7] dark:border-slate-800/80'
+            : 'border-slate-200 dark:border-slate-800'
+        } ${cellSurfaceClass} ${
           isMuslimMode && isFriday && filters.highlightFridays && isCurrentMonth
             ? 'border-t-2 border-t-emerald-500 shadow-xs'
             : isHinduMode && panchang && (panchang.isEkadashi || panchang.isPurnima) && isCurrentMonth
             ? 'border-t-2 border-t-amber-500 shadow-xs'
             : isChristianMode && isSunday && isCurrentMonth
-            ? 'border-t-2 border-t-blue-500 shadow-xs'
+            ? 'border-t-2 border-t-[#C69C44]/70 dark:border-t-sky-500/70'
             : ''
         }`}
       >
@@ -233,25 +252,25 @@ export const MonthView: React.FC<MonthViewProps> = ({
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-1.5">
                 <span
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono-tabular font-bold transition-all ${
                     isToday
-                      ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-300 dark:ring-blue-700'
+                      ? 'bg-[#14284B] dark:bg-sky-500 text-white shadow-xs ring-2 ring-[#C69C44]/50'
                       : isSelected
-                      ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900'
+                      ? 'bg-[#254A8A] dark:bg-sky-300 text-white dark:text-slate-950'
                       : isCurrentMonth
-                      ? 'text-slate-800 dark:text-slate-200 font-semibold'
+                      ? 'text-[#13223D] dark:text-slate-200 font-semibold'
                       : 'text-slate-400 dark:text-slate-600'
                   }`}
                 >
                   {dayNum}
                 </span>
-                {isSunday && (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold">
+                {isSunday && isCurrentMonth && (
+                  <span className="text-[10px] font-semibold text-[#1E40AF] dark:text-sky-300">
                     Sunday
                   </span>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">
                 {cellDate.toLocaleDateString('en-US', { weekday: 'short' })}
               </span>
             </div>
@@ -316,6 +335,18 @@ export const MonthView: React.FC<MonthViewProps> = ({
               </div>
             )}
 
+            {/* Christian Liturgical Observances */}
+            {christianObservances.slice(0, 1).map((obs) => (
+              <div
+                key={obs.id}
+                className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#FBF4E4] dark:bg-amber-950/40 text-[#7A5410] dark:text-amber-200 border border-[#E9D7AD] dark:border-amber-700/50 truncate flex items-center gap-1"
+                title={`${obs.name} (${obs.season}) — ${obs.description}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C69C44] flex-shrink-0" />
+                <span className="truncate">{obs.name}</span>
+              </div>
+            ))}
+
             {/* Indian Festivals */}
             {dayFestivals.slice(0, 2).map((fest) => {
               const badge = getCategoryBadgeStyle(fest.category);
@@ -326,12 +357,22 @@ export const MonthView: React.FC<MonthViewProps> = ({
                     e.stopPropagation();
                     onSelectFestival(fest);
                   }}
-                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${badge.bg} ${badge.text} border ${badge.border} truncate cursor-pointer hover:brightness-95 transition-all flex items-center gap-1`}
+                  className={
+                    isChristianMode
+                      ? 'px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#EDF3FC] dark:bg-sky-950/60 text-[#14284B] dark:text-sky-200 border border-[#D1DFF2] dark:border-sky-800/60 truncate cursor-pointer hover:bg-[#E2ECFA] dark:hover:bg-sky-900/60 transition-colors flex items-center gap-1'
+                      : `px-1.5 py-0.5 rounded-md text-[10px] font-bold ${badge.bg} ${badge.text} border ${badge.border} truncate cursor-pointer hover:brightness-95 transition-all flex items-center gap-1`
+                  }
                   title={`${fest.nameEn} - ${fest.significance}`}
                 >
                   <span
                     className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: badge.dotColor }}
+                    style={{
+                      backgroundColor: isChristianMode
+                        ? fest.category === 'christian'
+                          ? '#C69C44'
+                          : '#1E3A6E'
+                        : badge.dotColor,
+                    }}
                   />
                   <span className="truncate">
                     {isChristianMode
@@ -354,15 +395,29 @@ export const MonthView: React.FC<MonthViewProps> = ({
                   e.stopPropagation();
                   onSelectEvent(evt);
                 }}
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800 truncate cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1"
-                style={{
-                  borderLeftColor: evt.color || '#4f46e5',
-                  borderLeftWidth: '3px',
-                }}
+                className={
+                  isChristianMode
+                    ? 'px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-white dark:bg-slate-800/90 text-[#14284B] dark:text-slate-100 border border-[#DFD8CA] dark:border-slate-700 truncate cursor-pointer hover:border-[#1E3A6E]/50 dark:hover:border-sky-500/60 transition-colors flex items-center gap-1.5'
+                    : 'px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800 truncate cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1'
+                }
+                style={
+                  isChristianMode
+                    ? undefined
+                    : {
+                        borderLeftColor: evt.color || '#4f46e5',
+                        borderLeftWidth: '3px',
+                      }
+                }
                 title={`${evt.startTime ? evt.startTime + ' ' : ''}${evt.title}`}
               >
+                {isChristianMode && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: evt.color || '#1E3A6E' }}
+                  />
+                )}
                 {evt.startTime && !evt.allDay && (
-                  <span className="text-[9px] opacity-75">{evt.startTime}</span>
+                  <span className="text-[9px] font-mono-tabular opacity-75">{evt.startTime}</span>
                 )}
                 <span className="truncate">{evt.title}</span>
               </div>
@@ -405,19 +460,38 @@ export const MonthView: React.FC<MonthViewProps> = ({
     );
   };
 
+  const isChristianModeView = filters.calendarMode === 'christian';
+
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+    <div
+      className={`flex-1 flex flex-col rounded-2xl border overflow-hidden transition-colors ${
+        isChristianModeView
+          ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border-[#E4DDD0] dark:border-slate-800 shadow-[0_8px_28px_-12px_rgba(20,40,75,0.08)]'
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm'
+      }`}
+    >
       
       {/* Weekday Names Header */}
-      <div className="grid grid-cols-7 bg-slate-100/70 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
+      <div
+        className={`grid grid-cols-7 border-b ${
+          isChristianModeView
+            ? 'bg-[#F6F3EB] dark:bg-[#101D36] border-[#E4DDD0] dark:border-slate-800'
+            : 'bg-slate-100/70 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800'
+        }`}
+      >
         {t.days.map((day, idx) => {
           const isFriday = idx === 5;
+          const isSundayHeader = idx === 0;
           return (
             <div
               key={day}
-              className={`py-2 text-center text-xs font-bold uppercase tracking-wider ${
-                isFriday && filters.highlightFridays
+              className={`py-2.5 text-center text-xs font-bold uppercase tracking-wider ${
+                isFriday && filters.highlightFridays && filters.calendarMode === 'muslim'
                   ? 'text-emerald-700 dark:text-emerald-400'
+                  : isChristianModeView && isSundayHeader
+                  ? 'text-[#1E40AF] dark:text-sky-300'
+                  : isChristianModeView
+                  ? 'text-[#14284B]/80 dark:text-slate-300'
                   : 'text-slate-600 dark:text-slate-400'
               }`}
             >
@@ -429,7 +503,13 @@ export const MonthView: React.FC<MonthViewProps> = ({
       </div>
 
       {/* 7-column Calendar Grid */}
-      <div className="grid grid-cols-7 flex-1 border-l border-t border-slate-200 dark:border-slate-800 auto-rows-fr">
+      <div
+        className={`grid grid-cols-7 flex-1 border-l border-t auto-rows-fr ${
+          isChristianModeView
+            ? 'border-[#EAE4D7] dark:border-slate-800/80'
+            : 'border-slate-200 dark:border-slate-800'
+        }`}
+      >
         {/* Trailing days from previous month */}
         {Array.from({ length: trailingDaysCount }).map((_, i) => {
           const d = prevMonthLastDay - trailingDaysCount + i + 1;

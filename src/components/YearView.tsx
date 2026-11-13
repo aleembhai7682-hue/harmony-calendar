@@ -7,6 +7,7 @@ import {
 import { translations } from '../translations/i18n';
 import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
 import { getIslamicOccasionForDate } from '../utils/hijri';
+import { getChristianObservancesForDate } from '../utils/christianData';
 
 interface YearViewProps {
   currentDate: Date;
@@ -35,16 +36,32 @@ export const YearView: React.FC<YearViewProps> = ({
     today.getDate()
   ).padStart(2, '0')}`;
 
+  const isChristianModeView = filters.calendarMode === 'christian';
+
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50 dark:bg-slate-950">
+    <div
+      className={`flex-1 overflow-y-auto p-4 sm:p-6 rounded-2xl ${
+        isChristianModeView
+          ? 'bg-[#FAF8F3]/70 dark:bg-[#080F1E]/70'
+          : 'bg-slate-50 dark:bg-slate-950'
+      }`}
+    >
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+            <h1
+              className={
+                isChristianModeView
+                  ? 'font-editorial text-3xl sm:text-4xl font-semibold text-[#10203B] dark:text-[#FAF7F0]'
+                  : 'text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white'
+              }
+            >
               {year}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {language === 'en'
+              {isChristianModeView
+                ? 'Annual overview of Christian feasts, liturgical observances, national holidays, and scheduled events'
+                : language === 'en'
                 ? 'Overview of festivals, Islamic occasions, and scheduled events across the year'
                 : 'वर्ष भर के प्रमुख त्यौहार, इस्लामी पर्व और निर्धारित कार्यक्रमों का दृश्य'}
             </p>
@@ -61,14 +78,24 @@ export const YearView: React.FC<YearViewProps> = ({
               <div
                 key={monthIndex}
                 onClick={() => onNavigateToMonth(year, monthIndex)}
-                className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer group"
+                className={`rounded-2xl p-4 border transition-all cursor-pointer group ${
+                  isChristianModeView
+                    ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border-[#E4DDD0] dark:border-slate-800 hover:border-[#C69C44]/70 dark:hover:border-sky-500/60 shadow-xs'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700'
+                }`}
               >
                 {/* Month Name */}
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <h3
+                    className={`text-sm transition-colors ${
+                      isChristianModeView
+                        ? 'font-editorial text-base font-semibold text-[#14284B] dark:text-[#FAF7F0] group-hover:text-[#1E40AF] dark:group-hover:text-sky-300'
+                        : 'font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                    }`}
+                  >
                     {t.months[monthIndex]}
                   </h3>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">
+                  <span className="text-[10px] font-mono-tabular text-slate-400 font-bold uppercase">
                     {monthIndex + 1}
                   </span>
                 </div>
@@ -117,12 +144,12 @@ export const YearView: React.FC<YearViewProps> = ({
                       ).filter((f) => f.category === 'christian' || f.category === 'national');
                     }
 
+                    const cellDateObj = new Date(year, monthIndex, dayNum);
                     const islamicOccasion = isMuslimMode
-                      ? getIslamicOccasionForDate(
-                          new Date(year, monthIndex, dayNum),
-                          filters.hijriAdjustmentDays
-                        )
+                      ? getIslamicOccasionForDate(cellDateObj, filters.hijriAdjustmentDays)
                       : null;
+                    const hasChristianObs =
+                      isChristianMode && getChristianObservancesForDate(cellDateObj).length > 0;
                     const hasEvents = events.some((e) => e.startDate === dateStr);
 
                     return (
@@ -130,11 +157,13 @@ export const YearView: React.FC<YearViewProps> = ({
                         key={dayNum}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onSelectDate(new Date(year, monthIndex, dayNum));
+                          onSelectDate(cellDateObj);
                         }}
-                        className={`h-6 w-6 mx-auto rounded-md flex flex-col items-center justify-center relative font-semibold transition-all ${
+                        className={`h-6 w-6 mx-auto rounded-md flex flex-col items-center justify-center relative font-mono-tabular font-semibold transition-all ${
                           isToday
-                            ? 'bg-indigo-600 text-white font-bold'
+                            ? isChristianMode
+                              ? 'bg-[#14284B] dark:bg-sky-500 text-white font-bold'
+                              : 'bg-indigo-600 text-white font-bold'
                             : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                         }`}
                       >
@@ -144,6 +173,9 @@ export const YearView: React.FC<YearViewProps> = ({
                         <div className="flex items-center gap-0.5 absolute -bottom-0.5">
                           {islamicOccasion && (
                             <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                          )}
+                          {hasChristianObs && (
+                            <span className="w-1 h-1 rounded-full bg-[#C69C44]" />
                           )}
                           {dayFestivals.length > 0 && (
                             <span
