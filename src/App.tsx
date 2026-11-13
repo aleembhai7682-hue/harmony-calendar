@@ -29,6 +29,8 @@ import {
   DEFAULT_FILTERS,
 } from './utils/storage';
 import { formatDateToLocalYMD, getTodayLocalYMD } from './utils/dateUtils';
+import { isEventOnDate, isEventVisibleInMode } from './utils/eventUtils';
+import { isTaskVisibleInMode } from './utils/taskFilter';
 import { getHijriDate, getIslamicOccasionForDate } from './utils/hijri';
 import { INDIAN_FESTIVALS_DATABASE } from './utils/indianFestivals';
 import { exportEventsToIcs } from './utils/icsExport';
@@ -251,13 +253,14 @@ export default function App() {
     const checkReminders = () => {
       const todayStr = getTodayLocalYMD();
 
-      // Check Events
+      // Check Events (strictly filtered by active faith mode)
       for (const evt of events) {
         if (
-          evt.startDate === todayStr &&
+          isEventVisibleInMode(evt, calendarMode) &&
+          isEventOnDate(evt, todayStr) &&
           shouldTriggerReminder(
             `evt-${evt.id}`,
-            evt.startDate,
+            todayStr,
             evt.startTime,
             evt.reminderMinutesBefore || 15
           )
@@ -278,10 +281,11 @@ export default function App() {
         }
       }
 
-      // Check Tasks
+      // Check Tasks (strictly filtered by active faith mode)
       for (const tsk of tasks) {
         if (
           !tsk.completed &&
+          isTaskVisibleInMode(tsk, calendarMode) &&
           tsk.dueDate === todayStr &&
           shouldTriggerReminder(`tsk-${tsk.id}`, tsk.dueDate, tsk.dueTime, 30)
         ) {
@@ -309,7 +313,7 @@ export default function App() {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [events, tasks]);
+  }, [events, tasks, calendarMode]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
@@ -787,6 +791,7 @@ export default function App() {
         onClose={() => setIsQuickAddModalOpen(false)}
         onAddEvent={handleSaveEvent}
         language={language}
+        calendarMode={calendarMode}
       />
 
       <SettingsModal

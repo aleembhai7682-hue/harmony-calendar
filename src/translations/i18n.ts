@@ -315,9 +315,9 @@ export const translations = {
       jumpToDate: 'Tareekh Par Jayein',
       shortcuts: 'Keyboard Shortcuts',
     },
-    days: ['Itwar (Sunday)', 'Peer / Somwar', 'Mangal', 'Budh', 'Jumerat', 'Jumma Mubarak', 'Sanichar / Hafta'],
-    daysShort: ['Itw', 'Peer', 'Mgl', 'Budh', 'Jum', 'Juma', 'San'],
-    daysMin: ['It', 'Pe', 'Ma', 'Bu', 'Ju', 'Jm', 'Sa'],
+    days: ['Ravivar (Sunday)', 'Somwar (Monday)', 'Mangalwar (Tuesday)', 'Budhwar (Wednesday)', 'Guruwar (Thursday)', 'Shukrawar (Friday)', 'Shaniwar (Saturday)'],
+    daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    daysMin: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
     months: [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'

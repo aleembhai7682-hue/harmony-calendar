@@ -13,6 +13,7 @@ import {
   getDeviceTimezone,
   getTimezoneOffsetHoursForZone,
   formatUtcOffset,
+  isValidIanaTimezone,
 } from './istTime';
 
 export interface PrayerCalculationOptions {
@@ -29,6 +30,7 @@ export interface PrayerCalculationOptions {
 
 export interface DetailedPrayerInfo {
   hasLocation: boolean;
+  timezoneMissing?: boolean;
   times: PrayerTimes;
   cityName: string;
   countryName: string;
@@ -88,6 +90,7 @@ export function calculateLocationPrayerTimes(
 
     return {
       hasLocation: false,
+      timezoneMissing: false,
       times: {
         fajr: '--:--',
         sunrise: '--:--',
@@ -113,9 +116,46 @@ export function calculateLocationPrayerTimes(
 
   const lat = city.latitude;
   const lon = city.longitude;
+  const displayLabel = formatCityCountryLabel(city);
+  const coordStr = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}`;
 
-  // Resolve appropriate timezone for the geographical location (supporting DST)
-  const tzName = options.timezoneName || city.timezone || getDeviceTimezone();
+  // Resolve appropriate timezone for the geographical location (supporting DST).
+  // Never silently fall back to the device timezone when geographical resolution fails.
+  const explicitTz = options.timezoneName?.trim();
+  const tzName =
+    explicitTz && isValidIanaTimezone(explicitTz)
+      ? explicitTz
+      : city.timezone && isValidIanaTimezone(city.timezone)
+      ? city.timezone
+      : '';
+
+  if (!tzName && options.timezoneOffsetHours === undefined) {
+    return {
+      hasLocation: true,
+      timezoneMissing: true,
+      times: {
+        fajr: '--:--',
+        sunrise: '--:--',
+        dhuhr: '--:--',
+        asr: '--:--',
+        maghrib: '--:--',
+        isha: '--:--',
+        sehriEnds: '--:--',
+        iftarTime: '--:--',
+      },
+      cityName: displayLabel,
+      countryName: city.country,
+      cityNameUr: city.nameUr,
+      coordinates: coordStr,
+      timezoneName: '',
+      timezoneOffsetStr: 'Timezone required',
+      methodName,
+      asrJuristicName,
+      disclaimer: `Geographical timezone could not be determined for ${displayLabel} (${coordStr}). Please select an IANA timezone manually before calculating prayer times.`,
+      disclaimerUr: `${city.nameUr} (${coordStr}) کے لیے جغرافیائی ٹائم زون معلوم نہیں ہو سکا۔ درست اوقاتِ نماز کے لیے براہ کرم دستی طور پر IANA ٹائم زون منتخب کریں۔`,
+    };
+  }
+
   const tzOffsetHours =
     options.timezoneOffsetHours !== undefined
       ? options.timezoneOffsetHours
@@ -247,10 +287,9 @@ export function calculateLocationPrayerTimes(
     iftarTime: formatMin(maghribMin),
   };
 
-  const displayLabel = formatCityCountryLabel(city);
-
   return {
     hasLocation: true,
+    timezoneMissing: false,
     times,
     cityName: displayLabel,
     countryName: city.country,

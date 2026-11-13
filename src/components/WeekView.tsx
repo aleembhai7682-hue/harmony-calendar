@@ -148,7 +148,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                {t.daysShort[idx]}
+                {isMuslimMode && language === 'hinglish' && idx === 5 ? 'Juma' : t.daysShort[idx]}
               </div>
               <div className="flex items-center justify-center gap-1 my-0.5">
                 <span
@@ -173,8 +173,9 @@ export const WeekView: React.FC<WeekViewProps> = ({
 
               {/* Day Festivals / Occasions in header */}
               <div className="mt-1 space-y-1">
-                {/* Friday + Holi alert */}
+                {/* Friday + Holi alert (Muslim Mode only) */}
                 {(() => {
+                  if (!isMuslimMode) return null;
                   const alert = checkFridayFestivalCoincidence(day);
                   if (!alert) return null;
                   return (

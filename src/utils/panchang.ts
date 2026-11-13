@@ -12,10 +12,12 @@ import {
   getDeviceTimezone,
   getTimezoneOffsetHoursForZone,
   formatUtcOffset,
+  isValidIanaTimezone,
 } from './istTime';
 
 export interface HinduPanchangInfo {
   hasLocation: boolean;
+  timezoneMissing?: boolean;
   cityName: string;
   countryName: string;
   coordinates: string;
@@ -241,13 +243,25 @@ export function getHinduPanchang(
   const day = date.getDate();
   const noonUtc = new Date(Date.UTC(year, month, day, 12, 0, 0));
 
-  const tzName = customTimezone || (hasLocation ? city.timezone : getDeviceTimezone()) || getDeviceTimezone();
-  const tzOffsetHours =
-    customTzOffsetHours !== undefined
-      ? customTzOffsetHours
-      : getTimezoneOffsetHoursForZone(tzName, noonUtc);
+  const explicitTz = customTimezone?.trim();
+  const resolvedLocationTz =
+    explicitTz && isValidIanaTimezone(explicitTz)
+      ? explicitTz
+      : city.timezone && isValidIanaTimezone(city.timezone)
+      ? city.timezone
+      : '';
 
-  const tzOffsetStr = formatUtcOffset(tzOffsetHours);
+  const timezoneMissing =
+    hasLocation && !resolvedLocationTz && customTzOffsetHours === undefined;
+
+  const tzName = hasLocation ? resolvedLocationTz : getDeviceTimezone();
+  const tzOffsetHours = timezoneMissing
+    ? 0
+    : customTzOffsetHours !== undefined
+    ? customTzOffsetHours
+    : getTimezoneOffsetHoursForZone(tzName, noonUtc);
+
+  const tzOffsetStr = timezoneMissing ? 'Timezone required' : formatUtcOffset(tzOffsetHours);
 
   // Astronomical Julian Day at local morning epoch (approx 06:00 local time converted to UTC)
   const sunriseUtcHour = ((6 - tzOffsetHours) % 24 + 24) % 24;
@@ -344,15 +358,17 @@ export function getHinduPanchang(
     auspiciousTagHi = 'प्रदोष व्रत (संध्या कालीन शिव आराधना)';
   }
 
-  // Solar Timings (only computed when explicit location coordinates exist)
-  let sunriseStr = 'Location required';
-  let sunsetStr = 'Location required';
-  let solarNoonStr = 'Location required';
-  let rahuKaalStr = 'Requires location';
-  let abhijitStr = 'Requires location';
-  let coordLabel = 'Not set';
+  // Solar Timings (only computed when explicit location coordinates AND a valid geographical IANA timezone exist)
+  let sunriseStr = timezoneMissing ? 'Timezone required' : 'Location required';
+  let sunsetStr = timezoneMissing ? 'Timezone required' : 'Location required';
+  let solarNoonStr = timezoneMissing ? 'Timezone required' : 'Location required';
+  let rahuKaalStr = timezoneMissing ? 'Requires timezone' : 'Requires location';
+  let abhijitStr = timezoneMissing ? 'Requires timezone' : 'Requires location';
+  let coordLabel = hasLocation
+    ? `${Math.abs(city.latitude).toFixed(2)}°${city.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(city.longitude).toFixed(2)}°${city.longitude >= 0 ? 'E' : 'W'}`
+    : 'Not set';
 
-  if (hasLocation) {
+  if (hasLocation && !timezoneMissing) {
     const lat = city.latitude;
     const lon = city.longitude;
     coordLabel = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}`;
@@ -421,6 +437,7 @@ export function getHinduPanchang(
 
   return {
     hasLocation,
+    timezoneMissing,
     cityName: displayLabel,
     countryName: city.country,
     coordinates: coordLabel,
@@ -457,7 +474,9 @@ export function getHinduPanchang(
     auspiciousTagHi,
     abhijitMuhurat: abhijitStr,
     rahuKaal: rahuKaalStr,
-    calculationBasis: hasLocation
+    calculationBasis: timezoneMissing
+      ? `Geographical timezone could not be determined for ${displayLabel} (${coordLabel}). Please select an IANA timezone manually before calculating Sunrise, Sunset, Abhijit Muhurat, and Rahu Kaal.`
+      : hasLocation
       ? `Calculated astronomical estimate (Drik Siddhanta, Lahiri Ayanamsha) for ${displayLabel} (${tzName}, ${tzOffsetStr}). Regional temple observances and local Panchang traditions may differ slightly; consult your local temple Panchang for verified observance timings.`
       : `Calculated astronomical lunar estimate (Drik Siddhanta, Lahiri Ayanamsha) in ${tzName} (${tzOffsetStr}). Select a location for sunrise, sunset, Abhijit Muhurat, and Rahu Kaal.`,
   };

@@ -7,7 +7,7 @@
  */
 
 import tzlookup from 'tz-lookup';
-import { getDeviceTimezone, isValidIanaTimezone } from './istTime';
+import { isValidIanaTimezone } from './istTime';
 
 export interface CityLocation {
   id: string;
@@ -1250,10 +1250,6 @@ export function hasExplicitLocation(
  * Returns the neutral unset location state without assuming Mumbai or any other city.
  */
 export function getUnsetLocation(): CityLocation {
-  const tz =
-    typeof Intl !== 'undefined' && Intl.DateTimeFormat
-      ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-      : 'UTC';
   return {
     id: 'unset',
     nameEn: 'Location not set',
@@ -1266,18 +1262,26 @@ export function getUnsetLocation(): CityLocation {
     latitude: NaN,
     longitude: NaN,
     elevationM: 0,
-    timezone: tz,
+    timezone: '',
   };
+}
+
+/**
+ * Checks whether a geographical location timezone string is present and a valid IANA zone.
+ */
+export function isValidLocationTimezone(timeZone?: string | null): boolean {
+  return Boolean(timeZone && timeZone.trim() && isValidIanaTimezone(timeZone.trim()));
 }
 
 /**
  * Resolves any geographic (latitude, longitude) pair to its real IANA timezone ID
  * (e.g. 'Europe/London', 'America/New_York', 'Asia/Kolkata', 'Asia/Dubai').
- * Supports GPS coordinates and manual coordinates independently of the device's own timezone.
+ * Returns null if coordinates are invalid or resolution fails — never silently
+ * falls back to the device timezone.
  */
-export function resolveTimezoneFromCoordinates(lat: number, lon: number): string {
+export function resolveTimezoneFromCoordinates(lat: number, lon: number): string | null {
   if (!isValidCoordinatePair(lat, lon)) {
-    return getDeviceTimezone();
+    return null;
   }
   try {
     const resolved = tzlookup(lat, lon);
@@ -1285,12 +1289,13 @@ export function resolveTimezoneFromCoordinates(lat: number, lon: number): string
       return resolved;
     }
   } catch {}
-  return getDeviceTimezone();
+  return null;
 }
 
 /**
  * Returns city location for the given cityId or custom coordinates.
- * Never silently assumes Mumbai or any fallback city when unset.
+ * Never silently assumes Mumbai or any fallback city when unset,
+ * and never silently falls back to device timezone if coordinate resolution fails.
  */
 export function getCityLocation(
   cityId?: string,
@@ -1318,10 +1323,8 @@ export function getCityLocation(
     const latStr = `${Math.abs(customLat).toFixed(2)}°${customLat >= 0 ? 'N' : 'S'}`;
     const lonStr = `${Math.abs(customLon).toFixed(2)}°${customLon >= 0 ? 'E' : 'W'}`;
     const displayName = customName?.trim() || `Custom Location (${latStr}, ${lonStr})`;
-    const resolvedTz =
-      customTimezone?.trim() && isValidIanaTimezone(customTimezone.trim())
-        ? customTimezone.trim()
-        : resolveTimezoneFromCoordinates(customLat, customLon);
+    const explicitTz = isValidLocationTimezone(customTimezone) ? customTimezone!.trim() : null;
+    const resolvedTz = explicitTz ?? resolveTimezoneFromCoordinates(customLat, customLon) ?? '';
     return {
       id: 'custom',
       nameEn: displayName,

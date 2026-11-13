@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
-import { CalendarEvent, Language, EventCategory } from '../types/calendar';
+import { CalendarEvent, CalendarFaithMode, Language, EventCategory } from '../types/calendar';
 import { translations } from '../translations/i18n';
 import { formatDateToLocalYMD } from '../utils/dateUtils';
-import { Sparkles, X, Plus, Calendar, Clock, Tag } from 'lucide-react';
+import { Sparkles, X, Clock } from 'lucide-react';
 
 interface QuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddEvent: (event: CalendarEvent) => void;
   language: Language;
+  calendarMode?: CalendarFaithMode;
+}
+
+interface QuickTemplate {
+  title: string;
+  time: string;
+  category: EventCategory;
+  color: string;
+  faithTag: CalendarFaithMode | 'universal';
 }
 
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({
@@ -16,19 +25,73 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   onClose,
   onAddEvent,
   language,
+  calendarMode = 'christian',
 }) => {
   const t = translations[language];
   const [input, setInput] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<EventCategory>('personal');
+  const [selectedCategory] = useState<EventCategory>('personal');
 
   if (!isOpen) return null;
 
-  const quickTemplates = [
-    { title: 'Diwali Gifts & Sweets Shopping', time: '16:00', category: 'festival' as EventCategory, color: '#d97706' },
-    { title: 'Friday Jummah Prayer & Khutbah', time: '13:00', category: 'spiritual' as EventCategory, color: '#059669' },
-    { title: 'Sprint Review & Engineering Sync', time: '11:00', category: 'work' as EventCategory, color: '#2563eb' },
-    { title: 'Family Weekend Dinner', time: '19:30', category: 'family' as EventCategory, color: '#dc2626' },
-    { title: 'Morning Yoga & Pranayama', time: '06:30', category: 'health' as EventCategory, color: '#0284c7' },
+  const modeTemplate: QuickTemplate =
+    calendarMode === 'muslim'
+      ? {
+          title: 'Friday Jummah Prayer & Khutbah',
+          time: '13:00',
+          category: 'spiritual',
+          color: '#059669',
+          faithTag: 'muslim',
+        }
+      : calendarMode === 'hindu'
+      ? {
+          title: 'Morning Puja & Aarti',
+          time: '07:00',
+          category: 'spiritual',
+          color: '#d97706',
+          faithTag: 'hindu',
+        }
+      : {
+          title: 'Sunday Worship Service & Devotional',
+          time: '10:00',
+          category: 'spiritual',
+          color: '#1E3A6E',
+          faithTag: 'christian',
+        };
+
+  const quickTemplates: QuickTemplate[] = [
+    modeTemplate,
+    ...(calendarMode === 'hindu'
+      ? [
+          {
+            title: 'Festival Shopping & Family Prep',
+            time: '16:00',
+            category: 'festival' as EventCategory,
+            color: '#d97706',
+            faithTag: 'hindu' as const,
+          },
+        ]
+      : []),
+    {
+      title: 'Sprint Review & Engineering Sync',
+      time: '11:00',
+      category: 'work',
+      color: '#2563eb',
+      faithTag: 'universal',
+    },
+    {
+      title: 'Family Weekend Dinner',
+      time: '19:30',
+      category: 'family',
+      color: '#dc2626',
+      faithTag: 'universal',
+    },
+    {
+      title: 'Morning Walk & Wellness Routine',
+      time: '06:30',
+      category: 'health',
+      color: '#0284c7',
+      faithTag: 'universal',
+    },
   ];
 
   const handleParseAndSubmit = (e: React.FormEvent) => {
@@ -100,6 +163,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       priority: 'medium',
       recurrence: 'none',
       color,
+      faithTag: 'universal',
       createdAt: Date.now(),
     };
 
@@ -108,7 +172,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
     onClose();
   };
 
-  const handleApplyTemplate = (tmpl: typeof quickTemplates[0]) => {
+  const handleApplyTemplate = (tmpl: QuickTemplate) => {
     const dateStr = formatDateToLocalYMD(new Date());
 
     const newEvent: CalendarEvent = {
@@ -123,6 +187,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       priority: 'medium',
       recurrence: 'none',
       color: tmpl.color,
+      faithTag: tmpl.faithTag,
       createdAt: Date.now(),
     };
 

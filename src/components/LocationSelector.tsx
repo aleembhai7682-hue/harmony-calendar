@@ -85,8 +85,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
   const deviceTz = getDeviceTimezone();
   const deviceOffsetStr = formatUtcOffset(getTimezoneOffsetHoursForZone(deviceTz));
-  const locationTz = hasLocation ? activeLocation.timezone || deviceTz : deviceTz;
-  const locationTzOffsetStr = formatUtcOffset(getTimezoneOffsetHoursForZone(locationTz));
+  const locationTz = hasLocation ? activeLocation.timezone : '';
+  const needsManualTimezone = hasLocation && !isValidIanaTimezone(locationTz);
+  const locationTzOffsetStr =
+    locationTz && isValidIanaTimezone(locationTz)
+      ? formatUtcOffset(getTimezoneOffsetHoursForZone(locationTz))
+      : 'Timezone required';
 
   const localResults = useMemo(() => searchLocalCities(searchQuery), [searchQuery]);
 
@@ -161,7 +165,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         onLocationUpdate({
           selectedCity: 'custom',
           selectedCountry: '',
-          selectedLocationTimezone: resolvedTz,
+          selectedLocationTimezone: resolvedTz || '',
           customLatitude: lat,
           customLongitude: lon,
           customLocationName: 'Device GPS Location',
@@ -171,11 +175,21 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         setManualLon(String(lon));
         setManualName('Device GPS Location');
         setManualCountry('');
-        setManualTimezone(resolvedTz);
-        setGeoStatus({
-          message: `GPS detected: ${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'} • Location Timezone: ${resolvedTz}`,
-          isError: false,
-        });
+        if (resolvedTz) {
+          setManualTimezone(resolvedTz);
+          setGeoStatus({
+            message: `GPS detected: ${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'} • Location Timezone: ${resolvedTz}`,
+            isError: false,
+          });
+        } else {
+          setShowManualCoords(true);
+          setManualTimezone('');
+          setGeoStatus({
+            message:
+              'GPS coordinates detected, but the geographical timezone could not be determined automatically. Please select an IANA timezone manually below before calculating prayer times or Panchang.',
+            isError: true,
+          });
+        }
       },
       (err) => {
         setIsLocating(false);
@@ -221,22 +235,31 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       return;
     }
     const resolvedTz =
-      manualTimezone !== 'auto' && isValidIanaTimezone(manualTimezone)
+      manualTimezone !== 'auto' && manualTimezone !== '' && isValidIanaTimezone(manualTimezone)
         ? manualTimezone
         : resolveTimezoneFromCoordinates(lat, lon);
     onLocationUpdate({
       selectedCity: 'custom',
       selectedCountry: manualCountry.trim() || undefined,
-      selectedLocationTimezone: resolvedTz,
+      selectedLocationTimezone: resolvedTz || '',
       customLatitude: Number(lat.toFixed(4)),
       customLongitude: Number(lon.toFixed(4)),
       customLocationName: manualName.trim() || undefined,
       locationExplicitlyConfirmed: true,
     });
-    setGeoStatus({
-      message: `Manual coordinates saved (${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'} • Location Timezone: ${resolvedTz}).`,
-      isError: false,
-    });
+    if (resolvedTz) {
+      setGeoStatus({
+        message: `Manual coordinates saved (${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'} • Location Timezone: ${resolvedTz}).`,
+        isError: false,
+      });
+    } else {
+      setManualTimezone('');
+      setGeoStatus({
+        message:
+          'Geographical timezone could not be determined for these coordinates. Please select an IANA timezone manually below; prayer times and solar Panchang are paused until a timezone is selected.',
+        isError: true,
+      });
+    }
   };
 
   const isUrdu = calendarMode === 'muslim' && language === 'ur';
@@ -323,7 +346,9 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           </div>
           <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
             {hasLocation
-              ? `${Math.abs(activeLocation.latitude).toFixed(2)}°${activeLocation.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(activeLocation.longitude).toFixed(2)}°${activeLocation.longitude >= 0 ? 'E' : 'W'} • ${locationTz} (${locationTzOffsetStr})`
+              ? needsManualTimezone
+                ? `${Math.abs(activeLocation.latitude).toFixed(2)}°${activeLocation.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(activeLocation.longitude).toFixed(2)}°${activeLocation.longitude >= 0 ? 'E' : 'W'} • Timezone required`
+                : `${Math.abs(activeLocation.latitude).toFixed(2)}°${activeLocation.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(activeLocation.longitude).toFixed(2)}°${activeLocation.longitude >= 0 ? 'E' : 'W'} • ${locationTz} (${locationTzOffsetStr})`
               : 'Select a city, enable GPS, or enter coordinates'}
           </div>
         </div>
@@ -341,6 +366,43 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Warning & Manual IANA Timezone Selector when coordinate lookup fails */}
+      {needsManualTimezone && (
+        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 space-y-2">
+          <div className="flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Geographical timezone could not be determined</p>
+              <p className="text-[11px] opacity-90 mt-0.5">
+                Prayer times and solar Panchang calculations are paused so an assumed device timezone is not used. Please select the correct IANA timezone for your coordinates:
+              </p>
+            </div>
+          </div>
+          <select
+            value=""
+            onChange={(e) => {
+              const tz = e.target.value;
+              if (tz && isValidIanaTimezone(tz)) {
+                setManualTimezone(tz);
+                onLocationUpdate({ selectedLocationTimezone: tz });
+                setGeoStatus({
+                  message: `Location timezone set to ${tz}.`,
+                  isError: false,
+                });
+              }
+            }}
+            className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
+          >
+            <option value="">Select IANA Timezone manually...</option>
+            {supportedTimezones.map((tz) => (
+              <option key={tz} value={tz}>
+                {tz}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Geolocation / Validation Feedback */}
       {geoStatus && (
@@ -566,10 +628,15 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               >
                 <option value="auto">
                   {isValidCoordinatePair(parseFloat(manualLat), parseFloat(manualLon))
-                    ? `Auto-resolve from coordinates (${resolveTimezoneFromCoordinates(
-                        parseFloat(manualLat),
-                        parseFloat(manualLon)
-                      )})`
+                    ? (() => {
+                        const autoTz = resolveTimezoneFromCoordinates(
+                          parseFloat(manualLat),
+                          parseFloat(manualLon)
+                        );
+                        return autoTz
+                          ? `Auto-resolve from coordinates (${autoTz})`
+                          : 'Auto-resolve unavailable — select timezone manually';
+                      })()
                     : 'Auto-resolve from coordinates'}
                 </option>
                 {supportedTimezones.map((tz) => (

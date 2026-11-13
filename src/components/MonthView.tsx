@@ -482,6 +482,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
         {t.days.map((day, idx) => {
           const isFriday = idx === 5;
           const isSundayHeader = idx === 0;
+          const isMuslimHinglishFriday =
+            isFriday && filters.calendarMode === 'muslim' && language === 'hinglish';
+          const desktopLabel = isMuslimHinglishFriday ? 'Jumma Mubarak' : day;
+          const mobileLabel = isMuslimHinglishFriday ? 'Juma' : t.daysShort[idx];
           return (
             <div
               key={day}
@@ -495,8 +499,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                   : 'text-slate-600 dark:text-slate-400'
               }`}
             >
-              <span className="hidden sm:inline">{day}</span>
-              <span className="sm:hidden">{t.daysShort[idx]}</span>
+              <span className="hidden sm:inline">{desktopLabel}</span>
+              <span className="sm:hidden">{mobileLabel}</span>
             </div>
           );
         })}

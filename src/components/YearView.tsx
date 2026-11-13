@@ -8,6 +8,7 @@ import { translations } from '../translations/i18n';
 import { getFestivalsForDate, getCategoryBadgeStyle } from '../utils/indianFestivals';
 import { getIslamicOccasionForDate } from '../utils/hijri';
 import { getChristianObservancesForDate } from '../utils/christianData';
+import { isEventOnDate, isEventVisibleInMode } from '../utils/eventUtils';
 
 interface YearViewProps {
   currentDate: Date;
@@ -150,7 +151,11 @@ export const YearView: React.FC<YearViewProps> = ({
                       : null;
                     const hasChristianObs =
                       isChristianMode && getChristianObservancesForDate(cellDateObj).length > 0;
-                    const hasEvents = events.some((e) => e.startDate === dateStr);
+                    const hasEvents = events.some(
+                      (e) =>
+                        isEventVisibleInMode(e, filters.calendarMode) &&
+                        isEventOnDate(e, dateStr)
+                    );
 
                     return (
                       <div

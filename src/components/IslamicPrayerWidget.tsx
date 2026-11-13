@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Language } from '../types/calendar';
 import { getHijriDate, getDailyWisdom } from '../utils/hijri';
-import { getDeviceTimezone, getTimePartsInZone } from '../utils/istTime';
+import { getDeviceTimezone, getTimePartsInZone, getSupportedTimezones, isValidIanaTimezone } from '../utils/istTime';
 import {
   ALL_CITIES,
   INDIAN_CITIES,
@@ -114,10 +114,17 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
         const lat = parseFloat(pos.coords.latitude.toFixed(4));
         const lon = parseFloat(pos.coords.longitude.toFixed(4));
         const resolvedTz = resolveTimezoneFromCoordinates(lat, lon);
+        if (!resolvedTz) {
+          setGeoError(
+            language === 'ur'
+              ? 'GPS کوآرڈینیٹس مل گئے لیکن جغرافیائی ٹائم زون معلوم نہیں ہو سکا۔ براہ کرم نیچے دستی طور پر IANA ٹائم زون منتخب کریں۔'
+              : 'GPS coordinates were detected, but the geographical timezone could not be determined automatically. Please select your IANA timezone manually below.'
+          );
+        }
         onLocationChange?.({
           selectedCity: 'custom',
           selectedCountry: '',
-          selectedLocationTimezone: resolvedTz,
+          selectedLocationTimezone: resolvedTz || '',
           locationExplicitlyConfirmed: true,
           customLatitude: lat,
           customLongitude: lon,
@@ -156,8 +163,10 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
     asrMethod,
   });
 
+  const needsManualTimezone = isLocationReady && Boolean(prayerData.timezoneMissing);
+
   const activeTimeParts = getTimePartsInZone(
-    isLocationReady ? prayerData.timezoneName : deviceTz,
+    isLocationReady && !needsManualTimezone ? prayerData.timezoneName : deviceTz,
     now
   );
 
@@ -279,10 +288,16 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                 {language === 'ur' ? hijri.formattedUr : hijri.formattedEn}
               </span>
               {isLocationReady ? (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-emerald-300 border border-emerald-800 font-semibold flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-emerald-400" />
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold flex items-center gap-1 ${
+                  needsManualTimezone
+                    ? 'bg-amber-950/80 text-amber-300 border-amber-700/60'
+                    : 'bg-slate-800 text-emerald-300 border-emerald-800'
+                }`}>
+                  <MapPin className={`w-3 h-3 ${needsManualTimezone ? 'text-amber-400' : 'text-emerald-400'}`} />
                   <span>
-                    {language === 'ur' ? prayerData.cityNameUr : prayerData.cityName} ({prayerData.coordinates}) • {prayerData.timezoneName} ({prayerData.timezoneOffsetStr})
+                    {needsManualTimezone
+                      ? `${prayerData.cityName} (${prayerData.coordinates}) • Timezone required`
+                      : `${language === 'ur' ? prayerData.cityNameUr : prayerData.cityName} (${prayerData.coordinates}) • ${prayerData.timezoneName} (${prayerData.timezoneOffsetStr})`}
                   </span>
                 </span>
               ) : (
@@ -310,7 +325,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
               <span>{prayerData.asrJuristicName}</span>
               <span className="text-slate-500">•</span>
               <span>
-                {language === 'ur' ? 'وقت' : isLocationReady ? 'City Time' : 'Device Time'}:{' '}
+                {language === 'ur' ? 'وقت' : isLocationReady && !needsManualTimezone ? 'City Time' : 'Device Time'}:{' '}
                 <strong className="font-mono text-emerald-300">{activeTimeParts.formatted}</strong>
               </span>
             </p>
@@ -469,6 +484,72 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                     className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 cursor-pointer"
                   >
                     {language === 'ur' ? 'تلاش / کسٹم کوآرڈینیٹس' : 'Search All Cities / Custom'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : needsManualTimezone ? (
+            <div className="p-5 rounded-2xl bg-amber-950/50 border border-amber-600/60 space-y-3 shadow-md">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">
+                    {language === 'ur'
+                      ? 'جغرافیائی ٹائم زون دستی طور پر منتخب کریں'
+                      : 'Geographical Timezone Could Not Be Determined'}
+                  </h3>
+                  <p className="text-xs text-amber-100/90 mt-1 leading-relaxed">
+                    {language === 'ur'
+                      ? prayerData.disclaimerUr
+                      : prayerData.disclaimer}
+                  </p>
+                </div>
+              </div>
+
+              {geoError && (
+                <div className="p-2.5 rounded-xl bg-amber-900/50 border border-amber-700/60 text-xs text-amber-200 font-medium">
+                  {geoError}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const tz = e.target.value;
+                    if (tz && isValidIanaTimezone(tz)) {
+                      setGeoError(null);
+                      onLocationChange?.({
+                        selectedCity,
+                        selectedCountry,
+                        selectedLocationTimezone: tz,
+                        locationExplicitlyConfirmed: true,
+                        customLatitude: customLat,
+                        customLongitude: customLon,
+                        customLocationName: customName,
+                      });
+                    }
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/60 text-xs font-semibold text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="">
+                    {language === 'ur' ? 'IANA ٹائم زون منتخب کریں...' : 'Select IANA Timezone Manually...'}
+                  </option>
+                  {getSupportedTimezones().map((tz) => (
+                    <option key={tz} value={tz}>
+                      {tz}
+                    </option>
+                  ))}
+                </select>
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 cursor-pointer"
+                  >
+                    Open Location Settings
                   </button>
                 )}
               </div>
