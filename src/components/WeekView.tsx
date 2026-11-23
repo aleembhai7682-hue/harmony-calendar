@@ -16,6 +16,7 @@ import { isEventOnDate, isEventVisibleInMode } from '../utils/eventUtils';
 import { getChristianObservancesForDate } from '../utils/christianData';
 import { resolveWeekStartDay, formatTimePreference } from '../utils/localization';
 import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
+import { getConfirmedCountryCode } from '../utils/storage';
 import { Clock, Plus } from 'lucide-react';
 
 interface WeekViewProps {
@@ -102,23 +103,18 @@ export const WeekView: React.FC<WeekViewProps> = ({
           const isChristianMode = filters.calendarMode === 'christian';
 
           const hijri = isMuslimMode ? getHijriDate(day, filters.hijriAdjustmentDays) : null;
+          const confirmedCountryCode = getConfirmedCountryCode(filters);
           let dayFestivals: IndianFestival[] = [];
           if (isMuslimMode) {
             dayFestivals = [];
-          } else if (isHinduMode) {
+          } else if (isHinduMode || isChristianMode) {
             dayFestivals = getGlobalHolidaysForDate(dateStr, {
-              countryCode: filters.selectedCountryCode,
+              countryCode: confirmedCountryCode,
               state: filters.selectedState,
               enabledCategories: filters.enabledCategories,
               showGazettedOnly: filters.showGazettedOnly,
-            }).filter((f) => f.category === 'hindu' || f.category === 'national');
-          } else if (isChristianMode) {
-            dayFestivals = getGlobalHolidaysForDate(dateStr, {
-              countryCode: filters.selectedCountryCode,
-              state: filters.selectedState,
-              enabledCategories: filters.enabledCategories,
-              showGazettedOnly: filters.showGazettedOnly,
-            }).filter((f) => f.category === 'christian' || f.category === 'national');
+              calendarMode: filters.calendarMode,
+            });
           }
           const christianObs = isChristianMode
             ? getChristianObservancesForDate(day).filter(

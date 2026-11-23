@@ -86,6 +86,16 @@ export function needsLegacyMumbaiConfirmation(filters: CalendarFilterSettings): 
 }
 
 /**
+ * Returns the user's confirmed country code, returning undefined when
+ * location is unset or legacy Mumbai has not been explicitly confirmed.
+ */
+export function getConfirmedCountryCode(filters: CalendarFilterSettings): string | undefined {
+  if (needsLegacyMumbaiConfirmation(filters)) return undefined;
+  const cc = filters.selectedCountryCode?.trim().toUpperCase();
+  return cc || undefined;
+}
+
+/**
  * Safely migrates existing legacy v2 data to v3.
  * Preserves user events, tasks, mode, and settings without overwriting any existing v3 data.
  * Each category migrates independently so a failure in one category does not prevent others.
@@ -519,24 +529,31 @@ export function loadFilters(): CalendarFilterSettings {
       locationExplicitlyConfirmed = Boolean(selectedCity) || hasCustomCoords;
     }
 
-    const matchedCity = selectedCity
-      ? ALL_CITIES.find((c) => c.id.toLowerCase() === selectedCity.toLowerCase())
-      : undefined;
+    const isUnconfirmedLegacyMumbai =
+      selectedCity.toLowerCase() === 'mumbai' && !locationExplicitlyConfirmed;
 
-    const derivedCountryCode =
-      typeof parsed.selectedCountryCode === 'string' && parsed.selectedCountryCode.trim()
-        ? parsed.selectedCountryCode.trim().toUpperCase()
-        : matchedCity?.countryCode || undefined;
+    const matchedCity =
+      selectedCity && !isUnconfirmedLegacyMumbai
+        ? ALL_CITIES.find((c) => c.id.toLowerCase() === selectedCity.toLowerCase())
+        : undefined;
 
-    const derivedCountry =
-      typeof parsed.selectedCountry === 'string' && parsed.selectedCountry.trim()
-        ? parsed.selectedCountry.trim()
-        : matchedCity?.country || undefined;
+    const derivedCountryCode = isUnconfirmedLegacyMumbai
+      ? undefined
+      : typeof parsed.selectedCountryCode === 'string' && parsed.selectedCountryCode.trim()
+      ? parsed.selectedCountryCode.trim().toUpperCase()
+      : matchedCity?.countryCode || undefined;
 
-    const derivedRegion =
-      typeof parsed.selectedRegion === 'string' && parsed.selectedRegion.trim()
-        ? parsed.selectedRegion.trim()
-        : matchedCity?.stateOrRegion || undefined;
+    const derivedCountry = isUnconfirmedLegacyMumbai
+      ? undefined
+      : typeof parsed.selectedCountry === 'string' && parsed.selectedCountry.trim()
+      ? parsed.selectedCountry.trim()
+      : matchedCity?.country || undefined;
+
+    const derivedRegion = isUnconfirmedLegacyMumbai
+      ? undefined
+      : typeof parsed.selectedRegion === 'string' && parsed.selectedRegion.trim()
+      ? parsed.selectedRegion.trim()
+      : matchedCity?.stateOrRegion || undefined;
 
     return {
       ...DEFAULT_FILTERS,
@@ -953,14 +970,17 @@ export function importBackupData(jsonString: string): ImportBackupResult {
           ? false
           : Boolean(selectedCity) || (customLatitude !== undefined && customLongitude !== undefined);
 
+      const isUnconfirmedLegacyMumbai =
+        selectedCity === 'mumbai' && !locationExplicitlyConfirmed;
+
       validFilters = {
         selectedState,
         selectedCity,
-        selectedCountry,
-        selectedCountryCode,
-        selectedRegion,
-        selectedLocationTimezone,
-        locationSource,
+        selectedCountry: isUnconfirmedLegacyMumbai ? undefined : selectedCountry,
+        selectedCountryCode: isUnconfirmedLegacyMumbai ? undefined : selectedCountryCode,
+        selectedRegion: isUnconfirmedLegacyMumbai ? undefined : selectedRegion,
+        selectedLocationTimezone: isUnconfirmedLegacyMumbai ? undefined : selectedLocationTimezone,
+        locationSource: isUnconfirmedLegacyMumbai ? undefined : locationSource,
         locationExplicitlyConfirmed,
         weekStartDay,
         timeFormat,

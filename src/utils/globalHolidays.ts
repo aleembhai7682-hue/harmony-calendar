@@ -1,5 +1,6 @@
-import { FestivalCategory, IndianFestival } from '../types/calendar';
+import { CalendarFaithMode, FestivalCategory, IndianFestival } from '../types/calendar';
 import { getFestivalsForDate, INDIAN_FESTIVALS_DATABASE } from './indianFestivals';
+import { ChristianObservance, getChristianObservancesForYear } from './christianData';
 
 export interface CountryHolidaySummary {
   countryCode: string;
@@ -193,12 +194,64 @@ export function getCountryHolidaySummary(countryCode?: string): CountryHolidaySu
   };
 }
 
+function christianObservanceToFestival(obs: ChristianObservance): IndianFestival {
+  return {
+    id: `christian-${obs.id}`,
+    nameEn: obs.name,
+    nameHi: obs.name,
+    category: 'christian',
+    date: obs.dateStr,
+    holidayType: 'observance',
+    descriptionEn: obs.description,
+    descriptionHi: obs.description,
+    significance: `${obs.season} Christian observance`,
+    rituals: ['Church worship service', 'Scripture reading', 'Prayer & community fellowship'],
+  };
+}
+
+function getChristianFestivalsForYear(year: number): IndianFestival[] {
+  const fromChristianData = getChristianObservancesForYear(year).map(christianObservanceToFestival);
+  const fromDb = INDIAN_FESTIVALS_DATABASE.filter(
+    (f) => f.category === 'christian' && f.date.startsWith(`${year}-`)
+  );
+
+  const merged: IndianFestival[] = [...fromChristianData];
+  for (const item of fromDb) {
+    const alreadyExists = merged.some(
+      (existing) =>
+        existing.date === item.date &&
+        existing.nameEn.toLowerCase() === item.nameEn.toLowerCase()
+    );
+    if (!alreadyExists) {
+      merged.push(item);
+    }
+  }
+  return merged.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function matchesCalendarMode(
+  fest: IndianFestival,
+  calendarMode?: CalendarFaithMode
+): boolean {
+  if (!calendarMode) return true;
+  if (calendarMode === 'muslim') {
+    return false; // Muslim Mode uses Hijri/Islamic occasions exclusively
+  }
+  if (calendarMode === 'christian') {
+    return fest.category === 'christian' || fest.category === 'national';
+  }
+  if (calendarMode === 'hindu') {
+    return fest.category === 'hindu' || fest.category === 'national';
+  }
+  return true;
+}
+
 /**
  * Retrieves holidays/festivals for a specific date, respecting the active country and faith mode:
- * - India ('IN'): includes Indian national & regional holidays from indianFestivals.ts
- * - Other supported countries ('GB', 'US', 'AE', 'JP', 'AU', 'CA', 'SG'): returns verified country public holidays
- *   (separated cleanly from religious observances) + religious festivals matching the active faith mode when desired.
- * - Unset location (''): returns Christian/Hindu religious festivals cleanly without forcing India-only national holidays!
+ * - Christian Mode: Christian liturgical observances + applicable country public/national holidays ONLY.
+ *   Never includes Hindu, Sikh, Jain, Buddhist, or Islamic festivals.
+ * - Hindu Mode: Hindu festivals + applicable country public/national holidays.
+ * - Muslim Mode: returns empty list (Islamic occasions are computed via Hijri calendar).
  */
 export function getGlobalHolidaysForDate(
   dateStr: string,
@@ -207,36 +260,60 @@ export function getGlobalHolidaysForDate(
     state?: string;
     enabledCategories?: Record<FestivalCategory, boolean>;
     showGazettedOnly?: boolean;
+    calendarMode?: CalendarFaithMode;
   }
 ): IndianFestival[] {
+  if (options.calendarMode === 'muslim') {
+    return [];
+  }
+
   const cc = options.countryCode?.trim().toUpperCase() || '';
   const [yearStr] = dateStr.split('-');
   const year = Number(yearStr);
 
+  let rawList: IndianFestival[];
+
   if (cc === 'IN') {
-    return getFestivalsForDate(
+    rawList = getFestivalsForDate(
       dateStr,
       options.state || 'all',
       options.enabledCategories,
       options.showGazettedOnly || false
     );
+  } else {
+    const countryNational =
+      cc && Number.isFinite(year)
+        ? getNationalHolidaysForCountryYear(cc, year).filter((h) => h.date === dateStr)
+        : [];
+
+    const religiousFromDb = getFestivalsForDate(
+      dateStr,
+      'all',
+      options.enabledCategories,
+      options.showGazettedOnly || false
+    ).filter((f) => f.category !== 'national');
+
+    rawList = [...countryNational, ...religiousFromDb];
   }
 
-  const countryNational =
-    cc && Number.isFinite(year)
-      ? getNationalHolidaysForCountryYear(cc, year).filter((h) => h.date === dateStr)
-      : [];
+  if (options.calendarMode === 'christian' && Number.isFinite(year)) {
+    const christianYearItems = getChristianFestivalsForYear(year).filter((f) => f.date === dateStr);
+    for (const obs of christianYearItems) {
+      const dup = rawList.some(
+        (existing) =>
+          existing.category === 'christian' &&
+          existing.nameEn.toLowerCase() === obs.nameEn.toLowerCase()
+      );
+      if (!dup) {
+        rawList.push(obs);
+      }
+    }
+  }
 
-  // Religious holidays from database (excluding India-specific national holidays when outside India)
-  const religiousFromDb = getFestivalsForDate(
-    dateStr,
-    'all',
-    options.enabledCategories,
-    options.showGazettedOnly || false
-  ).filter((f) => f.category !== 'national');
-
-  const combined = [...countryNational, ...religiousFromDb];
-  return combined.filter((fest) => {
+  return rawList.filter((fest) => {
+    if (!matchesCalendarMode(fest, options.calendarMode)) {
+      return false;
+    }
     if (options.enabledCategories && !options.enabledCategories[fest.category]) {
       return false;
     }
@@ -248,32 +325,86 @@ export function getGlobalHolidaysForDate(
 }
 
 /**
- * Computes upcoming national holidays + religious festivals from a base date for a country.
+ * Computes upcoming national holidays + faith-appropriate observances from a base date,
+ * strictly filtered by calendarMode BEFORE any caller truncation.
  */
 export function getUpcomingGlobalHolidays(
   fromDate: Date,
   fromDateStr: string,
-  countryCode?: string
+  countryCode?: string,
+  options?: {
+    calendarMode?: CalendarFaithMode;
+    state?: string;
+    showGazettedOnly?: boolean;
+    enabledCategories?: Record<FestivalCategory, boolean>;
+  }
 ): IndianFestival[] {
-  const cc = countryCode?.trim().toUpperCase() || '';
-  const year = fromDate.getFullYear();
-
-  if (cc === 'IN') {
-    return INDIAN_FESTIVALS_DATABASE.filter((f) => f.date >= fromDateStr).sort((a, b) =>
-      a.date.localeCompare(b.date)
-    );
+  const calendarMode = options?.calendarMode;
+  if (calendarMode === 'muslim') {
+    return [];
   }
 
-  const countryHolidays = cc
-    ? [
-        ...getNationalHolidaysForCountryYear(cc, year),
-        ...getNationalHolidaysForCountryYear(cc, year + 1),
-      ].filter((h) => h.date >= fromDateStr)
-    : [];
+  const cc = countryCode?.trim().toUpperCase() || '';
+  const year = fromDate.getFullYear();
+  const state = options?.state || 'all';
+  const showGazettedOnly = options?.showGazettedOnly || false;
+  const enabledCategories = options?.enabledCategories;
 
-  const religious = INDIAN_FESTIVALS_DATABASE.filter(
-    (f) => f.category !== 'national' && f.date >= fromDateStr
-  );
+  let combined: IndianFestival[] = [];
 
-  return [...countryHolidays, ...religious].sort((a, b) => a.date.localeCompare(b.date));
+  if (cc === 'IN') {
+    combined = INDIAN_FESTIVALS_DATABASE.filter((f) => {
+      if (f.date < fromDateStr) return false;
+      if (
+        state !== 'all' &&
+        f.applicableStates &&
+        f.applicableStates.length > 0 &&
+        !f.applicableStates.includes(state)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  } else {
+    const countryHolidays = cc
+      ? [
+          ...getNationalHolidaysForCountryYear(cc, year),
+          ...getNationalHolidaysForCountryYear(cc, year + 1),
+        ].filter((h) => h.date >= fromDateStr)
+      : [];
+
+    const religious = INDIAN_FESTIVALS_DATABASE.filter(
+      (f) => f.category !== 'national' && f.date >= fromDateStr
+    );
+
+    combined = [...countryHolidays, ...religious];
+  }
+
+  if (calendarMode === 'christian') {
+    const christianObservances = [
+      ...getChristianFestivalsForYear(year),
+      ...getChristianFestivalsForYear(year + 1),
+    ].filter((f) => f.date >= fromDateStr);
+
+    for (const obs of christianObservances) {
+      const dup = combined.some(
+        (existing) =>
+          existing.category === 'christian' &&
+          existing.date === obs.date &&
+          existing.nameEn.toLowerCase() === obs.nameEn.toLowerCase()
+      );
+      if (!dup) {
+        combined.push(obs);
+      }
+    }
+  }
+
+  return combined
+    .filter((fest) => {
+      if (!matchesCalendarMode(fest, calendarMode)) return false;
+      if (enabledCategories && !enabledCategories[fest.category]) return false;
+      if (showGazettedOnly && fest.holidayType !== 'gazetted') return false;
+      return true;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
 }

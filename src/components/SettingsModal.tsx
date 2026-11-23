@@ -17,6 +17,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { getCountryHolidaySummary } from '../utils/globalHolidays';
+import { getConfirmedCountryCode } from '../utils/storage';
 import {
   getNotificationPermissionStatus,
   requestNotificationPermissionByUser,
@@ -124,8 +125,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Country / Regional Holiday Notice & State Selector (India Only) */}
           {(() => {
-            const countrySummary = getCountryHolidaySummary(filters.selectedCountryCode);
-            if (filters.selectedCountryCode === 'IN') {
+            const confirmedCountryCode = getConfirmedCountryCode(filters);
+            const countrySummary = getCountryHolidaySummary(confirmedCountryCode);
+            if (confirmedCountryCode === 'IN') {
               return (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">

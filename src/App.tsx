@@ -26,6 +26,7 @@ import {
   loadDemoSampleData,
   clearAllUserCalendarData,
   importBackupData,
+  getConfirmedCountryCode,
   DEFAULT_FILTERS,
 } from './utils/storage';
 import { formatDateToLocalYMD, getTodayLocalYMD } from './utils/dateUtils';
@@ -186,12 +187,25 @@ export default function App() {
   };
 
   const effectiveTz = useMemo(() => getEffectiveCalendarTimezone(filters), [filters]);
+  const confirmedCountryCode = useMemo(() => getConfirmedCountryCode(filters), [filters]);
 
-  // Upcoming items calculation (country-aware national holidays + religious festivals)
+  // Upcoming items calculation (mode-segregated BEFORE slice so Hindu holidays never leak into Christian Mode or crowd out feasts)
   const upcomingFestivals = useMemo(() => {
     const todayStr = formatDateToLocalYMD(currentDate);
-    return getUpcomingGlobalHolidays(currentDate, todayStr, filters.selectedCountryCode).slice(0, 8);
-  }, [currentDate, filters.selectedCountryCode]);
+    return getUpcomingGlobalHolidays(currentDate, todayStr, confirmedCountryCode, {
+      calendarMode,
+      state: filters.selectedState,
+      showGazettedOnly: filters.showGazettedOnly,
+      enabledCategories: filters.enabledCategories,
+    }).slice(0, 8);
+  }, [
+    currentDate,
+    confirmedCountryCode,
+    calendarMode,
+    filters.selectedState,
+    filters.showGazettedOnly,
+    filters.enabledCategories,
+  ]);
 
   const upcomingIslamic = useMemo(() => {
     const list: IslamicOccasion[] = [];
@@ -555,7 +569,7 @@ export default function App() {
         {calendarMode === 'christian' && (
           <ChristianLifestyleWidget
             currentDate={currentDate}
-            selectedCountryCode={filters.selectedCountryCode}
+            selectedCountryCode={confirmedCountryCode}
             timeFormat={filters.timeFormat}
             dateFormat={filters.dateFormat}
           />

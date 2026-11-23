@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   CalendarFilterSettings,
   CalendarTask,
-  FestivalCategory,
   Language,
   IndianFestival,
   IslamicOccasion,
@@ -31,6 +30,7 @@ import {
   formatNumberLocalized,
 } from '../utils/localization';
 import { getCountryHolidaySummary } from '../utils/globalHolidays';
+import { getConfirmedCountryCode } from '../utils/storage';
 
 interface SidebarProps {
   currentDate: Date;
@@ -78,25 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setMiniCalMonth(new Date(miniYear, miniMonthIndex + offset, 1));
   };
 
-  const categories: { key: FestivalCategory; label: string; dot: string }[] = [
-    { key: 'hindu', label: t.categories.hindu, dot: '#d97706' },
-    { key: 'islamic', label: t.categories.islamic, dot: '#059669' },
-    { key: 'sikh', label: t.categories.sikh, dot: '#ea580c' },
-    { key: 'christian', label: t.categories.christian, dot: '#e11d48' },
-    { key: 'jain', label: t.categories.jain, dot: '#ca8a04' },
-    { key: 'buddhist', label: t.categories.buddhist, dot: '#4f46e5' },
-    { key: 'national', label: t.categories.national, dot: '#2563eb' },
-  ];
-
-  const handleCategoryToggle = (cat: FestivalCategory) => {
-    onFilterChange({
-      ...filters,
-      enabledCategories: {
-        ...filters.enabledCategories,
-        [cat]: !filters.enabledCategories[cat],
-      },
-    });
-  };
+  const confirmedCountryCode = getConfirmedCountryCode(filters);
 
   const handleHijriOffsetChange = (val: number) => {
     onFilterChange({
@@ -203,8 +185,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Regional State Holidays Selector (India) or Active Country Holiday Notice */}
       {(() => {
-        const countrySummary = getCountryHolidaySummary(filters.selectedCountryCode);
-        if (filters.selectedCountryCode === 'IN') {
+        const countrySummary = getCountryHolidaySummary(confirmedCountryCode);
+        if (confirmedCountryCode === 'IN') {
           return (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -364,7 +346,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div className="flex items-center justify-between text-[11px] font-mono-tabular text-slate-500 dark:text-slate-400 mb-1">
                     <span>{formatDateLocalized(f.date, filters.dateFormat || 'auto', locale, 'medium')}</span>
                     <span className="capitalize font-sans text-[10px] font-semibold text-[#8C6418] dark:text-amber-300">
-                      {f.category === 'christian' ? 'Christian Feast' : 'National Holiday'}
+                      {f.category === 'christian' ? 'Christian Observance' : 'Public Holiday'}
                     </span>
                   </div>
                   <div className="text-xs font-bold text-[#14284B] dark:text-sky-200 group-hover:underline">

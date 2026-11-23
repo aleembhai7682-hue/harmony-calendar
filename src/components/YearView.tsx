@@ -12,6 +12,7 @@ import { getChristianObservancesForDate } from '../utils/christianData';
 import { isEventOnDate, isEventVisibleInMode } from '../utils/eventUtils';
 import { resolveWeekStartDay, getWeekdayOrder } from '../utils/localization';
 import { getEffectiveCalendarTimezone } from '../utils/timezoneService';
+import { getConfirmedCountryCode } from '../utils/storage';
 
 interface YearViewProps {
   currentDate: Date;
@@ -132,23 +133,18 @@ export const YearView: React.FC<YearViewProps> = ({
                     const isHinduMode = filters.calendarMode === 'hindu';
                     const isChristianMode = filters.calendarMode === 'christian';
 
+                    const confirmedCountryCode = getConfirmedCountryCode(filters);
                     let dayFestivals: ReturnType<typeof getGlobalHolidaysForDate> = [];
                     if (isMuslimMode) {
                       dayFestivals = [];
-                    } else if (isHinduMode) {
+                    } else if (isHinduMode || isChristianMode) {
                       dayFestivals = getGlobalHolidaysForDate(dateStr, {
-                        countryCode: filters.selectedCountryCode,
+                        countryCode: confirmedCountryCode,
                         state: filters.selectedState,
                         enabledCategories: filters.enabledCategories,
                         showGazettedOnly: filters.showGazettedOnly,
-                      }).filter((f) => f.category === 'hindu' || f.category === 'national');
-                    } else if (isChristianMode) {
-                      dayFestivals = getGlobalHolidaysForDate(dateStr, {
-                        countryCode: filters.selectedCountryCode,
-                        state: filters.selectedState,
-                        enabledCategories: filters.enabledCategories,
-                        showGazettedOnly: filters.showGazettedOnly,
-                      }).filter((f) => f.category === 'christian' || f.category === 'national');
+                        calendarMode: filters.calendarMode,
+                      });
                     }
 
                     const cellDateObj = new Date(year, monthIndex, dayNum);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   MapPin,
   Navigation,
@@ -68,6 +68,8 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const [manualTimezone, setManualTimezone] = useState<string>(
     filters.selectedLocationTimezone || 'auto'
   );
+  const manualSectionRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const supportedTimezones = useMemo(() => getSupportedTimezones(), []);
   const supportedCountries = useMemo(() => getSupportedCountries(), []);
 
@@ -77,6 +79,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     filters.customLongitude
   );
   const isLegacyMumbai = needsLegacyMumbaiConfirmation(filters);
+  const isConfirmedLocation = hasLocation && !isLegacyMumbai;
 
   const activeLocation = getCityLocation(
     filters.selectedCity,
@@ -89,8 +92,8 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
   const deviceTz = getDeviceTimezone();
   const deviceOffsetStr = formatUtcOffset(getTimezoneOffsetHoursForZone(deviceTz));
-  const locationTz = hasLocation ? activeLocation.timezone : '';
-  const needsManualTimezone = hasLocation && !isValidIanaTimezone(locationTz);
+  const locationTz = isConfirmedLocation ? activeLocation.timezone : '';
+  const needsManualTimezone = isConfirmedLocation && !isValidIanaTimezone(locationTz);
   const locationTzOffsetStr =
     locationTz && isValidIanaTimezone(locationTz)
       ? formatUtcOffset(getTimezoneOffsetHoursForZone(locationTz))
@@ -100,6 +103,11 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     () => searchLocalCities(searchQuery, countryFilter),
     [searchQuery, countryFilter]
   );
+
+  const handleFocusManualSelection = () => {
+    manualSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    searchInputRef.current?.focus();
+  };
 
   const handleSelectCity = (city: CityLocation) => {
     const isBuiltIn = !city.id.startsWith('geocoded:');
@@ -119,6 +127,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     setManualLon(String(city.longitude));
     setManualName(city.nameEn);
     setManualCountry(city.country);
+    setManualTimezone(city.timezone || 'auto');
     setGeoStatus(null);
     setOnlineSearchNotice(null);
   };
@@ -134,12 +143,15 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       customLatitude: undefined,
       customLongitude: undefined,
       customLocationName: undefined,
-      locationExplicitlyConfirmed: true,
+      locationExplicitlyConfirmed: false,
     });
     setManualLat('');
     setManualLon('');
     setManualName('');
     setManualCountry('');
+    setManualTimezone('auto');
+    setOnlineResults([]);
+    setOnlineSearchNotice(null);
     setGeoStatus(null);
   };
 
@@ -299,6 +311,15 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             <span>{isLocating ? 'Detecting...' : 'Detect my location'}</span>
           </button>
 
+          <button
+            type="button"
+            onClick={handleFocusManualSelection}
+            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Choose Location Manually</span>
+          </button>
+
           {hasLocation && (
             <button
               type="button"
@@ -319,9 +340,9 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           <div className="flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold">Please confirm your saved location</p>
+              <p className="font-bold">Please confirm or change your saved location</p>
               <p className="text-[11px] opacity-90 mt-0.5">
-                Mumbai, India was previously saved as the default. Confirm if you are in Mumbai, or clear and choose your actual city.
+                Mumbai, India was found from an earlier default setting and is not active until confirmed. Confirm if you are in Mumbai, or choose your actual city manually below.
               </p>
             </div>
           </div>
@@ -336,10 +357,13 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             </button>
             <button
               type="button"
-              onClick={handleClearLocation}
+              onClick={() => {
+                handleClearLocation();
+                handleFocusManualSelection();
+              }}
               className="px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-[11px] font-bold cursor-pointer"
             >
-              Choose another location
+              Choose Location Manually
             </button>
           </div>
         </div>
@@ -353,7 +377,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               <Globe className="w-3 h-3 text-emerald-500" />
               <span>Current City & Country</span>
             </span>
-            {hasLocation && (
+            {isConfirmedLocation && (
               <span
                 className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
                   filters.locationSource === 'detected'
@@ -366,14 +390,20 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             )}
           </div>
           <div className="font-bold text-slate-900 dark:text-white mt-0.5 truncate">
-            {hasLocation ? formatCityCountryLabel(activeLocation) : 'Location not set'}
+            {isConfirmedLocation
+              ? formatCityCountryLabel(activeLocation)
+              : isLegacyMumbai
+              ? 'Location not confirmed'
+              : 'Location not set'}
           </div>
           <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-            {hasLocation
+            {isConfirmedLocation
               ? needsManualTimezone
                 ? `${Math.abs(activeLocation.latitude).toFixed(2)}°${activeLocation.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(activeLocation.longitude).toFixed(2)}°${activeLocation.longitude >= 0 ? 'E' : 'W'} • Timezone required`
                 : `${Math.abs(activeLocation.latitude).toFixed(2)}°${activeLocation.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(activeLocation.longitude).toFixed(2)}°${activeLocation.longitude >= 0 ? 'E' : 'W'} • ${locationTz} (${locationTzOffsetStr})`
-              : 'Select a city, enable GPS, or enter coordinates'}
+              : isLegacyMumbai
+              ? 'Unconfirmed legacy entry — confirm above or choose a city below'
+              : 'Choose a city manually below or enable GPS'}
           </div>
         </div>
 
@@ -441,8 +471,20 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         </div>
       )}
 
-      {/* Searchable Country & City Selector */}
-      <div className="space-y-2">
+      {/* Immediately Visible Manual Country & City Selection */}
+      <div
+        ref={manualSectionRef}
+        className="space-y-2 p-3 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700/80"
+      >
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <Search className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Choose Location Manually</span>
+          </div>
+          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+            Works anytime without GPS
+          </span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-2">
           <select
             value={countryFilter}
@@ -461,6 +503,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => {
@@ -468,7 +511,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                 setOnlineResults([]);
                 setOnlineSearchNotice(null);
               }}
-              placeholder="Search city, region, or country (e.g. Pune, London, New York, Tokyo)..."
+              placeholder="Search city (e.g. Pune, Kanpur, London, New York, Dubai, Tokyo)..."
               className="w-full pl-8 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             {searchQuery && (
@@ -698,9 +741,9 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         )}
       </div>
 
-      {!hasLocation && (
+      {!isConfirmedLocation && (
         <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-          Without a selected location, standard calendar views, events, tasks, reminders, and Gregorian/Hijri dates continue working normally in your device timezone ({deviceTz}). Select a location above when you want sunrise, sunset, prayer times, or solar Panchang timings.
+          Without a confirmed location, standard calendar views, events, tasks, reminders, and Gregorian/Hijri dates continue working normally in your device timezone ({deviceTz}). Choose a city manually above or enable GPS when you want sunrise, sunset, prayer times, or solar Panchang timings.
         </p>
       )}
     </div>

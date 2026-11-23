@@ -18,6 +18,7 @@ import { getEventsForDateAndMode } from '../utils/eventUtils';
 import { getChristianObservancesForDate, getLiturgicalSeason } from '../utils/christianData';
 import { getLocaleTag, formatTimePreference } from '../utils/localization';
 import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
+import { getConfirmedCountryCode } from '../utils/storage';
 import {
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -151,23 +152,18 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           const isHinduMode = filters.calendarMode === 'hindu';
           const isChristianMode = filters.calendarMode === 'christian';
 
+          const confirmedCountryCode = getConfirmedCountryCode(filters);
           let dayFestivals: IndianFestival[] = [];
           if (isMuslimMode) {
             dayFestivals = [];
-          } else if (isHinduMode) {
+          } else if (isHinduMode || isChristianMode) {
             dayFestivals = getGlobalHolidaysForDate(dateStr, {
-              countryCode: filters.selectedCountryCode,
+              countryCode: confirmedCountryCode,
               state: filters.selectedState,
               enabledCategories: filters.enabledCategories,
               showGazettedOnly: filters.showGazettedOnly,
-            }).filter((f) => f.category === 'hindu' || f.category === 'national');
-          } else if (isChristianMode) {
-            dayFestivals = getGlobalHolidaysForDate(dateStr, {
-              countryCode: filters.selectedCountryCode,
-              state: filters.selectedState,
-              enabledCategories: filters.enabledCategories,
-              showGazettedOnly: filters.showGazettedOnly,
-            }).filter((f) => f.category === 'christian' || f.category === 'national');
+              calendarMode: filters.calendarMode,
+            });
           }
 
           let christianObs = isChristianMode

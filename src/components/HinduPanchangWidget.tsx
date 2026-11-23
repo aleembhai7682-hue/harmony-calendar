@@ -524,7 +524,7 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                     onClick={onOpenSettings}
                     className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 cursor-pointer"
                   >
-                    Search All Cities / Custom
+                    Choose Location Manually
                   </button>
                 )}
               </div>

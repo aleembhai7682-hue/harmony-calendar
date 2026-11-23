@@ -483,7 +483,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                     onClick={onOpenSettings}
                     className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 cursor-pointer"
                   >
-                    {language === 'ur' ? 'تلاش / کسٹم کوآرڈینیٹس' : 'Search All Cities / Custom'}
+                    {language === 'ur' ? 'دستی مقام منتخب کریں / تلاش' : 'Choose Location Manually'}
                   </button>
                 )}
               </div>

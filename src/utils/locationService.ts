@@ -109,15 +109,15 @@ export function detectDeviceGpsLocation(): Promise<DetectedLocationResult> {
         if (err.code === err.PERMISSION_DENIED) {
           errorCode = 'denied';
           errorMessage =
-            'Location permission was denied. Standard calendar views, events, tasks, and reminders remain fully functional; select a country and city manually when needed.';
+            'Location permission was denied. You can still search and select a country and city manually below right away, or re-enable GPS anytime by clicking the location/lock icon next to your browser address bar and allowing Location.';
         } else if (err.code === err.POSITION_UNAVAILABLE) {
           errorCode = 'unavailable';
           errorMessage =
-            'Device location is unavailable right now. Please select a country and city manually.';
+            'Device location is unavailable right now. You can still search and select a country and city manually below.';
         } else if (err.code === err.TIMEOUT) {
           errorCode = 'timeout';
           errorMessage =
-            'Location detection timed out. Please select a country and city manually.';
+            'Location detection timed out. You can still search and select a country and city manually below.';
         }
 
         resolve({

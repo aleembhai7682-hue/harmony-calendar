@@ -23,6 +23,7 @@ import {
   formatTimePreference,
 } from '../utils/localization';
 import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
+import { getConfirmedCountryCode } from '../utils/storage';
 import { Plus, CheckCircle2 } from 'lucide-react';
 
 interface MonthViewProps {
@@ -123,24 +124,20 @@ export const MonthView: React.FC<MonthViewProps> = ({
         )
       : null;
 
+    const confirmedCountryCode = getConfirmedCountryCode(filters);
+
     // Festivals & Country Holidays (Strictly segregated by active faith mode)
     let dayFestivals: IndianFestival[] = [];
     if (isMuslimMode) {
       dayFestivals = []; // Strictly NO non-Islamic festivals in Muslim mode
-    } else if (isHinduMode) {
+    } else if (isHinduMode || isChristianMode) {
       dayFestivals = getGlobalHolidaysForDate(dateStr, {
-        countryCode: filters.selectedCountryCode,
+        countryCode: confirmedCountryCode,
         state: filters.selectedState,
         enabledCategories: filters.enabledCategories,
         showGazettedOnly: filters.showGazettedOnly,
-      }).filter((f) => f.category === 'hindu' || f.category === 'national');
-    } else if (isChristianMode) {
-      dayFestivals = getGlobalHolidaysForDate(dateStr, {
-        countryCode: filters.selectedCountryCode,
-        state: filters.selectedState,
-        enabledCategories: filters.enabledCategories,
-        showGazettedOnly: filters.showGazettedOnly,
-      }).filter((f) => f.category === 'christian' || f.category === 'national');
+        calendarMode: filters.calendarMode,
+      });
     }
 
     const christianObservances = isChristianMode
