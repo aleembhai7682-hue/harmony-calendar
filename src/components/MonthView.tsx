@@ -110,7 +110,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
     const moon = isMuslimMode && filters.showMoonPhases ? getMoonPhase(cellDate) : null;
     const fridayAlert = isMuslimMode ? checkFridayFestivalCoincidence(cellDate) : null;
 
-    // Hindu Panchang info (only in Hindu mode, location calibrated)
+    // Hindu Panchang info (only in Hindu mode, strictly location confirmed)
     const panchang = isHinduMode
       ? getHinduPanchang(
           cellDate,
@@ -120,7 +120,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
           filters.customLocationName,
           undefined,
           filters.selectedCountry,
-          filters.selectedLocationTimezone
+          filters.selectedLocationTimezone,
+          filters.locationExplicitlyConfirmed
         )
       : null;
 

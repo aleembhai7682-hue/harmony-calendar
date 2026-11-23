@@ -1,14 +1,31 @@
 /**
- * Islamic Prayer Timetable Engine
- * Calculates astronomically accurate Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha,
- * Sehri Ends (Imsak), and Iftar for any city or geographic coordinates worldwide.
+ * Islamic Prayer Timetable Engine (Powered by Adhan.js astronomical algorithms)
+ * Calculates high-precision Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha,
+ * Sehri Ends (~10 min before Fajr), and Iftar (= Maghrib) for any city or geographic coordinates worldwide.
  *
- * Supports reputable calculation conventions (Karachi, MWL, Makkah, Egypt)
- * and juristic Asr calculations (Hanafi vs Shafi'i/Standard).
+ * Supports:
+ * - Calculation methods: Karachi, Muslim World League (MWL), Umm al-Qura (Makkah), Egyptian
+ * - Asr juristic schools: Hanafi (2x shadow) and Standard / Shafi'i (1x shadow)
+ * - High-latitude rules via HighLatitudeRule.recommended(coordinates)
+ * - Per-instant DST-aware formatting in the location's IANA timezone
  */
 
+import {
+  Coordinates,
+  CalculationMethod,
+  CalculationParameters,
+  Madhab,
+  HighLatitudeRule,
+  PrayerTimes as AdhanPrayerTimes,
+} from 'adhan';
 import { PrayerTimes } from '../types/calendar';
-import { getCityLocation, CityLocation, isValidCoordinatePair, formatCityCountryLabel } from './cities';
+import {
+  getCityLocation,
+  getUnsetLocation,
+  CityLocation,
+  isValidCoordinatePair,
+  formatCityCountryLabel,
+} from './cities';
 import {
   getDeviceTimezone,
   getTimezoneOffsetHoursForZone,
@@ -26,6 +43,7 @@ export interface PrayerCalculationOptions {
   asrMethod?: 'hanafi' | 'standard';
   timezoneOffsetHours?: number;
   timezoneName?: string;
+  locationExplicitlyConfirmed?: boolean;
 }
 
 export interface DetailedPrayerInfo {
@@ -44,23 +62,89 @@ export interface DetailedPrayerInfo {
   disclaimerUr: string;
 }
 
+function getAdhanParameters(
+  prayerMethod: 'karachi' | 'mwl' | 'makkah' | 'egypt',
+  asrMethod: 'hanafi' | 'standard',
+  coordinates: Coordinates
+): CalculationParameters {
+  let params: CalculationParameters;
+  switch (prayerMethod) {
+    case 'mwl':
+      params = CalculationMethod.MuslimWorldLeague();
+      break;
+    case 'makkah':
+      params = CalculationMethod.UmmAlQura();
+      break;
+    case 'egypt':
+      params = CalculationMethod.Egyptian();
+      break;
+    case 'karachi':
+    default:
+      params = CalculationMethod.Karachi();
+      break;
+  }
+
+  params.madhab = asrMethod === 'hanafi' ? Madhab.Hanafi : Madhab.Shafi;
+  params.highLatitudeRule = HighLatitudeRule.recommended(coordinates);
+  return params;
+}
+
+function formatUtcDateInLocationZone(
+  utcDate: Date,
+  tzName: string,
+  explicitOffsetHours?: number
+): string {
+  if (!utcDate || Number.isNaN(utcDate.getTime())) {
+    return '--:--';
+  }
+
+  if (explicitOffsetHours !== undefined && !Number.isNaN(explicitOffsetHours)) {
+    const shifted = new Date(utcDate.getTime() + Math.round(explicitOffsetHours * 3600000));
+    const h = shifted.getUTCHours();
+    const m = shifted.getUTCMinutes();
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tzName,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(utcDate);
+    let hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
+    const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
+    if (hour === 24) hour = 0;
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  } catch {
+    const h = utcDate.getHours();
+    const m = utcDate.getMinutes();
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+}
+
 /**
- * Calculates prayer times for a given date and configuration.
- * Strictly uses selected location and its appropriate timezone (supporting DST).
+ * Calculates astronomically accurate prayer times for a given date and configuration using Adhan.js.
+ * Strictly uses selected & confirmed location and its appropriate geographical IANA timezone (supporting DST).
  * Never hardcodes or silently falls back to Mumbai or IST.
  */
 export function calculateLocationPrayerTimes(
   date: Date,
   options: PrayerCalculationOptions = {}
 ): DetailedPrayerInfo {
-  const city: CityLocation = getCityLocation(
-    options.cityId,
-    options.customLat,
-    options.customLon,
-    options.customLocationName,
-    options.customCountry,
-    options.timezoneName
-  );
+  const isExplicitlyUnconfirmed = options.locationExplicitlyConfirmed === false;
+
+  const city: CityLocation = isExplicitlyUnconfirmed
+    ? getUnsetLocation()
+    : getCityLocation(
+        options.cityId,
+        options.customLat,
+        options.customLon,
+        options.customLocationName,
+        options.customCountry,
+        options.timezoneName
+      );
 
   const prayerMethod = options.prayerMethod || 'karachi';
   const asrMethod = options.asrMethod || 'hanafi';
@@ -70,7 +154,7 @@ export function calculateLocationPrayerTimes(
   const noonUtc = new Date(Date.UTC(year, month, day, 12, 0, 0));
 
   const asrJuristicName =
-    asrMethod === 'hanafi' ? 'Hanafi (Asr: 2x Shadow)' : 'Standard / Shafi\'i (Asr: 1x Shadow)';
+    asrMethod === 'hanafi' ? 'Hanafi (Asr: 2x Shadow)' : "Standard / Shafi'i (Asr: 1x Shadow)";
   const methodName =
     prayerMethod === 'mwl'
       ? 'Muslim World League (Fajr 18°, Isha 17°)'
@@ -81,7 +165,9 @@ export function calculateLocationPrayerTimes(
       : 'Univ. of Islamic Sciences, Karachi (Fajr 18°, Isha 18°)';
 
   if (city.id === 'unset' || !isValidCoordinatePair(city.latitude, city.longitude)) {
-    const deviceTz = options.timezoneName || getDeviceTimezone();
+    const deviceTz = options.timezoneName && isValidIanaTimezone(options.timezoneName)
+      ? options.timezoneName
+      : getDeviceTimezone();
     const tzOffsetHours =
       options.timezoneOffsetHours !== undefined
         ? options.timezoneOffsetHours
@@ -92,14 +178,14 @@ export function calculateLocationPrayerTimes(
       hasLocation: false,
       timezoneMissing: false,
       times: {
-        fajr: '--:--',
-        sunrise: '--:--',
-        dhuhr: '--:--',
-        asr: '--:--',
-        maghrib: '--:--',
-        isha: '--:--',
-        sehriEnds: '--:--',
-        iftarTime: '--:--',
+        fajr: 'Location required',
+        sunrise: 'Location required',
+        dhuhr: 'Location required',
+        asr: 'Location required',
+        maghrib: 'Location required',
+        isha: 'Location required',
+        sehriEnds: 'Location required',
+        iftarTime: 'Location required',
       },
       cityName: 'Location not set',
       countryName: '',
@@ -109,8 +195,10 @@ export function calculateLocationPrayerTimes(
       timezoneOffsetStr: tzOffsetStr,
       methodName,
       asrJuristicName,
-      disclaimer: `Location not set. Select a city, enable geolocation, or enter coordinates to calculate prayer times (${deviceTz}, ${tzOffsetStr}).`,
-      disclaimerUr: `مقام منتخب نہیں ہے۔ اوقاتِ نماز دیکھنے کے لیے شہر منتخب کریں یا لوکیشن فعال کریں۔ (${deviceTz})`,
+      disclaimer:
+        'Location required — Please select city or enable GPS to calculate prayer times. Always confirm prayer times with your local mosque.',
+      disclaimerUr:
+        'مقام درکار ہے۔ براہ کرم شہر منتخب کریں یا GPS فعال کریں۔ حتمی اوقات کے لیے اپنی مقامی مسجد سے تصدیق کریں۔',
     };
   }
 
@@ -134,14 +222,14 @@ export function calculateLocationPrayerTimes(
       hasLocation: true,
       timezoneMissing: true,
       times: {
-        fajr: '--:--',
-        sunrise: '--:--',
-        dhuhr: '--:--',
-        asr: '--:--',
-        maghrib: '--:--',
-        isha: '--:--',
-        sehriEnds: '--:--',
-        iftarTime: '--:--',
+        fajr: 'Timezone required',
+        sunrise: 'Timezone required',
+        dhuhr: 'Timezone required',
+        asr: 'Timezone required',
+        maghrib: 'Timezone required',
+        isha: 'Timezone required',
+        sehriEnds: 'Timezone required',
+        iftarTime: 'Timezone required',
       },
       cityName: displayLabel,
       countryName: city.country,
@@ -156,135 +244,35 @@ export function calculateLocationPrayerTimes(
     };
   }
 
+  // Adhan calculation engine
+  const coordinates = new Coordinates(lat, lon);
+  const params = getAdhanParameters(prayerMethod, asrMethod, coordinates);
+  const calcDate = new Date(year, month, day, 12, 0, 0);
+  const adhanTimes = new AdhanPrayerTimes(coordinates, calcDate, params);
+
   const tzOffsetHours =
     options.timezoneOffsetHours !== undefined
       ? options.timezoneOffsetHours
-      : getTimezoneOffsetHoursForZone(tzName, noonUtc);
-
+      : getTimezoneOffsetHoursForZone(tzName, adhanTimes.dhuhr || noonUtc);
   const tzOffsetStr = formatUtcOffset(tzOffsetHours);
 
-  // DST-safe integer day of year (1..366)
-  const dayOfYear = Math.round(
-    (Date.UTC(year, month, day) - Date.UTC(year, 0, 0)) / 86400000
-  );
+  // Sehri Ends (Imsak precautionary cutoff ~10 minutes before true dawn / Fajr)
+  const sehriEndsDate = new Date(adhanTimes.fajr.getTime() - 10 * 60_000);
+  // Iftar occurs strictly at Maghrib sunset
+  const iftarDate = adhanTimes.maghrib;
 
-  // Solar position parameters
-  const b = (2 * Math.PI * (dayOfYear - 81)) / 365;
-  const eot = 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
-  const declination = 23.45 * Math.sin(b);
-
-  const latRad = (lat * Math.PI) / 180;
-  const decRad = (declination * Math.PI) / 180;
-
-  // Local Timezone Meridian Longitude correction (standardMeridian = tzOffsetHours * 15°)
-  const standardMeridian = tzOffsetHours * 15;
-  const lonCorrection = (standardMeridian - lon) * 4; // minutes
-  const solarNoonMin = 12 * 60 + lonCorrection - eot;
-
-  // Helper to compute hour angle (in degrees) for a target solar altitude angle
-  const getHourAngleInfo = (
-    altitudeDeg: number
-  ): { ha: number; neverReachesBelow: boolean } => {
-    const altRad = (altitudeDeg * Math.PI) / 180;
-    const cosHA =
-      (Math.sin(altRad) - Math.sin(latRad) * Math.sin(decRad)) /
-      (Math.cos(latRad) * Math.cos(decRad));
-    if (cosHA > 1) return { ha: 0, neverReachesBelow: false };
-    if (cosHA < -1) return { ha: 180, neverReachesBelow: true };
-    return {
-      ha: (Math.acos(cosHA) * 180) / Math.PI,
-      neverReachesBelow: false,
-    };
-  };
-
-  // Determine Fajr & Isha twilight angles based on method
-  let fajrAngle = -18;
-  let ishaAngle: number | null = -18;
-  let ishaFixedOffsetMin: number | null = null;
-
-  switch (prayerMethod) {
-    case 'mwl':
-      fajrAngle = -18;
-      ishaAngle = -17;
-      break;
-    case 'makkah':
-      fajrAngle = -18.5;
-      ishaAngle = null;
-      ishaFixedOffsetMin = 90; // 90 min after Maghrib
-      break;
-    case 'egypt':
-      fajrAngle = -19.5;
-      ishaAngle = -17.5;
-      break;
-    case 'karachi':
-    default:
-      fajrAngle = -18;
-      ishaAngle = -18;
-      break;
-  }
-
-  // Sunrise & Sunset Times (Sun center at -0.8333° for atmospheric refraction & solar radius)
-  const sunriseHA = getHourAngleInfo(-0.8333).ha;
-  const sunriseMin = solarNoonMin - sunriseHA * 4;
-  const sunsetMin = solarNoonMin + sunriseHA * 4;
-  const nightMinutes = Math.max(0, 1440 - (sunsetMin - sunriseMin));
-
-  // Fajr Time (uses Angle-Based high-latitude adjustment when sun stays above fajrAngle all night)
-  const fajrInfo = getHourAngleInfo(fajrAngle);
-  const fajrMin =
-    fajrInfo.neverReachesBelow && nightMinutes > 0
-      ? sunriseMin - (Math.abs(fajrAngle) / 60) * nightMinutes
-      : solarNoonMin - fajrInfo.ha * 4;
-
-  // Dhuhr Time (Solar Noon + 1 min buffer after zenith)
-  const dhuhrMin = solarNoonMin + 1;
-
-  // Asr Time:
-  // Standard (Shafi'i/Maliki/Hanbali): shadow = 1x object length + noon shadow
-  // Hanafi: shadow = 2x object length + noon shadow
-  const asrShadowRatio = asrMethod === 'hanafi' ? 2 : 1;
-  const noonShadowRatio = Math.tan(Math.abs(latRad - decRad));
-  const asrAltitudeRad = Math.atan(1 / (asrShadowRatio + noonShadowRatio));
-  const asrAltitudeDeg = (asrAltitudeRad * 180) / Math.PI;
-  const asrHA = getHourAngleInfo(asrAltitudeDeg).ha;
-  const asrMin = solarNoonMin + asrHA * 4;
-
-  // Maghrib Time: Sunset + 2 min safety precaution
-  const maghribMin = sunsetMin + 2;
-
-  // Isha Time (uses Angle-Based high-latitude adjustment when sun stays above ishaAngle all night)
-  let ishaMin: number;
-  if (ishaAngle !== null) {
-    const ishaInfo = getHourAngleInfo(ishaAngle);
-    ishaMin =
-      ishaInfo.neverReachesBelow && nightMinutes > 0
-        ? sunsetMin + (Math.abs(ishaAngle) / 60) * nightMinutes
-        : solarNoonMin + ishaInfo.ha * 4;
-  } else {
-    ishaMin = maghribMin + (ishaFixedOffsetMin || 90);
-  }
-
-  // Precautionary Sehri Ends (10 minutes before true dawn / Fajr)
-  const sehriEndsMin = fajrMin - 10;
-
-  const formatMin = (m: number): string => {
-    let rounded = Math.round(m);
-    while (rounded < 0) rounded += 1440;
-    while (rounded >= 1440) rounded -= 1440;
-    const hours = Math.floor(rounded / 60);
-    const mins = rounded % 60;
-    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-  };
+  const fmt = (d: Date) =>
+    formatUtcDateInLocationZone(d, tzName, options.timezoneOffsetHours);
 
   const times: PrayerTimes = {
-    fajr: formatMin(fajrMin),
-    sunrise: formatMin(sunriseMin),
-    dhuhr: formatMin(dhuhrMin),
-    asr: formatMin(asrMin),
-    maghrib: formatMin(maghribMin),
-    isha: formatMin(ishaMin),
-    sehriEnds: formatMin(sehriEndsMin),
-    iftarTime: formatMin(maghribMin),
+    fajr: fmt(adhanTimes.fajr),
+    sunrise: fmt(adhanTimes.sunrise),
+    dhuhr: fmt(adhanTimes.dhuhr),
+    asr: fmt(adhanTimes.asr),
+    maghrib: fmt(adhanTimes.maghrib),
+    isha: fmt(adhanTimes.isha),
+    sehriEnds: fmt(sehriEndsDate),
+    iftarTime: fmt(iftarDate),
   };
 
   return {
@@ -294,12 +282,12 @@ export function calculateLocationPrayerTimes(
     cityName: displayLabel,
     countryName: city.country,
     cityNameUr: city.nameUr,
-    coordinates: `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}`,
-    timezoneName: tzName,
+    coordinates: coordStr,
+    timezoneName: tzName || tzOffsetStr,
     timezoneOffsetStr: tzOffsetStr,
     methodName,
     asrJuristicName,
-    disclaimer: `Estimated astronomical prayer times for ${displayLabel} (${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}) in ${tzName} (${tzOffsetStr}). Please confirm with your local mosque timetable.`,
-    disclaimerUr: `یہ اوقاتِ نماز فلکیاتی حساب سے ${city.nameUr} (${tzName}) کے لیے تخمیناً تیار کیے گئے ہیں۔ حتمی اوقات کے لیے مقامی مسجد کی اذان و جماعت کی پیروی کریں۔`,
+    disclaimer: `Calculated via Adhan astronomical engine (${methodName}, ${asrJuristicName}) for ${displayLabel} (${coordStr}) in ${tzName || tzOffsetStr} (${tzOffsetStr}). Astronomical estimates may vary by 1–2 minutes; always confirm prayer times with your local mosque.`,
+    disclaimerUr: `یہ اوقاتِ نماز فلکیاتی حساب سے ${city.nameUr} (${coordStr} • ${tzName || tzOffsetStr}، ${tzOffsetStr}) کے لیے تیار کیے گئے ہیں۔ حتمی اوقات کے لیے ہمیشہ اپنی مقامی مسجد کی اذان و جماعت سے تصدیق کریں۔`,
   };
 }

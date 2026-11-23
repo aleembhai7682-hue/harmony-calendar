@@ -20,6 +20,10 @@ interface IslamicPrayerCountdownProps {
   currentDate: Date;
   hijriOffset?: number;
   language?: Language;
+  cityId?: string;
+  customLat?: number;
+  customLon?: number;
+  locationExplicitlyConfirmed?: boolean;
 }
 
 interface PrayerSlot {
@@ -36,11 +40,14 @@ export const IslamicPrayerCountdown: React.FC<IslamicPrayerCountdownProps> = ({
   currentDate,
   hijriOffset = 0,
   language = 'ur',
+  cityId = '',
+  customLat,
+  customLon,
+  locationExplicitlyConfirmed,
 }) => {
   const [now, setNow] = useState(new Date());
   const [tasbeehCount, setTasbeehCount] = useState<number>(0);
   const [selectedZikr, setSelectedZikr] = useState<string>('SubhanAllah');
-  const [audioNotification, setAudioNotification] = useState<boolean>(true);
 
   // Update live clock every second
   useEffect(() => {
@@ -50,7 +57,13 @@ export const IslamicPrayerCountdown: React.FC<IslamicPrayerCountdownProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const prayerTimes: PrayerTimes = getPrayerTimes(currentDate);
+  const prayerTimes: PrayerTimes = getPrayerTimes(currentDate, {
+    cityId,
+    customLat,
+    customLon,
+    locationExplicitlyConfirmed,
+  });
+  const hasValidPrayerTimes = /^\d{1,2}:\d{2}$/.test(prayerTimes.fajr);
   const wisdom = getDailyWisdom(currentDate);
   const hijri = getHijriDate(currentDate, hijriOffset);
   const isFriday = currentDate.getDay() === 5;
@@ -176,7 +189,7 @@ export const IslamicPrayerCountdown: React.FC<IslamicPrayerCountdownProps> = ({
           </div>
           <div className="text-right hidden sm:block">
             <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-              {prayerTimes.dhuhr} PM
+              {hasValidPrayerTimes ? prayerTimes.dhuhr : 'Location required'}
             </div>
             <div className="text-[10px] text-slate-500">جماعت وقت</div>
           </div>
@@ -220,7 +233,7 @@ export const IslamicPrayerCountdown: React.FC<IslamicPrayerCountdownProps> = ({
                 باقی وقت • Time Remaining
               </div>
               <div className="font-mono text-2xl sm:text-3xl font-black text-amber-300 tracking-wider">
-                {formatCountdown()}
+                {hasValidPrayerTimes ? formatCountdown() : '--:--:--'}
               </div>
             </div>
             <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-300">
@@ -232,7 +245,7 @@ export const IslamicPrayerCountdown: React.FC<IslamicPrayerCountdownProps> = ({
         {/* 5 Daily Prayer Cards Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 pt-4 border-t border-emerald-700/50">
           {slots.map((slot) => {
-            const isNext = slot.id === nextPrayer.id;
+            const isNext = hasValidPrayerTimes && slot.id === nextPrayer.id;
             return (
               <div
                 key={slot.id}
@@ -263,11 +276,11 @@ export const IslamicPrayerCountdown: React.FC<IslamicPrayerCountdownProps> = ({
         <div className="mt-3 pt-2.5 border-t border-white/10 flex flex-wrap items-center justify-between text-xs text-emerald-200 gap-2">
           <div className="flex items-center gap-1.5">
             <span className="text-amber-300">🌙 سحری ختم:</span>
-            <span className="font-mono font-bold text-white">{prayerTimes.sehriEnds} AM</span>
+            <span className="font-mono font-bold text-white">{prayerTimes.sehriEnds}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-amber-300">✨ افطار وقت:</span>
-            <span className="font-mono font-bold text-white">{prayerTimes.iftarTime} PM</span>
+            <span className="font-mono font-bold text-white">{prayerTimes.iftarTime}</span>
           </div>
         </div>
       </div>

@@ -145,16 +145,17 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
     });
   };
 
-  // Compute location-aware astronomical prayer times
+  // Compute location-aware astronomical prayer times (never evaluate unconfirmed legacy Mumbai)
   const prayerData: DetailedPrayerInfo = calculateLocationPrayerTimes(currentDate, {
-    cityId: selectedCity,
-    customLat,
-    customLon,
-    customLocationName: customName,
-    customCountry: selectedCountry,
-    timezoneName: selectedLocationTimezone,
+    cityId: isLocationReady ? selectedCity : '',
+    customLat: isLocationReady ? customLat : undefined,
+    customLon: isLocationReady ? customLon : undefined,
+    customLocationName: isLocationReady ? customName : undefined,
+    customCountry: isLocationReady ? selectedCountry : undefined,
+    timezoneName: isLocationReady ? selectedLocationTimezone : undefined,
     prayerMethod,
     asrMethod,
+    locationExplicitlyConfirmed: isLocationReady,
   });
 
   const needsManualTimezone = isLocationReady && Boolean(prayerData.timezoneMissing);
@@ -322,6 +323,10 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                 {language === 'ur' ? 'وقت' : isLocationReady && !needsManualTimezone ? 'City Time' : 'Device Time'}:{' '}
                 <strong className="font-mono text-emerald-300">{activeTimeParts.formatted}</strong>
               </span>
+              <span className="text-slate-500">•</span>
+              <span className="text-[11px] font-mono text-emerald-200/90">
+                {prayerData.timezoneName || deviceTz} ({prayerData.timezoneOffsetStr})
+              </span>
             </p>
           </div>
         </div>
@@ -361,20 +366,20 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                     <h3 className="text-sm font-black text-white">
                       {needsMumbaiConfirm
                         ? language === 'ur'
-                          ? 'اپنے محفوظ کردہ مقام (ممبئی، بھارت) کی تصدیق کریں'
-                          : 'Confirm Your Location (Saved as Mumbai, India)'
+                          ? 'مقام کی تصدیق درکار ہے — براہ کرم ممبئی کی تصدیق کریں یا اپنا شہر منتخب کریں'
+                          : 'Location required — Confirm Saved Mumbai or Select Your City'
                         : language === 'ur'
-                        ? 'اوقاتِ نماز کے لیے اپنا مقام منتخب کریں یا لوکیشن فعال کریں'
-                        : 'Select or Enable Your Location for Prayer Times'}
+                        ? 'مقام درکار ہے — براہ کرم شہر منتخب کریں یا GPS فعال کریں'
+                        : 'Location required — Please select city or enable GPS'}
                     </h3>
                     <p className="text-xs text-slate-300 mt-1 leading-relaxed">
                       {needsMumbaiConfirm
                         ? language === 'ur'
-                          ? 'ممبئی پہلے سے بطور ڈیفالٹ محفوظ تھا۔ براہ کرم تصدیق کریں کہ آپ ممبئی میں ہیں یا اپنا اصل شہر منتخب کریں۔'
-                          : 'Mumbai, India was previously saved as the default. Please confirm if you live in Mumbai, or choose your city below.'
+                          ? 'ممبئی پہلے سے بطور ڈیفالٹ محفوظ تھا۔ جب تک آپ تصدیق یا تبدیلی نہیں کرتے، اوقاتِ نماز حساب نہیں کیے جائیں گے۔'
+                          : 'Mumbai, India was saved as an old default. Prayer times remain paused until you confirm Mumbai or choose your city or enable GPS below.'
                         : language === 'ur'
-                        ? `درست فجر، ظہر، عصر، مغرب، عشاء اور سحری/افطار کے حساب کے لیے جغرافیائی عرض و طول درکار ہیں۔ (موجودہ ڈیوائس ٹائم زون: ${deviceTz})`
-                        : `Prayer times, Sehri, and Iftar depend on your geographic latitude and longitude. No default city is assumed. (Device timezone: ${deviceTz})`}
+                        ? `درست فجر، ظہر، عصر، مغرب، عشاء اور سحری/افطار کے حساب کے لیے جغرافیائی عرض و طول درکار ہیں۔ (ڈیوائس ٹائم زون: ${deviceTz} • ${prayerData.timezoneOffsetStr})`
+                        : `Prayer times, Sehri, and Iftar depend on your geographic latitude and longitude. No default city is assumed. (Device timezone: ${deviceTz}, ${prayerData.timezoneOffsetStr})`}
                     </p>
                   </div>
                 </div>

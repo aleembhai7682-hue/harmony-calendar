@@ -212,14 +212,6 @@ export function getNowLocal(): Date {
 }
 
 /**
- * Backwards compatibility alias for getNowLocal.
- * Returns the user's actual device local time rather than forcing an artificial offset.
- */
-export function getNowInIST(): Date {
-  return new Date();
-}
-
-/**
  * Returns formatted local device time string with timezone indicator.
  * e.g. "10:30:15 AM (EDT)" or "10:30:15 AM"
  */
@@ -248,13 +240,3 @@ export function formatLocalTime(date?: Date, showTimezone: boolean = true): stri
 
   return tzCode ? `${hh}:${mm}:${ss} ${ampm} (${tzCode})` : `${hh}:${mm}:${ss} ${ampm}`;
 }
-
-/**
- * Backwards compatibility alias for formatLocalTime.
- */
-export function formatISTTime(date?: Date): string {
-  return formatLocalTime(date, true);
-}
-
-
-

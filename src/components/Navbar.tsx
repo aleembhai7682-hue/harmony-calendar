@@ -87,16 +87,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const hasLoc = hasExplicitLocation(selectedCity, customLatitude, customLongitude);
   const needsMumbaiConfirm =
     selectedCity?.trim().toLowerCase() === 'mumbai' && locationExplicitlyConfirmed !== true;
-  const activeLoc = hasLoc
-    ? getCityLocation(
-        selectedCity,
-        customLatitude,
-        customLongitude,
-        customLocationName,
-        selectedCountry,
-        selectedLocationTimezone
-      )
-    : null;
+  const activeLoc =
+    hasLoc && !needsMumbaiConfirm
+      ? getCityLocation(
+          selectedCity,
+          customLatitude,
+          customLongitude,
+          customLocationName,
+          selectedCountry,
+          selectedLocationTimezone
+        )
+      : null;
   const deviceTz = getDeviceTimezone();
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [now, setNow] = useState<Date>(() => new Date());

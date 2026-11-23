@@ -122,13 +122,14 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
 
   const panchang: HinduPanchangInfo = getHinduPanchang(
     currentDate,
-    selectedCity,
-    customLat,
-    customLon,
-    customName,
+    isLocationReady ? selectedCity : '',
+    isLocationReady ? customLat : undefined,
+    isLocationReady ? customLon : undefined,
+    isLocationReady ? customName : undefined,
     undefined,
-    selectedCountry,
-    selectedLocationTimezone
+    isLocationReady ? selectedCountry : undefined,
+    isLocationReady ? selectedLocationTimezone : undefined,
+    isLocationReady
   );
   const needsManualTimezone = isLocationReady && Boolean(panchang.timezoneMissing);
   const gitaVerse: GitaVerse = getDailyGitaVerse(currentDate);
@@ -186,7 +187,14 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
               <span className="text-slate-500">•</span>
               <span>मास: <strong className="text-amber-200">{panchang.hinduMonthHi} ({panchang.hinduMonthEn})</strong></span>
               <span className="text-slate-500">•</span>
-              <span>{isLocationReady && !needsManualTimezone ? 'City Time' : 'Device Time'}: <strong className="font-mono text-amber-300">{activeTime.formatted}</strong></span>
+              <span>
+                {isLocationReady && !needsManualTimezone ? 'City Time' : 'Device Time'}:{' '}
+                <strong className="font-mono text-amber-300">{activeTime.formatted}</strong>
+              </span>
+              <span className="text-slate-500">•</span>
+              <span className="text-[11px] font-mono text-amber-200/80">
+                {panchang.timezoneName || deviceTz} ({panchang.timezoneOffsetStr})
+              </span>
             </p>
           </div>
         </div>
@@ -283,12 +291,15 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="text-xs text-amber-200/90 mt-1 font-medium">
-                  {needsManualTimezone
-                    ? 'Timezone required below'
-                    : needsMumbaiConfirm
-                    ? 'Confirm location below'
-                    : 'Select location below'}
+                <div className="mt-1">
+                  <div className="text-xs text-amber-300 font-bold">
+                    {needsManualTimezone ? 'Timezone required' : 'Location required'}
+                  </div>
+                  <div className="text-[10px] text-amber-200/80 mt-0.5">
+                    {needsManualTimezone
+                      ? 'Select an IANA timezone below'
+                      : 'Please select city or enable GPS'}
+                  </div>
                 </div>
               )}
             </div>
@@ -321,10 +332,15 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="text-xs text-emerald-200/80 mt-1 font-medium">
-                  {needsManualTimezone
-                    ? 'Select an IANA timezone below'
-                    : 'Requires confirmed city or GPS coordinates'}
+                <div className="mt-1">
+                  <div className="text-xs text-emerald-300 font-bold">
+                    {needsManualTimezone ? 'Timezone required' : 'Location required'}
+                  </div>
+                  <div className="text-[10px] text-emerald-200/80 mt-0.5">
+                    {needsManualTimezone
+                      ? 'Select an IANA timezone below'
+                      : 'Please select city or enable GPS'}
+                  </div>
                 </div>
               )}
             </div>
@@ -344,10 +360,15 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="text-xs text-rose-200/80 mt-1 font-medium">
-                  {needsManualTimezone
-                    ? 'Select an IANA timezone below'
-                    : 'Requires confirmed city or GPS coordinates'}
+                <div className="mt-1">
+                  <div className="text-xs text-rose-300 font-bold">
+                    {needsManualTimezone ? 'Timezone required' : 'Location required'}
+                  </div>
+                  <div className="text-[10px] text-rose-200/80 mt-0.5">
+                    {needsManualTimezone
+                      ? 'Select an IANA timezone below'
+                      : 'Please select city or enable GPS'}
+                  </div>
                 </div>
               )}
             </div>
@@ -420,13 +441,13 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                 <div>
                   <h3 className="text-sm font-black text-white">
                     {needsMumbaiConfirm
-                      ? 'Confirm Your Location (Saved as Mumbai, India)'
-                      : 'Select or Enable Location for Sunrise, Sunset, Rahu Kaal & Abhijit Muhurat'}
+                      ? 'Location required — Confirm Saved Mumbai or Select Your City'
+                      : 'Location required — Please select city or enable GPS'}
                   </h3>
                   <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
                     {needsMumbaiConfirm
-                      ? 'Mumbai, India was previously saved as the default. Please confirm if you live in Mumbai, or choose your city below.'
-                      : `Solar Panchang timings depend on your geographic latitude and longitude. No default city is assumed. (Device timezone: ${deviceTz})`}
+                      ? 'Mumbai, India was previously saved as the default. Sunrise, Sunset, Rahu Kaal, and Abhijit Muhurat stay paused until you confirm Mumbai or select your city below.'
+                      : `Solar Panchang timings depend on your geographic latitude and longitude. No default city is assumed. (Device timezone: ${deviceTz}, ${panchang.timezoneOffsetStr})`}
                   </p>
                 </div>
               </div>

@@ -298,7 +298,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                               filters.customLocationName,
                               undefined,
                               filters.selectedCountry,
-                              filters.selectedLocationTimezone
+                              filters.selectedLocationTimezone,
+                              filters.locationExplicitlyConfirmed
                             );
                             return `${p.pakshaHi} • ${p.tithiNameHi}`;
                           })()}
