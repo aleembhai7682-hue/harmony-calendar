@@ -18,6 +18,7 @@ import { translations } from '../translations/i18n';
 import { getDeviceTimezone } from '../utils/istTime';
 import { getCityLocation, hasExplicitLocation, formatCityCountryLabel } from '../utils/cities';
 import { getLocaleTag, formatClockInZone, formatDateLocalized, TimeFormatOption, DateFormatOption } from '../utils/localization';
+import { getModeTheme } from '../utils/modeTheme';
 
 interface NavbarProps {
   currentDate: Date;
@@ -132,37 +133,37 @@ export const Navbar: React.FC<NavbarProps> = ({
       id: 'muslim',
       label: 'Muslim Mode',
       icon: '🌙',
-      colorClasses: 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 ring-1 ring-emerald-400',
-      activeBorder: 'border-emerald-500',
+      colorClasses:
+        'bg-emerald-700 text-white shadow-xs ring-1 ring-[#C69C44]/40 dark:bg-emerald-600 dark:text-white',
+      activeBorder: 'border-emerald-700',
       badge: 'Hijri & Namaz',
     },
     {
       id: 'hindu',
       label: 'Hindu Mode',
       icon: '🕉️',
-      colorClasses: 'bg-amber-600 text-white shadow-md shadow-amber-600/30 ring-1 ring-amber-400',
-      activeBorder: 'border-amber-500',
+      colorClasses:
+        'bg-amber-700 text-white shadow-xs ring-1 ring-amber-400/50 dark:bg-amber-600 dark:text-white',
+      activeBorder: 'border-amber-700',
       badge: 'Panchang & Gita',
     },
     {
       id: 'christian',
       label: 'Christian Mode',
       icon: '✝️',
-      colorClasses: 'bg-[#14284B] text-[#FAF8F3] shadow-sm ring-1 ring-[#C69C44]/50 dark:bg-sky-600 dark:text-white',
+      colorClasses:
+        'bg-[#14284B] text-[#FAF8F3] shadow-xs ring-1 ring-[#C69C44]/50 dark:bg-sky-600 dark:text-white',
       activeBorder: 'border-[#14284B]',
       badge: 'Bible & Sunday',
     },
   ];
 
   const isChristianMode = calendarMode === 'christian';
+  const modeTheme = getModeTheme(calendarMode);
 
   return (
     <header
-      className={`sticky top-0 z-30 backdrop-blur-md transition-colors ${
-        isChristianMode
-          ? 'bg-[#FCFBF8]/92 dark:bg-[#0B1528]/92 border-b border-[#E5DFD2] dark:border-slate-800/80 shadow-[0_2px_12px_rgba(20,40,75,0.04)]'
-          : 'bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 shadow-xs'
-      }`}
+      className={`sticky top-0 z-30 backdrop-blur-md transition-colors ${modeTheme.headerSurface}`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -177,11 +178,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => onNavigate('today')}
             >
               <div
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform ${
-                  isChristianMode
-                    ? 'bg-gradient-to-tr from-[#14284B] via-[#1E3A6E] to-[#C69C44] shadow-[#14284B]/20'
-                    : 'bg-gradient-to-tr from-emerald-600 via-indigo-600 to-amber-500 shadow-indigo-500/20'
-                }`}
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform ${modeTheme.brandBadge}`}
               >
                 <CalendarIcon className="w-5 h-5" />
               </div>
@@ -196,25 +193,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Previous / Today / Next Navigation buttons */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className={`flex items-center gap-1 ${modeTheme.cardSubSurface} p-1 rounded-xl border ${modeTheme.cardBorder}`}>
               <button
                 onClick={() => onNavigate('prev')}
                 title="Previous"
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700/70 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                 aria-label="Previous"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onNavigate('today')}
-                className="px-3 py-1 rounded-lg text-xs font-bold hover:bg-white dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-lg text-xs font-bold hover:bg-white dark:hover:bg-slate-700/70 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
               >
                 Today
               </button>
               <button
                 onClick={() => onNavigate('next')}
                 title="Next"
-                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700/70 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                 aria-label="Next"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -233,13 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
                 <span>{formatDateLocalized(currentDate, dateFormat, locale, 'medium')}</span>
                 <span className="text-slate-300 dark:text-slate-600">•</span>
-                <span
-                  className={`font-mono-tabular text-[11px] font-bold ${
-                    isChristianMode
-                      ? 'text-[#8C6418] dark:text-amber-300'
-                      : 'text-emerald-600 dark:text-emerald-400'
-                  }`}
-                >
+                <span className={`font-mono-tabular text-[11px] font-bold ${modeTheme.clockText}`}>
                   {formatClockInZone(now, deviceTz, timeFormat, selectedCountryCode, locale, true)}
                 </span>
               </div>
@@ -247,7 +238,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Middle: 3-Faith Safe Mode Switcher (Desktop/Tablet) */}
-          <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800/90 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
+          <div className={`hidden lg:flex items-center ${modeTheme.cardSubSurface} p-1 rounded-2xl border ${modeTheme.cardBorder} shadow-inner`}>
             {modes.map((m) => {
               const isActive = calendarMode === m.id;
               return (
@@ -282,7 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       value={searchQuery}
                       onChange={(e) => onSearchChange(e.target.value)}
                       placeholder="Search events & tasks..."
-                      className="w-full pl-9 pr-7 py-1 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className={`w-full pl-9 pr-7 py-1 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing}`}
                       autoFocus
                     />
                     <button
@@ -310,21 +301,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Quick Add Button */}
             <button
               onClick={onOpenQuickAdd}
-              className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 text-xs font-semibold transition-colors cursor-pointer"
+              className={`hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${modeTheme.subtleActionBtn}`}
               title="Quick Add (K)"
             >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Quick Add</span>
             </button>
 
             {/* New Event Button */}
             <button
               onClick={onOpenNewEvent}
-              className={`inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl active:scale-95 text-white text-xs font-bold transition-all shadow-sm cursor-pointer ${
-                isChristianMode
-                  ? 'bg-[#14284B] hover:bg-[#1D396A] dark:bg-sky-600 dark:hover:bg-sky-500'
-                  : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/25'
-              }`}
+              className={`inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl active:scale-95 text-xs font-bold transition-all cursor-pointer ${modeTheme.primaryBtn}`}
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">New Event</span>
@@ -333,23 +320,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Add Task Button */}
             <button
               onClick={onOpenNewTask}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 cursor-pointer"
+              className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${modeTheme.cardSubSurface} hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all border ${modeTheme.cardBorder} cursor-pointer`}
               title="Add Task"
             >
-              <CalendarCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <CalendarCheck className={`w-3.5 h-3.5 ${modeTheme.accentText}`} />
               <span className="hidden md:inline">Add Task</span>
             </button>
 
             {/* Dark / Light Theme Toggle */}
             <button
               onClick={onThemeToggle}
-              className="p-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors shadow-xs cursor-pointer"
+              className={`p-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border ${modeTheme.cardBorder} transition-colors shadow-xs cursor-pointer`}
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {theme === 'dark' ? (
                 <Sun className="w-4 h-4 text-amber-400" />
               ) : (
-                <Moon className="w-4 h-4 text-indigo-600" />
+                <Moon className={`w-4 h-4 ${modeTheme.accentText}`} />
               )}
             </button>
 
@@ -365,10 +352,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Sub-Bar: Mode Switcher (on mobile) & Calendar View Tabs (Month, Week, Day, Year, Agenda) */}
-        <div className="flex items-center justify-between py-2 border-t border-slate-200 dark:border-slate-800 overflow-x-auto gap-3">
+        <div className={`flex items-center justify-between py-2 border-t ${modeTheme.cardBorder} overflow-x-auto gap-3`}>
           
           {/* Mode Switcher on Mobile / Smaller Screens */}
-          <div className="flex lg:hidden items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700">
+          <div className={`flex lg:hidden items-center gap-1 ${modeTheme.cardSubSurface} p-0.5 rounded-xl border ${modeTheme.cardBorder}`}>
             {modes.map((m) => {
               const isActive = calendarMode === m.id;
               return (
@@ -389,7 +376,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Calendar View Mode Tabs (Month, Week, Day, Year, Agenda) */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 ml-auto">
+          <div className={`flex items-center gap-1 ${modeTheme.cardSubSurface} p-0.5 rounded-xl border ${modeTheme.cardBorder} ml-auto`}>
             {views.map((v) => {
               const active = viewMode === v.id;
               return (
@@ -398,9 +385,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => onViewModeChange(v.id)}
                   className={`px-3 py-1 text-xs font-semibold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                     active
-                      ? isChristianMode
-                        ? 'bg-white dark:bg-slate-900 text-[#14284B] dark:text-sky-300 shadow-xs font-bold'
-                        : 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold'
+                      ? modeTheme.activeTab
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -414,12 +399,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div
             onClick={onOpenSettings}
             title="Click to configure geographical location or preferences in Settings"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl ${modeTheme.cardSubSurface} text-[11px] font-semibold text-slate-700 dark:text-slate-300 border ${modeTheme.cardBorder} hover:opacity-90 transition-colors cursor-pointer whitespace-nowrap shrink-0`}
           >
             <span
               className={`w-2 h-2 rounded-full ${
-                hasLoc && !needsMumbaiConfirm ? 'bg-emerald-500' : 'bg-amber-500'
-              } ${isChristianMode ? '' : 'animate-pulse'}`}
+                hasLoc && !needsMumbaiConfirm ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-amber-500'
+              }`}
             />
             <span>
               {needsMumbaiConfirm

@@ -3,6 +3,7 @@ import { Clock, CheckCircle2 } from 'lucide-react';
 import { Language, PrayerTimes } from '../../types/calendar';
 import { formatTimePreference, TimeFormatOption } from '../../utils/localization';
 import { DetailedPrayerInfo } from '../../utils/prayerTimes';
+import { PrayerWindowPieChart } from './PrayerWindowPieChart';
 
 export interface PrayerSlot {
   id: string;
@@ -47,6 +48,18 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
       ? nextPrayer.nameHinglish
       : nextPrayer.nameEn;
 
+  const nextIdx = slots.findIndex((s) => s.id === nextPrayer.id);
+  const prevSlot = isTomorrowFajr
+    ? slots[slots.length - 1]
+    : nextIdx > 0
+    ? slots[nextIdx - 1]
+    : slots[slots.length - 1];
+  const prevPrayerLabel = prevSlot
+    ? language === 'ur'
+      ? prevSlot.nameUr
+      : prevSlot.nameEn
+    : 'Isha';
+
   const formattedNextTime = formatTimePreference(
     nextPrayer.timeStr,
     timeFormat,
@@ -57,70 +70,81 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
 
   return (
     <>
-      {/* Cleaner Next Prayer Countdown Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-teal-50/70 dark:from-emerald-950/90 dark:via-slate-900 dark:to-slate-900 border border-emerald-200 dark:border-emerald-500/35 shadow-sm dark:shadow-lg">
-        <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Next Prayer Countdown + D3 Window Progress Pie Chart Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#FCFDFC] via-[#F2F8F4] to-[#E8F3EC] dark:from-[#0E211A] dark:via-[#0B1914] dark:to-[#08130F] border border-[#D5E4DC] dark:border-[#1B382E] shadow-xs dark:shadow-lg">
+        <div className="p-4 sm:p-5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-400/35 flex items-center justify-center shrink-0 shadow-inner">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-700/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 dark:border-emerald-400/30 flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-[11px] uppercase font-bold text-emerald-700 dark:text-emerald-300/95 tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+              <div className="flex items-center gap-2 text-[11px] uppercase font-bold text-emerald-800 dark:text-emerald-300/95 tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                 <span>{language === 'ur' ? 'اگلی نماز' : 'Next Prayer'}</span>
                 {isTomorrowFajr && (
-                  <span className="text-[10px] normal-case font-semibold text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/70 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-600/50">
+                  <span className="text-[10px] normal-case font-semibold text-[#8C6418] dark:text-amber-200 bg-[#FBF5E6] dark:bg-amber-950/70 px-2 py-0.5 rounded-full border border-[#E5D3A7] dark:border-amber-600/50">
                     {language === 'ur' ? 'کل صبح' : 'Tomorrow'}
                   </span>
                 )}
               </div>
               <div className="mt-1 flex items-center gap-2.5 flex-wrap">
-                <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                <span className="text-xl sm:text-2xl font-black text-emerald-950 dark:text-white tracking-tight">
                   {nextPrayerLabel}
                 </span>
-                <span className="font-serif text-base text-emerald-700 dark:text-emerald-400/90">
+                <span className="font-serif text-base text-emerald-800 dark:text-emerald-400/90">
                   {nextPrayer.nameAr}
                 </span>
-                <span className="text-xs sm:text-sm font-mono font-bold text-emerald-900 dark:text-emerald-200 bg-emerald-100 dark:bg-emerald-950/90 px-2.5 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-700/50">
+                <span className="text-xs sm:text-sm font-mono font-bold text-emerald-900 dark:text-emerald-200 bg-[#EFF6F2] dark:bg-[#10231C] px-2.5 py-0.5 rounded-lg border border-[#C6DDD1] dark:border-[#1B382E]">
                   {formattedNextTime}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Segmented Tabular Countdown */}
-          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-3 bg-emerald-50/90 dark:bg-slate-950/75 px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/50">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider sm:hidden">
-              {language === 'ur' ? 'باقی وقت' : 'Starts In'}
-            </span>
-            <div className="flex items-center gap-1.5" aria-label={`Time remaining ${countdownFormatted}`}>
-              {[
-                { val: hh, unit: language === 'ur' ? 'گھنٹے' : 'hrs' },
-                { val: mm, unit: language === 'ur' ? 'منٹ' : 'min' },
-                { val: ss, unit: language === 'ur' ? 'سیکنڈ' : 'sec' },
-              ].map((seg, idx) => (
-                <React.Fragment key={seg.unit}>
-                  <div className="flex flex-col items-center min-w-[42px] px-2 py-1 rounded-lg bg-white dark:bg-slate-900/90 border border-emerald-200 dark:border-emerald-700/40 shadow-xs">
-                    <span className="text-lg sm:text-xl font-black font-mono tabular-nums text-emerald-700 dark:text-emerald-300 leading-none">
-                      {seg.val}
-                    </span>
-                    <span className="text-[9px] uppercase font-semibold text-slate-500 dark:text-slate-400 mt-0.5 tracking-wider">
-                      {seg.unit}
-                    </span>
-                  </div>
-                  {idx < 2 && (
-                    <span className="text-emerald-600/70 dark:text-emerald-500/70 font-black font-mono text-base -mt-2">:</span>
-                  )}
-                </React.Fragment>
-              ))}
+          <div className="w-full xl:w-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between xl:justify-end gap-3">
+            {/* D3 SVG Prayer Window Progress Pie Chart */}
+            <PrayerWindowPieChart
+              progressPct={intervalProgressPct}
+              prevPrayerLabel={prevPrayerLabel}
+              nextPrayerLabel={language === 'ur' ? nextPrayer.nameUr : nextPrayer.nameEn}
+              remainingFormatted={countdownFormatted}
+              language={language}
+            />
+
+            {/* Segmented Tabular Countdown */}
+            <div className="flex items-center justify-between sm:justify-end gap-3 bg-[#EFF6F2]/90 dark:bg-[#08130F]/80 px-3.5 py-2.5 rounded-xl border border-[#D5E4DC] dark:border-[#1B382E]">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider sm:hidden">
+                {language === 'ur' ? 'باقی وقت' : 'Starts In'}
+              </span>
+              <div className="flex items-center gap-1.5" aria-label={`Time remaining ${countdownFormatted}`}>
+                {[
+                  { val: hh, unit: language === 'ur' ? 'گھنٹے' : 'hrs' },
+                  { val: mm, unit: language === 'ur' ? 'منٹ' : 'min' },
+                  { val: ss, unit: language === 'ur' ? 'سیکنڈ' : 'sec' },
+                ].map((seg, idx) => (
+                  <React.Fragment key={seg.unit}>
+                    <div className="flex flex-col items-center min-w-[42px] px-2 py-1 rounded-lg bg-[#FCFDFC] dark:bg-[#0E211A] border border-[#D5E4DC] dark:border-[#1B382E] shadow-xs">
+                      <span className="text-lg sm:text-xl font-black font-mono tabular-nums text-emerald-800 dark:text-emerald-300 leading-none">
+                        {seg.val}
+                      </span>
+                      <span className="text-[9px] uppercase font-semibold text-slate-500 dark:text-slate-400 mt-0.5 tracking-wider">
+                        {seg.unit}
+                      </span>
+                    </div>
+                    {idx < 2 && (
+                      <span className="text-emerald-700/70 dark:text-emerald-500/70 font-black font-mono text-base -mt-2">:</span>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Subtle Interval Progress Bar */}
-        <div className="h-1 w-full bg-emerald-100 dark:bg-slate-950/80">
+        <div className="h-1 w-full bg-[#DDEAE3] dark:bg-[#07110D]">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 transition-all duration-700"
+            className="h-full bg-gradient-to-r from-emerald-700 via-emerald-500 to-amber-400 transition-all duration-700"
             style={{ width: `${intervalProgressPct}%` }}
           />
         </div>
@@ -135,15 +159,15 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
               key={slot.id}
               className={`p-3 rounded-2xl border transition-all ${
                 isNext
-                  ? 'bg-emerald-100/80 dark:bg-emerald-900/50 border-emerald-500 dark:border-emerald-400 ring-1 ring-emerald-400/50 shadow-sm'
-                  : 'bg-white/90 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60 hover:border-emerald-300 dark:hover:border-slate-600 shadow-xs'
+                  ? 'bg-[#E6F4EC] dark:bg-emerald-900/45 border-emerald-600 dark:border-emerald-400 ring-1 ring-emerald-500/35 shadow-sm'
+                  : 'bg-[#FCFDFC] dark:bg-[#10231C]/80 border-[#D5E4DC] dark:border-[#1B382E] hover:border-emerald-400/70 dark:hover:border-emerald-700 shadow-xs'
               }`}
             >
               <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
                 <span>{language === 'ur' ? slot.nameUr : slot.nameEn}</span>
-                <span className="font-serif text-xs text-emerald-700 dark:text-emerald-400">{slot.nameAr}</span>
+                <span className="font-serif text-xs text-emerald-800 dark:text-emerald-300">{slot.nameAr}</span>
               </div>
-              <div className="text-base font-black font-mono text-slate-900 dark:text-white">
+              <div className="text-base font-black font-mono text-emerald-950 dark:text-white">
                 {formatTimePreference(slot.timeStr, timeFormat, selectedCountryCode)}
               </div>
               <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
@@ -159,37 +183,37 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
           );
         })}
 
-        {/* Sehri Ends */}
-        <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/35 border border-amber-200 dark:border-amber-700/50 shadow-xs">
-          <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 mb-1">
+        {/* Sehri Ends — Champagne Brass Dawn */}
+        <div className="p-3 rounded-2xl bg-[#FEF9EC] dark:bg-[#1D1709] border border-[#E8D5A7] dark:border-amber-700/50 shadow-xs">
+          <div className="text-[11px] font-bold text-[#92400E] dark:text-amber-300 mb-1">
             {language === 'ur' ? 'سحری ختم (امساک)' : 'Sehri Ends'}
           </div>
-          <div className="text-base font-black font-mono text-amber-900 dark:text-amber-200">
+          <div className="text-base font-black font-mono text-[#78350F] dark:text-amber-200">
             {formatTimePreference(prayerTimes.sehriEnds, timeFormat, selectedCountryCode)}
           </div>
-          <div className="text-[10px] text-amber-700 dark:text-amber-300/80 mt-1">
+          <div className="text-[10px] text-[#92400E]/85 dark:text-amber-300/80 mt-1">
             {language === 'ur' ? 'فجر سے 10 منٹ قبل' : '10 min before Fajr'}
           </div>
         </div>
 
-        {/* Iftar Time */}
-        <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/35 border border-rose-200 dark:border-rose-700/50 shadow-xs">
-          <div className="text-[11px] font-bold text-rose-800 dark:text-rose-300 mb-1">
+        {/* Iftar Time — Warm Terracotta Dusk */}
+        <div className="p-3 rounded-2xl bg-[#FFF6F0] dark:bg-[#22130D] border border-[#F0CDBB] dark:border-orange-800/50 shadow-xs">
+          <div className="text-[11px] font-bold text-[#9A3412] dark:text-orange-300 mb-1">
             {language === 'ur' ? 'افطار کا وقت' : 'Iftar Time'}
           </div>
-          <div className="text-base font-black font-mono text-rose-900 dark:text-rose-200">
+          <div className="text-base font-black font-mono text-[#7C2D12] dark:text-orange-200">
             {formatTimePreference(prayerTimes.iftarTime, timeFormat, selectedCountryCode)}
           </div>
-          <div className="text-[10px] text-rose-700 dark:text-rose-300/80 mt-1">
+          <div className="text-[10px] text-[#9A3412]/85 dark:text-orange-300/80 mt-1">
             {language === 'ur' ? 'وقتِ مغرب' : 'At Maghrib Adhan'}
           </div>
         </div>
       </div>
 
       {/* Subtle Adhan Astronomical Confirmation + Non-Intrusive Mosque Disclaimer */}
-      <div className="px-3.5 py-2.5 rounded-xl bg-white/80 dark:bg-slate-900/85 border border-emerald-200/80 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between gap-2 flex-wrap">
-        <span className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300/95 font-medium">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+      <div className="px-3.5 py-2.5 rounded-xl bg-[#FCFDFC]/90 dark:bg-[#0B1914]/85 border border-[#D5E4DC] dark:border-[#1B382E] text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between gap-2 flex-wrap">
+        <span className="flex items-center gap-2 text-emerald-900 dark:text-emerald-300 font-medium">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
           <span>
             {language === 'ur'
               ? `Adhan فلکیاتی انجن سے حساب شدہ (${prayerData.methodShortName} • ${prayerData.asrShortName})`

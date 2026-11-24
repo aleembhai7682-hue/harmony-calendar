@@ -3,6 +3,7 @@ import { CalendarEvent, CalendarFaithMode, Language, EventCategory } from '../ty
 import { translations } from '../translations/i18n';
 import { formatDateToLocalYMD } from '../utils/dateUtils';
 import { getDeviceTimezone } from '../utils/istTime';
+import { getModeTheme } from '../utils/modeTheme';
 import { Sparkles, X, Clock } from 'lucide-react';
 
 interface QuickAddModalProps {
@@ -32,10 +33,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 }) => {
   const t = translations[language];
   const resolvedTz = activeTimeZone || getDeviceTimezone();
+  const modeTheme = getModeTheme(calendarMode);
   const [input, setInput] = useState('');
   const [selectedCategory] = useState<EventCategory>('personal');
 
   if (!isOpen) return null;
+
+  const modeDefaultColor =
+    calendarMode === 'muslim' ? '#047857' : calendarMode === 'hindu' ? '#B45309' : '#14284B';
 
   const modeTemplate: QuickTemplate =
     calendarMode === 'muslim'
@@ -43,7 +48,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           title: 'Friday Jummah Prayer & Khutbah',
           time: '13:00',
           category: 'spiritual',
-          color: '#059669',
+          color: '#047857',
           faithTag: 'muslim',
         }
       : calendarMode === 'hindu'
@@ -51,14 +56,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           title: 'Morning Puja & Aarti',
           time: '07:00',
           category: 'spiritual',
-          color: '#d97706',
+          color: '#B45309',
           faithTag: 'hindu',
         }
       : {
           title: 'Sunday Worship Service & Devotional',
           time: '10:00',
           category: 'spiritual',
-          color: '#1E3A6E',
+          color: '#14284B',
           faithTag: 'christian',
         };
 
@@ -70,7 +75,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
             title: 'Festival Shopping & Family Prep',
             time: '16:00',
             category: 'festival' as EventCategory,
-            color: '#d97706',
+            color: '#C69C44',
             faithTag: 'hindu' as const,
           },
         ]
@@ -79,14 +84,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       title: 'Sprint Review & Engineering Sync',
       time: '11:00',
       category: 'work',
-      color: '#2563eb',
+      color: '#1E3A6E',
       faithTag: 'universal',
     },
     {
       title: 'Family Weekend Dinner',
       time: '19:30',
       category: 'family',
-      color: '#dc2626',
+      color: '#BE123C',
       faithTag: 'universal',
     },
     {
@@ -131,17 +136,17 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
     // Auto category detection
     let category: EventCategory = selectedCategory;
-    let color = '#4f46e5';
+    let color = modeDefaultColor;
 
     if (lower.includes('prayer') || lower.includes('jummah') || lower.includes('puja') || lower.includes('mandir') || lower.includes('masjid')) {
       category = 'spiritual';
-      color = '#059669';
+      color = calendarMode === 'hindu' ? '#B45309' : '#047857';
     } else if (lower.includes('diwali') || lower.includes('eid') || lower.includes('holi') || lower.includes('festival') || lower.includes('navratri')) {
       category = 'festival';
-      color = '#d97706';
+      color = '#C69C44';
     } else if (lower.includes('meeting') || lower.includes('sync') || lower.includes('client') || lower.includes('standup')) {
       category = 'work';
-      color = '#2563eb';
+      color = '#1E3A6E';
     } else if (lower.includes('workout') || lower.includes('gym') || lower.includes('run') || lower.includes('doctor')) {
       category = 'health';
       color = '#0284c7';
@@ -203,25 +208,25 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div className={`${modeTheme.cardSurface} rounded-3xl max-w-lg w-full p-6 shadow-2xl border ${modeTheme.cardBorder}`}>
         
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className={`flex items-center justify-between pb-3 border-b ${modeTheme.gridDivider}`}>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+            <div className={`p-2 rounded-xl ${modeTheme.timerIconBox}`}>
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
                 {t.actions.quickAdd}
               </h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Natural text scheduling (e.g. "Meeting with team tomorrow at 3pm")
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -234,13 +239,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="What would you like to schedule?"
-              className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-semibold pr-24"
+              className={`w-full px-4 py-3 rounded-2xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing} text-sm font-semibold pr-24`}
               autoFocus
             />
             <button
               type="submit"
               disabled={!input.trim()}
-              className="absolute right-2 top-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm transition-all"
+              className={`absolute right-2 top-2 px-3 py-1.5 rounded-xl disabled:opacity-50 text-xs font-bold transition-all cursor-pointer ${modeTheme.primaryBtn}`}
             >
               Add
             </button>
@@ -248,7 +253,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
           {/* Quick suggestions / 1-click templates */}
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2">
               Instant 1-Click Templates
             </span>
             <div className="space-y-1.5">
@@ -256,18 +261,18 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                 <div
                   key={idx}
                   onClick={() => handleApplyTemplate(tmpl)}
-                  className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-all flex items-center justify-between group"
+                  className={`p-2.5 rounded-xl border ${modeTheme.cardBorder} hover:${modeTheme.selectedCell} ${modeTheme.cardSubSurface} cursor-pointer transition-all flex items-center justify-between group`}
                 >
                   <div className="flex items-center gap-2">
                     <span
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: tmpl.color }}
                     />
-                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                       {tmpl.title}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                     <Clock className="w-3 h-3" />
                     <span>{tmpl.time}</span>
                   </div>

@@ -17,6 +17,7 @@ import { getChristianObservancesForDate } from '../utils/christianData';
 import { resolveWeekStartDay, formatTimePreference } from '../utils/localization';
 import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
 import { getConfirmedCountryCode } from '../utils/storage';
+import { getModeTheme } from '../utils/modeTheme';
 import { Clock, Plus } from 'lucide-react';
 
 interface WeekViewProps {
@@ -66,26 +67,18 @@ export const WeekView: React.FC<WeekViewProps> = ({
     today.getDate()
   ).padStart(2, '0')}`;
 
-  const isChristianModeView = filters.calendarMode === 'christian';
+  const modeTheme = getModeTheme(filters.calendarMode);
 
   return (
     <div
-      className={`flex-1 flex flex-col rounded-2xl border overflow-hidden transition-colors ${
-        isChristianModeView
-          ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border-[#E4DDD0] dark:border-slate-800 shadow-[0_8px_28px_-12px_rgba(20,40,75,0.08)]'
-          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm'
-      }`}
+      className={`flex-1 flex flex-col rounded-2xl border overflow-hidden transition-colors shadow-xs ${modeTheme.cardSurface} ${modeTheme.cardBorder}`}
     >
       
       {/* Week Header */}
       <div
-        className={`grid grid-cols-[60px_repeat(7,1fr)] border-b sticky top-0 z-20 ${
-          isChristianModeView
-            ? 'bg-[#F6F3EB]/95 dark:bg-[#101D36]/95 border-[#E4DDD0] dark:border-slate-800'
-            : 'bg-slate-100/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-800'
-        }`}
+        className={`grid grid-cols-[60px_repeat(7,1fr)] border-b sticky top-0 z-20 ${modeTheme.cardSubSurface} ${modeTheme.cardBorder}`}
       >
-        <div className="p-3 text-center text-xs font-bold text-slate-400 border-r border-slate-200 dark:border-slate-700 flex items-center justify-center">
+        <div className={`p-3 text-center text-xs font-bold text-slate-400 border-r ${modeTheme.gridDivider} flex items-center justify-center`}>
           <Clock className="w-4 h-4" />
         </div>
         {weekDays.map((day, idx) => {
@@ -129,18 +122,12 @@ export const WeekView: React.FC<WeekViewProps> = ({
             <div
               key={dateStr}
               onClick={() => onSelectDate(day)}
-              className={`p-2 border-r text-center cursor-pointer transition-colors ${
-                isChristianMode
-                  ? 'border-[#EAE4D7] dark:border-slate-800/80'
-                  : 'border-slate-200 dark:border-slate-700'
-              } ${
+              className={`p-2 border-r text-center cursor-pointer transition-colors ${modeTheme.gridDivider} ${
                 isSelected
-                  ? isChristianMode
-                    ? 'bg-[#EAF1FA]/90 dark:bg-sky-950/40'
-                    : 'bg-indigo-50/50 dark:bg-indigo-950/40'
+                  ? modeTheme.selectedCell
                   : isChristianMode && day.getDay() === 0
-                  ? 'bg-[#F3F8FE]/70 dark:bg-sky-950/20 hover:bg-[#EAF1FA] dark:hover:bg-sky-950/30'
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                  ? modeTheme.specialDayCell
+                  : 'hover:bg-black/5 dark:hover:bg-white/5'
               }`}
             >
               <div
@@ -148,7 +135,9 @@ export const WeekView: React.FC<WeekViewProps> = ({
                   isChristianMode && day.getDay() === 0
                     ? 'text-[#1E40AF] dark:text-sky-300'
                     : isMuslimMode && day.getDay() === 5 && filters.highlightFridays
-                    ? 'text-emerald-700 dark:text-emerald-400'
+                    ? 'text-emerald-800 dark:text-emerald-300'
+                    : isHinduMode && day.getDay() === 0
+                    ? 'text-amber-800 dark:text-amber-300'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
@@ -160,9 +149,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
                 <span
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-mono-tabular font-bold ${
                     isToday
-                      ? isChristianMode
-                        ? 'bg-[#14284B] dark:bg-sky-500 text-white shadow-xs ring-2 ring-[#C69C44]/50'
-                        : 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300'
+                      ? modeTheme.todayCircle
                       : 'text-slate-800 dark:text-slate-200'
                   }`}
                 >
@@ -172,8 +159,8 @@ export const WeekView: React.FC<WeekViewProps> = ({
               
               {/* Hijri day (Muslim Mode only) */}
               {isMuslimMode && hijri && filters.showHijri && (
-                <div className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 truncate">
-                  {hijri.day} {language === 'ur' ? (hijri.monthNameUr || hijri.monthNameEn) : language === 'hinglish' ? hijri.monthNameEn : hijri.monthNameEn}
+                <div className="text-[10px] font-semibold text-emerald-800 dark:text-emerald-300 truncate">
+                  {hijri.day} {language === 'ur' ? (hijri.monthNameUr || hijri.monthNameEn) : hijri.monthNameEn}
                 </div>
               )}
 
@@ -186,10 +173,10 @@ export const WeekView: React.FC<WeekViewProps> = ({
                   if (!alert) return null;
                   return (
                     <div
-                      className="text-[9px] px-1 py-0.5 rounded font-extrabold bg-red-600 text-white shadow-sm animate-pulse truncate flex items-center justify-center gap-0.5"
+                      className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-rose-50 dark:bg-rose-950/80 text-rose-900 dark:text-rose-200 border border-rose-300/80 dark:border-rose-700/70 shadow-xs truncate flex items-center justify-center gap-1"
                       title={language === 'ur' ? alert.warningUr : language === 'hinglish' ? alert.warningHinglish : alert.warningEn}
                     >
-                      <span>🚨</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400 shrink-0" />
                       <span>{language === 'ur' ? 'جمعہ+ہولی' : 'Jumma+Holi'}</span>
                     </div>
                   );
@@ -254,7 +241,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
             return (
               <React.Fragment key={hour}>
                 {/* Time label */}
-                <div className="p-2 text-right text-[11px] font-semibold text-slate-400 border-b border-r border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/40 select-none">
+                <div className={`p-2 text-right text-[11px] font-mono-tabular font-semibold text-slate-400 border-b border-r ${modeTheme.gridDivider} ${modeTheme.cardSubSurface} select-none`}>
                   {timeLabelDisplay}
                 </div>
 
@@ -278,10 +265,10 @@ export const WeekView: React.FC<WeekViewProps> = ({
                     <div
                       key={`${dateStr}-${hour}`}
                       onClick={() => onOpenCreateEventOnDateAndTime(dateStr, timeLabelRaw)}
-                      className="group relative min-h-[52px] p-1 border-b border-r border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                      className={`group relative min-h-[52px] p-1 border-b border-r ${modeTheme.gridDivider} hover:bg-black/[0.02] dark:hover:bg-white/[0.03] cursor-pointer transition-colors`}
                     >
                       {/* Plus icon on hover */}
-                      <div className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 text-indigo-500">
+                      <div className={`absolute right-1 top-1 opacity-0 group-hover:opacity-100 ${modeTheme.accentText}`}>
                         <Plus className="w-3.5 h-3.5" />
                       </div>
 
@@ -302,8 +289,16 @@ export const WeekView: React.FC<WeekViewProps> = ({
                               e.stopPropagation();
                               onSelectEvent(evt);
                             }}
-                            className="p-1 rounded-md text-[10px] font-semibold bg-indigo-600 text-white shadow-sm truncate hover:scale-[1.02] transition-transform"
-                            style={{ backgroundColor: evt.color || '#4f46e5' }}
+                            className="p-1 rounded-md text-[10px] font-semibold text-white shadow-sm truncate hover:scale-[1.02] transition-transform"
+                            style={{
+                              backgroundColor:
+                                evt.color ||
+                                (filters.calendarMode === 'muslim'
+                                  ? '#047857'
+                                  : filters.calendarMode === 'hindu'
+                                  ? '#B45309'
+                                  : '#14284B'),
+                            }}
                             title={
                               display.isConverted && display.sourceTimeZone
                                 ? `${evt.title} (Scheduled ${evt.startTime} in ${display.sourceTimeZone})`

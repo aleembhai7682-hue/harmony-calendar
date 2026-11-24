@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   CalendarEvent,
+  CalendarFaithMode,
   EventCategory,
   Priority,
   RecurrenceType,
@@ -9,6 +10,7 @@ import {
 import { translations } from '../translations/i18n';
 import { getTodayLocalYMD } from '../utils/dateUtils';
 import { getDeviceTimezone } from '../utils/istTime';
+import { getModeTheme } from '../utils/modeTheme';
 import { X, Trash2, Calendar, Clock, MapPin, Tag, AlertCircle, Globe } from 'lucide-react';
 
 interface EventModalProps {
@@ -20,18 +22,19 @@ interface EventModalProps {
   defaultDate?: string;
   defaultTime?: string;
   language: Language;
+  calendarMode?: CalendarFaithMode;
   activeTimeZone?: string;
 }
 
 const COLOR_PALETTE = [
-  '#4f46e5', // Indigo
-  '#059669', // Emerald
-  '#d97706', // Amber
-  '#dc2626', // Red
-  '#e11d48', // Rose
-  '#0284c7', // Sky
-  '#7c3aed', // Purple
-  '#ea580c', // Orange
+  '#14284B', // Midnight Navy
+  '#047857', // Botanical Emerald
+  '#B45309', // Burnished Saffron
+  '#C69C44', // Champagne Brass
+  '#BE123C', // Deep Crimson
+  '#0284C7', // Cerulean Sky
+  '#9A3412', // Terracotta Dusk
+  '#6D28D9', // Royal Violet
 ];
 
 export const EventModal: React.FC<EventModalProps> = ({
@@ -43,10 +46,14 @@ export const EventModal: React.FC<EventModalProps> = ({
   defaultDate,
   defaultTime,
   language,
+  calendarMode = 'christian',
   activeTimeZone,
 }) => {
   const t = translations[language];
   const resolvedTz = initialEvent?.timeZone || activeTimeZone || getDeviceTimezone();
+  const modeTheme = getModeTheme(calendarMode);
+  const modeDefaultColor =
+    calendarMode === 'muslim' ? '#047857' : calendarMode === 'hindu' ? '#B45309' : '#14284B';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -58,7 +65,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [category, setCategory] = useState<EventCategory>('personal');
   const [priority, setPriority] = useState<Priority>('medium');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
-  const [color, setColor] = useState(COLOR_PALETTE[0]);
+  const [color, setColor] = useState(modeDefaultColor);
   const [location, setLocation] = useState('');
   const [reminderMinutesBefore, setReminderMinutesBefore] = useState<number>(15);
   const [faithTag, setFaithTag] = useState<'universal' | 'muslim' | 'hindu' | 'christian'>('universal');
@@ -76,7 +83,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       setCategory(initialEvent.category);
       setPriority(initialEvent.priority);
       setRecurrence(initialEvent.recurrence);
-      setColor(initialEvent.color || COLOR_PALETTE[0]);
+      setColor(initialEvent.color || modeDefaultColor);
       setLocation(initialEvent.location || '');
       setReminderMinutesBefore(initialEvent.reminderMinutesBefore || 15);
       setFaithTag(initialEvent.faithTag || 'universal');
@@ -91,13 +98,13 @@ export const EventModal: React.FC<EventModalProps> = ({
       setCategory('personal');
       setPriority('medium');
       setRecurrence('none');
-      setColor(COLOR_PALETTE[0]);
+      setColor(modeDefaultColor);
       setLocation('');
       setReminderMinutesBefore(15);
       setFaithTag('universal');
     }
     setError('');
-  }, [initialEvent, defaultDate, defaultTime, isOpen]);
+  }, [initialEvent, defaultDate, defaultTime, isOpen, modeDefaultColor]);
 
   if (!isOpen) return null;
 
@@ -142,12 +149,21 @@ export const EventModal: React.FC<EventModalProps> = ({
     onClose();
   };
 
+  const toggleCheckedColor =
+    calendarMode === 'muslim'
+      ? 'peer-checked:bg-emerald-700 dark:peer-checked:bg-emerald-500'
+      : calendarMode === 'hindu'
+      ? 'peer-checked:bg-amber-700 dark:peer-checked:bg-amber-500'
+      : 'peer-checked:bg-[#14284B] dark:peer-checked:bg-sky-500';
+
+  const inputCls = `w-full px-3 py-2 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing} font-medium`;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+      <div className={`${modeTheme.cardSurface} rounded-3xl max-w-lg w-full p-6 shadow-2xl border ${modeTheme.cardBorder} max-h-[90vh] overflow-y-auto`}>
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className={`flex items-center justify-between pb-4 border-b ${modeTheme.gridDivider}`}>
           <div className="flex items-center gap-2">
             <span
               className="w-4 h-4 rounded-full shadow-sm"
@@ -159,14 +175,14 @@ export const EventModal: React.FC<EventModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
+          <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
             <span>{error}</span>
           </div>
@@ -184,7 +200,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Diwali Dinner / Client Sync / Quran Recitation"
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
+              className={`w-full px-3.5 py-2.5 text-sm rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing} font-semibold`}
               autoFocus
             />
           </div>
@@ -201,7 +217,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                 onChange={(e) => setAllDay(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600" />
+              <div className={`w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all ${toggleCheckedColor}`} />
             </label>
           </div>
 
@@ -216,7 +232,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                className={inputCls}
               />
             </div>
 
@@ -230,7 +246,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  className={inputCls}
                 />
               </div>
             )}
@@ -246,7 +262,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  className={inputCls}
                 />
               </div>
 
@@ -258,11 +274,11 @@ export const EventModal: React.FC<EventModalProps> = ({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  className={inputCls}
                 />
               </div>
               <div className="sm:col-span-2 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                <Globe className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <Globe className={`w-3.5 h-3.5 ${modeTheme.accentText} shrink-0`} />
                 <span>Event Timezone: <strong className="text-slate-700 dark:text-slate-200">{resolvedTz.replace(/_/g, ' ')}</strong></span>
               </div>
             </div>
@@ -278,7 +294,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as EventCategory)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 capitalize font-medium"
+                className={`${inputCls} capitalize cursor-pointer`}
               >
                 <option value="personal">{t.categories.personal}</option>
                 <option value="work">{t.categories.work}</option>
@@ -297,7 +313,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Priority)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                className={`${inputCls} cursor-pointer`}
               >
                 <option value="low">{t.priorities.low}</option>
                 <option value="medium">{t.priorities.medium}</option>
@@ -314,7 +330,7 @@ export const EventModal: React.FC<EventModalProps> = ({
             <select
               value={recurrence}
               onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className={`${inputCls} cursor-pointer`}
             >
               <option value="none">{t.recurrence.none}</option>
               <option value="daily">{t.recurrence.daily}</option>
@@ -332,8 +348,8 @@ export const EventModal: React.FC<EventModalProps> = ({
             </label>
             <select
               value={faithTag}
-              onChange={(e) => setFaithTag(e.target.value as any)}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
+              onChange={(e) => setFaithTag(e.target.value as 'universal' | 'muslim' | 'hindu' | 'christian')}
+              className={`${inputCls} cursor-pointer`}
             >
               <option value="universal">🌐 Universal (Visible in all modes)</option>
               <option value="christian">✝️ Christian Mode Only</option>
@@ -353,7 +369,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Office / Home / Jamia Masjid / Connaught Place"
-              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className={inputCls}
             />
           </div>
 
@@ -362,14 +378,14 @@ export const EventModal: React.FC<EventModalProps> = ({
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
               Event Color Tag
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {COLOR_PALETTE.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-xl transition-all ${
-                    color === c ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110 shadow-sm' : 'opacity-80 hover:opacity-100'
+                  className={`w-7 h-7 rounded-xl transition-all cursor-pointer ${
+                    color === c ? 'ring-2 ring-offset-2 ring-slate-700 dark:ring-white scale-110 shadow-sm' : 'opacity-80 hover:opacity-100'
                   }`}
                   style={{ backgroundColor: c }}
                 />
@@ -387,12 +403,12 @@ export const EventModal: React.FC<EventModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               placeholder="Notes, agenda, or reminders..."
-              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className={inputCls}
             />
           </div>
 
           {/* Footer Buttons */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className={`flex items-center justify-between pt-4 border-t ${modeTheme.gridDivider}`}>
             {initialEvent && onDelete ? (
               <button
                 type="button"
@@ -400,7 +416,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                   onDelete(initialEvent.id);
                   onClose();
                 }}
-                className="px-3.5 py-2 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                className="px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>{t.actions.delete}</span>
@@ -411,13 +427,13 @@ export const EventModal: React.FC<EventModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 {t.actions.cancel}
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all active:scale-95"
+                className={`px-5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer ${modeTheme.primaryBtn}`}
               >
                 {t.actions.save}
               </button>

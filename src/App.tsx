@@ -36,6 +36,7 @@ import { getHijriDate, getIslamicOccasionForDate } from './utils/hijri';
 import { getUpcomingGlobalHolidays } from './utils/globalHolidays';
 import { getDeviceTimezone } from './utils/istTime';
 import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from './utils/timezoneService';
+import { getModeTheme } from './utils/modeTheme';
 import { exportEventsToIcs } from './utils/icsExport';
 import {
   shouldTriggerReminder,
@@ -45,7 +46,7 @@ import {
   testNotificationChimeAndAlert,
   CalendarReminderItem,
 } from './utils/notifications';
-import { Bell, CheckCircle2, X } from 'lucide-react';
+import { Bell, X } from 'lucide-react';
 
 // Calendar Views & Components
 import { Navbar } from './components/Navbar';
@@ -457,31 +458,26 @@ export default function App() {
   };
 
   const todayHijri = getHijriDate(currentDate, filters.hijriAdjustmentDays);
+  const modeTheme = getModeTheme(calendarMode);
 
   return (
     <div
-      className={`min-h-screen text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors relative overflow-x-hidden ${
-        calendarMode === 'christian'
-          ? 'bg-gradient-to-b from-[#FAF8F3] via-[#F4F8FD] to-[#EEF3FA] dark:bg-gradient-to-b dark:from-[#070E1D] dark:via-[#0B162C] dark:to-[#081020]'
-          : calendarMode === 'hindu'
-          ? 'bg-gradient-to-b from-[#FFFDF7] via-[#FDF5E4] to-[#F8ECDA] dark:bg-gradient-to-b dark:from-[#0b0907] dark:via-[#171108] dark:to-[#0a0806]'
-          : 'bg-gradient-to-b from-[#F5FCF8] via-[#F1FAF5] to-[#EBF5F0] dark:bg-gradient-to-b dark:from-[#060E0C] dark:via-[#091814] dark:to-[#060C0A]'
-      }`}
+      className={`min-h-screen text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors relative overflow-x-hidden ${modeTheme.pageCanvas}`}
     >
       {/* Ambient background light glow for serene Light & Dark mode depth */}
       {calendarMode === 'christian' && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-b from-sky-300/20 via-amber-200/12 to-transparent dark:from-sky-500/12 dark:via-amber-300/5 blur-3xl pointer-events-none -z-0" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-b from-sky-300/18 via-amber-200/10 to-transparent dark:from-sky-500/10 dark:via-amber-300/5 blur-3xl pointer-events-none -z-0" />
       )}
       {calendarMode === 'hindu' && (
         <>
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-gradient-to-b from-amber-300/22 via-orange-200/12 to-transparent dark:from-amber-500/12 dark:via-orange-500/6 dark:to-transparent blur-3xl pointer-events-none -z-0" />
-          <div className="absolute top-1/3 -right-24 w-96 h-96 rounded-full bg-amber-200/25 dark:bg-amber-500/6 blur-3xl pointer-events-none -z-0" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-gradient-to-b from-amber-300/18 via-orange-200/10 to-transparent dark:from-amber-500/10 dark:via-orange-500/5 dark:to-transparent blur-3xl pointer-events-none -z-0" />
+          <div className="absolute top-1/3 -right-24 w-96 h-96 rounded-full bg-amber-200/20 dark:bg-amber-500/5 blur-3xl pointer-events-none -z-0" />
         </>
       )}
       {calendarMode === 'muslim' && (
         <>
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-gradient-to-b from-emerald-300/18 via-teal-200/10 to-transparent dark:from-emerald-500/12 dark:via-teal-500/5 dark:to-transparent blur-3xl pointer-events-none -z-0" />
-          <div className="absolute top-1/3 -left-24 w-96 h-96 rounded-full bg-teal-200/20 dark:bg-emerald-500/6 blur-3xl pointer-events-none -z-0" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-gradient-to-b from-emerald-300/14 via-teal-200/8 to-transparent dark:from-emerald-500/10 dark:via-teal-500/4 dark:to-transparent blur-3xl pointer-events-none -z-0" />
+          <div className="absolute top-1/3 -left-24 w-96 h-96 rounded-full bg-emerald-200/18 dark:bg-emerald-500/5 blur-3xl pointer-events-none -z-0" />
         </>
       )}
       
@@ -585,7 +581,7 @@ export default function App() {
         )}
 
         {/* ⚡ Lifestyle & Daily Routine Productivity Focus Timer */}
-        <ProductivityTimerWidget />
+        <ProductivityTimerWidget calendarMode={calendarMode} />
 
         {/* Calendar Grid + Sidebar Layout */}
         <div className="flex flex-col lg:flex-row gap-5">
@@ -771,6 +767,7 @@ export default function App() {
         defaultDate={eventModalDate}
         defaultTime={eventModalTime}
         language={language}
+        calendarMode={calendarMode}
         activeTimeZone={effectiveTz}
       />
 
@@ -782,6 +779,7 @@ export default function App() {
         initialTask={selectedTask}
         defaultDate={taskModalDate}
         language={language}
+        calendarMode={calendarMode}
       />
 
       <FestivalDetailModal
@@ -789,6 +787,7 @@ export default function App() {
         onClose={() => setIsFestivalModalOpen(false)}
         festival={selectedFestival}
         language={language}
+        calendarMode={calendarMode}
         onAddToEvents={(fest) => {
           handleSaveEvent({
             id: `fest-evt-${Date.now()}`,
@@ -883,33 +882,33 @@ export default function App() {
         <aside
           role="status"
           aria-live="polite"
-          className="fixed bottom-5 right-5 z-50 max-w-sm w-full bg-slate-900 text-white border border-indigo-500/50 rounded-2xl p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300"
+          className={`fixed bottom-5 right-5 z-50 max-w-sm w-full ${modeTheme.cardSurface} ${modeTheme.cardBorder} text-slate-900 dark:text-white border rounded-2xl p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300`}
         >
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-              <Bell className="w-5 h-5 animate-bounce" />
+            <div className={`p-2 rounded-xl ${modeTheme.timerIconBox}`}>
+              <Bell className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                <span className={`text-xs font-bold uppercase tracking-wider ${modeTheme.accentText}`}>
                   {activeReminderToast.type === 'event' ? 'Upcoming Event' : 'Task Reminder'}
                 </span>
-                <span className="text-[11px] font-mono text-slate-400">
+                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                   {activeReminderToast.timeStr}
                 </span>
               </div>
-              <h4 className="font-bold text-sm text-white truncate mt-0.5">
+              <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate mt-0.5">
                 {activeReminderToast.title}
               </h4>
               {activeReminderToast.message && (
-                <p className="text-xs text-slate-300 line-clamp-2 mt-0.5">
+                <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 mt-0.5">
                   {activeReminderToast.message}
                 </p>
               )}
             </div>
             <button
               onClick={() => setActiveReminderToast(null)}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               title="Dismiss"
             >
               <X className="w-4 h-4" />

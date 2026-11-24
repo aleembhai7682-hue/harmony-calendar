@@ -31,6 +31,7 @@ import {
 } from '../utils/localization';
 import { getCountryHolidaySummary } from '../utils/globalHolidays';
 import { getConfirmedCountryCode } from '../utils/storage';
+import { getModeTheme } from '../utils/modeTheme';
 
 interface SidebarProps {
   currentDate: Date;
@@ -90,44 +91,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const dailyWisdom = getDailyWisdom(currentDate);
 
   const isChristianMode = filters.calendarMode === 'christian';
+  const modeTheme = getModeTheme(filters.calendarMode);
 
   return (
     <aside
-      className={`w-full lg:w-72 xl:w-80 flex-shrink-0 flex flex-col gap-4 p-4 sm:p-5 overflow-y-auto transition-colors ${
-        isChristianMode
-          ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border border-[#E5DFD2] dark:border-slate-800 rounded-2xl shadow-[0_6px_24px_-12px_rgba(20,40,75,0.08)] text-[#13223D] dark:text-slate-200'
-          : 'bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
-      }`}
+      className={`w-full lg:w-72 xl:w-80 flex-shrink-0 flex flex-col gap-4 p-4 sm:p-5 overflow-y-auto transition-colors rounded-2xl border shadow-xs ${modeTheme.cardSurface} ${modeTheme.cardBorder} text-slate-800 dark:text-slate-200`}
     >
       
       {/* Mini Calendar Widget */}
       <div
-        className={`rounded-2xl p-4 border shadow-xs ${
-          isChristianMode
-            ? 'bg-gradient-to-b from-[#F8FAFD] to-[#FAF7F0] dark:from-[#11203B] dark:to-[#0C172B] border-[#E5DFD2] dark:border-slate-700/70'
-            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/60 shadow-sm'
-        }`}
+        className={`rounded-2xl p-4 border shadow-xs ${modeTheme.cardSubSurface} ${modeTheme.cardBorder}`}
       >
         <div className="flex items-center justify-between mb-3">
-          <span
-            className={`text-xs uppercase tracking-wider ${
-              isChristianMode
-                ? 'font-bold text-[#14284B] dark:text-sky-200'
-                : 'font-bold text-slate-700 dark:text-slate-300'
-            }`}
-          >
+          <span className={`text-xs uppercase tracking-wider font-bold ${modeTheme.accentText}`}>
             {t.months[miniMonthIndex]} {formatNumberLocalized(miniYear, locale)}
           </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => handleMiniMonthChange(-1)}
-              className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => handleMiniMonthChange(1)}
-              className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -166,14 +154,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => onSelectDate(new Date(miniYear, miniMonthIndex, dayNum))}
                 className={`h-7 w-7 rounded-lg text-xs font-semibold font-mono-tabular flex items-center justify-center transition-all cursor-pointer ${
                   isSelected
-                    ? isChristianMode
-                      ? 'bg-[#14284B] dark:bg-sky-500 text-white font-bold shadow-xs'
-                      : 'bg-indigo-600 text-white font-bold shadow-sm'
+                    ? `${modeTheme.todayCircle} font-bold`
                     : isToday
-                    ? isChristianMode
-                      ? 'border border-[#C69C44] text-[#8C6418] dark:text-amber-300 font-bold'
-                      : 'border border-indigo-500 text-indigo-600 dark:text-indigo-400 font-bold'
-                    : 'hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                    ? `border ${modeTheme.cardBorder} ${modeTheme.accentTextMuted} font-bold bg-white/60 dark:bg-black/20`
+                    : 'hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300'
                 }`}
               >
                 {dayNum}
@@ -191,14 +175,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
                 <span className="flex items-center gap-1.5">
-                  <Compass className="w-3.5 h-3.5 text-indigo-500" />
+                  <Compass className={`w-3.5 h-3.5 ${modeTheme.accentText}`} />
                   <span>Regional Holidays & State</span>
                 </span>
               </div>
               <select
                 value={filters.selectedState}
                 onChange={(e) => onFilterChange({ ...filters, selectedState: e.target.value })}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${modeTheme.focusRing}`}
               >
                 {INDIAN_STATES.map((st) => (
                   <option key={st.code} value={st.code}>
@@ -210,9 +194,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           );
         }
         return (
-          <div className="rounded-xl p-3 bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/70 text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
+          <div className={`rounded-xl p-3 ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-[11px] text-slate-600 dark:text-slate-300 space-y-1`}>
             <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
-              <Globe className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <Globe className={`w-3.5 h-3.5 shrink-0 ${modeTheme.accentText}`} />
               <span>
                 {countrySummary.countryName ? `${countrySummary.countryName} Holidays` : 'Global Holidays'}
               </span>
@@ -224,13 +208,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Hijri Moon Sighting Adjustment - visible in Muslim Mode */}
       {filters.calendarMode === 'muslim' && (
-        <div className="bg-slate-100/70 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-200 dark:border-slate-700">
+        <div className={`${modeTheme.cardSubSurface} rounded-2xl p-3.5 border ${modeTheme.cardBorder}`}>
           <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
-              <Moon className="w-3.5 h-3.5 text-emerald-500" />
+              <Moon className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
               <span>Hijri Moon Offset</span>
             </div>
-            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/40">
               {filters.hijriAdjustmentDays > 0
                 ? `+${filters.hijriAdjustmentDays} Day`
                 : filters.hijriAdjustmentDays < 0
@@ -238,7 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 : '0 (Default)'}
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mb-2">
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mb-2">
             Adjust Hijri calendar by ±1 or ±2 days for regional moon sightings.
           </p>
           <div className="flex items-center gap-1 justify-center">
@@ -248,8 +232,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => handleHijriOffsetChange(val)}
                 className={`flex-1 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                   filters.hijriAdjustmentDays === val
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'bg-white dark:bg-[#0B1914] text-slate-700 dark:text-slate-300 border border-[#D5E4DC] dark:border-[#1B382E] hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
                 }`}
               >
                 {val > 0 ? `+${val}` : val}
@@ -262,7 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Upcoming Occasions Spotlight - Segregated by Mode */}
       <div className="space-y-2">
         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          <Sparkles className={`w-3.5 h-3.5 ${modeTheme.accentTextMuted}`} />
           <span>
             {filters.calendarMode === 'muslim'
               ? 'Upcoming Islamic Occasions'
@@ -279,11 +263,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div
                 key={occ.id}
                 onClick={() => onSelectIslamic(occ)}
-                className="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 cursor-pointer hover:shadow-xs transition-all group"
+                className="p-2.5 rounded-xl border border-[#D5E4DC] dark:border-[#1B382E] bg-[#F1F8F4] dark:bg-emerald-950/40 cursor-pointer hover:shadow-xs transition-all group"
               >
-                <div className="flex items-center justify-between text-[11px] font-bold text-emerald-800 dark:text-emerald-400 mb-0.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-emerald-800 dark:text-emerald-300 mb-0.5">
                   <span>{formatDateLocalized(occ.estimatedDate, filters.dateFormat || 'auto', locale, 'medium')}</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-200/80 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 font-bold">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/40 font-bold">
                     {occ.hijriDay}{' '}
                     {occ.hijriMonth === 9
                       ? 'Ramadan'
@@ -294,10 +278,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       : 'Hijri'}
                   </span>
                 </div>
-                <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200 group-hover:underline">
+                <div className="text-xs font-bold text-emerald-950 dark:text-emerald-100 group-hover:underline">
                   {occ.nameEn}
                 </div>
-                <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 line-clamp-1 mt-0.5">
+                <div className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 line-clamp-1 mt-0.5">
                   {occ.spiritualSignificance}
                 </div>
               </div>
@@ -316,9 +300,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => onSelectFestival(f)}
                     className={`p-2.5 rounded-xl border ${style.border} ${style.bg} cursor-pointer hover:shadow-xs transition-all group`}
                   >
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-0.5">
                       <span>{formatDateLocalized(f.date, filters.dateFormat || 'auto', locale, 'medium')}</span>
-                      <span className="capitalize text-[10px] px-1 rounded bg-white/70 dark:bg-black/30 font-bold">
+                      <span className="capitalize text-[10px] px-1.5 py-0.2 rounded bg-white/75 dark:bg-black/30 font-bold">
                         {f.category}
                       </span>
                     </div>
@@ -364,12 +348,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
           <span className="flex items-center gap-1.5">
-            <CalendarCheck2 className="w-3.5 h-3.5 text-emerald-500" />
+            <CalendarCheck2 className={`w-3.5 h-3.5 ${modeTheme.accentText}`} />
             <span>Personal To-Do List</span>
           </span>
           <button
             onClick={onOpenNewTask}
-            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-emerald-600 cursor-pointer"
+            className={`p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 hover:${modeTheme.accentText} cursor-pointer`}
             title="Add New Task"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -393,20 +377,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             return visibleTasks.slice(0, 6).map((task) => (
               <div
                 key={task.id}
-                className={`flex items-start gap-2 p-2 rounded-xl transition-all ${
+                className={`flex items-start gap-2 p-2 rounded-xl border transition-all ${modeTheme.cardBorder} ${
                   task.completed
-                    ? 'bg-slate-100/50 dark:bg-slate-800/40 opacity-60'
-                    : 'bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? `${modeTheme.cardSubSurface} opacity-60`
+                    : `${modeTheme.cardSubSurface} hover:brightness-98 dark:hover:brightness-110`
                 }`}
               >
                 <button
                   onClick={() => onToggleTask(task.id)}
-                  className="mt-0.5 text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
+                  className={`mt-0.5 text-slate-400 transition-colors cursor-pointer ${modeTheme.accentText}`}
                 >
                   {task.completed ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <CheckCircle2 className={`w-4 h-4 ${modeTheme.accentText}`} />
                   ) : (
-                    <Circle className="w-4 h-4" />
+                    <Circle className="w-4 h-4 text-slate-400" />
                   )}
                 </button>
                 <div className="min-w-0 flex-1">

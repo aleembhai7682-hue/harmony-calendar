@@ -13,6 +13,7 @@ import { isEventOnDate, isEventVisibleInMode } from '../utils/eventUtils';
 import { resolveWeekStartDay, getWeekdayOrder } from '../utils/localization';
 import { getEffectiveCalendarTimezone } from '../utils/timezoneService';
 import { getConfirmedCountryCode } from '../utils/storage';
+import { getModeTheme } from '../utils/modeTheme';
 
 interface YearViewProps {
   currentDate: Date;
@@ -45,14 +46,11 @@ export const YearView: React.FC<YearViewProps> = ({
   ).padStart(2, '0')}`;
 
   const isChristianModeView = filters.calendarMode === 'christian';
+  const modeTheme = getModeTheme(filters.calendarMode);
 
   return (
     <div
-      className={`flex-1 overflow-y-auto p-4 sm:p-6 rounded-2xl ${
-        isChristianModeView
-          ? 'bg-[#FAF8F3]/70 dark:bg-[#080F1E]/70'
-          : 'bg-slate-50 dark:bg-slate-950'
-      }`}
+      className={`flex-1 overflow-y-auto p-4 sm:p-6 rounded-2xl border ${modeTheme.cardBorder} ${modeTheme.cardSubSurface}`}
     >
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
@@ -61,7 +59,7 @@ export const YearView: React.FC<YearViewProps> = ({
               className={
                 isChristianModeView
                   ? 'font-editorial text-3xl sm:text-4xl font-semibold text-[#10203B] dark:text-[#FAF7F0]'
-                  : 'text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white'
+                  : `text-2xl sm:text-3xl font-extrabold ${modeTheme.accentText}`
               }
             >
               {year}
@@ -69,9 +67,11 @@ export const YearView: React.FC<YearViewProps> = ({
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {isChristianModeView
                 ? 'Annual overview of Christian feasts, liturgical observances, national holidays, and scheduled events'
+                : filters.calendarMode === 'muslim'
+                ? 'Annual overview of Islamic lunar occasions and scheduled events across the year'
                 : language === 'en'
-                ? 'Overview of festivals, Islamic occasions, and scheduled events across the year'
-                : 'वर्ष भर के प्रमुख त्यौहार, इस्लामी पर्व और निर्धारित कार्यक्रमों का दृश्य'}
+                ? 'Overview of Hindu festivals, Panchang observances, and scheduled events across the year'
+                : 'वर्ष भर के प्रमुख त्यौहार, पंचांग पर्व और निर्धारित कार्यक्रमों का दृश्य'}
             </p>
           </div>
         </div>
@@ -86,11 +86,7 @@ export const YearView: React.FC<YearViewProps> = ({
               <div
                 key={monthIndex}
                 onClick={() => onNavigateToMonth(year, monthIndex)}
-                className={`rounded-2xl p-4 border transition-all cursor-pointer group ${
-                  isChristianModeView
-                    ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border-[#E4DDD0] dark:border-slate-800 hover:border-[#C69C44]/70 dark:hover:border-sky-500/60 shadow-xs'
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700'
-                }`}
+                className={`rounded-2xl p-4 border transition-all cursor-pointer group shadow-xs hover:shadow-md ${modeTheme.cardSurface} ${modeTheme.cardBorder}`}
               >
                 {/* Month Name */}
                 <div className="flex items-center justify-between mb-2">
@@ -98,7 +94,7 @@ export const YearView: React.FC<YearViewProps> = ({
                     className={`text-sm transition-colors ${
                       isChristianModeView
                         ? 'font-editorial text-base font-semibold text-[#14284B] dark:text-[#FAF7F0] group-hover:text-[#1E40AF] dark:group-hover:text-sky-300'
-                        : 'font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                        : `font-bold text-slate-800 dark:text-slate-200 group-hover:${modeTheme.accentText}`
                     }`}
                   >
                     {t.months[monthIndex]}
@@ -168,10 +164,8 @@ export const YearView: React.FC<YearViewProps> = ({
                         }}
                         className={`h-6 w-6 mx-auto rounded-md flex flex-col items-center justify-center relative font-mono-tabular font-semibold transition-all ${
                           isToday
-                            ? isChristianMode
-                              ? 'bg-[#14284B] dark:bg-sky-500 text-white font-bold'
-                              : 'bg-indigo-600 text-white font-bold'
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? `${modeTheme.todayCircle} font-bold`
+                            : 'hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300'
                         }`}
                       >
                         <span className="text-[11px]">{dayNum}</span>
@@ -179,7 +173,7 @@ export const YearView: React.FC<YearViewProps> = ({
                         {/* Dot indicator for festival or event */}
                         <div className="flex items-center gap-0.5 absolute -bottom-0.5">
                           {islamicOccasion && (
-                            <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                            <span className="w-1 h-1 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                           )}
                           {hasChristianObs && (
                             <span className="w-1 h-1 rounded-full bg-[#C69C44]" />
@@ -192,7 +186,17 @@ export const YearView: React.FC<YearViewProps> = ({
                               }}
                             />
                           )}
-                          {hasEvents && <span className="w-1 h-1 rounded-full bg-indigo-500" />}
+                          {hasEvents && (
+                            <span
+                              className={`w-1 h-1 rounded-full ${
+                                isMuslimMode
+                                  ? 'bg-amber-600'
+                                  : isHinduMode
+                                  ? 'bg-amber-600'
+                                  : 'bg-[#1E3A6E] dark:bg-sky-400'
+                              }`}
+                            />
+                          )}
                         </div>
                       </div>
                     );

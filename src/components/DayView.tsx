@@ -17,6 +17,7 @@ import { getLiturgicalSeason, getChristianObservancesForDate } from '../utils/ch
 import { getLocaleTag, formatTimePreference, formatDateLocalized } from '../utils/localization';
 import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
 import { getConfirmedCountryCode } from '../utils/storage';
+import { getModeTheme } from '../utils/modeTheme';
 import {
   Clock,
   Plus,
@@ -108,19 +109,20 @@ export const DayView: React.FC<DayViewProps> = ({
   );
 
   const hours = Array.from({ length: 18 }).map((_, i) => i + 6); // 6 AM to 11 PM
+  const modeTheme = getModeTheme(filters.calendarMode);
 
   return (
     <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
       
-      {/* 🚨 Friday & Holi Coincidence Red Alert Banner */}
+      {/* Friday & Holi Coincidence Advisory Banner */}
       {fridayAlert && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 border border-red-400 text-white shadow-xl flex items-start gap-3 animate-pulse">
-          <AlertOctagon className="w-6 h-6 text-red-200 flex-shrink-0 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-700/70 text-rose-950 dark:text-rose-100 shadow-xs flex items-start gap-3">
+          <AlertOctagon className="w-5 h-5 text-rose-700 dark:text-rose-300 flex-shrink-0 mt-0.5" />
           <div>
-            <div className="font-black text-sm flex items-center gap-2">
-              <span>🚨 {language === 'ur' ? 'خاص انتباہ: جمعۃ المبارک اور ہولی کا اتفاق' : language === 'hinglish' ? 'Alert: Jumma & Holi Ek Sath' : 'Special Advisory: Jummah & Holi Coincidence'}</span>
+            <div className="font-bold text-sm flex items-center gap-2">
+              <span>{language === 'ur' ? 'خاص انتباہ: جمعۃ المبارک اور ہولی کا اتفاق' : language === 'hinglish' ? 'Advisory: Jumma & Holi Ek Sath' : 'Special Advisory: Jummah & Holi Coincidence'}</span>
             </div>
-            <p className="text-xs text-red-100 mt-1 leading-relaxed font-medium">
+            <p className="text-xs text-rose-800 dark:text-rose-200 mt-1 leading-relaxed font-medium">
               {language === 'ur' ? fridayAlert.warningUr : language === 'hinglish' ? fridayAlert.warningHinglish : fridayAlert.warningEn}
             </p>
           </div>
@@ -133,8 +135,8 @@ export const DayView: React.FC<DayViewProps> = ({
           isChristianMode
             ? 'bg-gradient-to-br from-[#FCFBF8] via-[#F3F8FE] to-[#EAF1FA] dark:from-[#0E1B33] dark:via-[#11203D] dark:to-[#0B1528] border border-[#E4DDD0] dark:border-slate-700/80 text-[#10203B] dark:text-[#FAF7F0] shadow-[0_8px_28px_-12px_rgba(20,40,75,0.1)]'
             : isHinduMode
-            ? 'bg-gradient-to-br from-[#FFFDF7] via-amber-50/90 to-orange-50/70 dark:from-[#1b150d] dark:via-slate-900 dark:to-[#241608] border border-amber-200 dark:border-amber-700/40 text-slate-900 dark:text-amber-50 shadow-sm dark:shadow-lg'
-            : 'bg-gradient-to-br from-emerald-50/95 via-white to-teal-50/80 dark:from-emerald-950 dark:via-slate-900 dark:to-teal-950 border border-emerald-200 dark:border-emerald-800/50 text-slate-900 dark:text-emerald-50 shadow-sm dark:shadow-lg'
+            ? 'bg-gradient-to-br from-[#FFFDF9] via-[#FAF2E4] to-[#F5E7CE] dark:from-[#1B150E] dark:via-[#15110C] dark:to-[#22170C] border border-[#E8D9BE] dark:border-[#34281B] text-[#2D1B09] dark:text-amber-50 shadow-xs'
+            : 'bg-gradient-to-br from-[#FAFDFB] via-[#EFF7F2] to-[#E6F2EB] dark:from-[#0A1813] dark:via-[#0D1E18] dark:to-[#091612] border border-[#D5E4DC] dark:border-[#1B382E] text-emerald-950 dark:text-emerald-50 shadow-xs'
         }`}
       >
         {/* Background glow & aesthetic motifs */}
@@ -211,24 +213,14 @@ export const DayView: React.FC<DayViewProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenCreateEventOnDateAndTime(dateStr, '09:00')}
-              className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
-                isChristianMode
-                  ? 'bg-[#14284B] hover:bg-[#1E3A6E] text-white dark:bg-sky-600 dark:hover:bg-sky-500'
-                  : isHinduMode
-                  ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
-              }`}
+              className={`px-4 py-2 rounded-xl font-bold text-xs shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${modeTheme.primaryBtn}`}
             >
               <Plus className="w-4 h-4" />
               <span>{t.actions.addEvent}</span>
             </button>
             <button
               onClick={onOpenNewTask}
-              className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
-                isChristianMode
-                  ? 'bg-white/90 hover:bg-white text-[#14284B] border border-[#DED8CA] dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-700'
-                  : 'bg-white/90 hover:bg-white text-slate-800 border border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-700'
-              }`}
+              className={`px-4 py-2 rounded-xl font-bold text-xs border shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${modeTheme.subtleActionBtn}`}
             >
               <CalendarCheck className="w-4 h-4" />
               <span>{t.actions.addTask}</span>
@@ -320,10 +312,10 @@ export const DayView: React.FC<DayViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Hourly Timeline (2 columns on wide screens) */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+        <div className={`lg:col-span-2 ${modeTheme.cardSurface} rounded-2xl border ${modeTheme.cardBorder} p-4 shadow-xs`}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-indigo-500" />
+              <Clock className={`w-4 h-4 ${modeTheme.accentText}`} />
               <span>{t.events.title}</span>
             </h2>
             <span className="text-xs font-semibold text-slate-400">
@@ -390,7 +382,15 @@ export const DayView: React.FC<DayViewProps> = ({
                                 onSelectEvent(evt);
                               }}
                               className="p-2 rounded-xl text-white shadow-sm flex items-center justify-between cursor-pointer hover:scale-[1.01] transition-transform"
-                              style={{ backgroundColor: evt.color || '#4f46e5' }}
+                              style={{
+                                backgroundColor:
+                                  evt.color ||
+                                  (filters.calendarMode === 'muslim'
+                                    ? '#047857'
+                                    : filters.calendarMode === 'hindu'
+                                    ? '#B45309'
+                                    : '#14284B'),
+                              }}
                             >
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-black/20">
@@ -423,15 +423,15 @@ export const DayView: React.FC<DayViewProps> = ({
 
         {/* Tasks & Day Focus Column */}
         <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+          <div className={`${modeTheme.cardSurface} rounded-2xl border ${modeTheme.cardBorder} p-4 shadow-xs`}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                <CalendarCheck className="w-4 h-4 text-emerald-500" />
+                <CalendarCheck className={`w-4 h-4 ${modeTheme.accentText}`} />
                 <span>{t.tasks.title}</span>
               </h2>
               <button
                 onClick={onOpenNewTask}
-                className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                className={`text-xs font-bold ${modeTheme.accentText} hover:underline flex items-center gap-1 cursor-pointer`}
               >
                 <Plus className="w-3 h-3" />
                 <span>{t.actions.addTask}</span>
@@ -442,18 +442,18 @@ export const DayView: React.FC<DayViewProps> = ({
               {dayTasks.map((task) => (
                 <div
                   key={task.id}
-                  className={`p-3 rounded-xl border transition-all flex items-start gap-3 ${
+                  className={`p-3 rounded-xl border transition-all flex items-start gap-3 ${modeTheme.cardBorder} ${
                     task.completed
-                      ? 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 opacity-60'
-                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm'
+                      ? `${modeTheme.cardSubSurface} opacity-60`
+                      : `${modeTheme.cardSubSurface} shadow-xs`
                   }`}
                 >
                   <button
                     onClick={() => onToggleTask(task.id)}
-                    className="mt-0.5 text-slate-400 hover:text-emerald-600 transition-colors"
+                    className={`mt-0.5 text-slate-400 transition-colors cursor-pointer`}
                   >
                     {task.completed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <CheckCircle2 className={`w-4 h-4 ${modeTheme.accentText}`} />
                     ) : (
                       <Circle className="w-4 h-4" />
                     )}

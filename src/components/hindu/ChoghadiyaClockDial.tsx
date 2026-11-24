@@ -263,7 +263,7 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
   const secondaryTierStyles = secondarySlot ? getTierStyles(secondarySlot.tier) : null;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-amber-300/90 dark:border-amber-500/35 bg-gradient-to-b from-[#FFFEFA] via-[#FDF5E2] to-[#F6E6C6] dark:from-[#16130d] dark:via-[#110f0b] dark:to-[#090806] p-4 sm:p-6 shadow-md dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.85)] transition-colors">
+    <div className="relative overflow-hidden rounded-3xl border border-[#DFC9A1] dark:border-[#3B2C1B] bg-gradient-to-b from-[#FFFEFA] via-[#FDF5E2] to-[#F6E6C6] dark:from-[#18130D] dark:via-[#120F0A] dark:to-[#0A0806] p-4 sm:p-6 shadow-md dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.85)] transition-colors">
       {/* Subtle Celestial Ambient Glows & Sacred Mandala Backdrop */}
       <div
         aria-hidden="true"
@@ -271,7 +271,7 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
       >
         <div className="absolute left-1/2 top-[48%] -translate-x-1/2 -translate-y-1/2 w-[440px] h-[440px] rounded-full bg-radial from-amber-400/20 via-orange-300/10 to-transparent dark:from-amber-500/15 dark:via-amber-700/5 dark:to-transparent blur-2xl" />
         <div className="absolute -top-20 -right-16 w-64 h-64 rounded-full bg-amber-300/15 dark:bg-amber-500/8 blur-3xl" />
-        <div className="absolute -bottom-24 -left-16 w-64 h-64 rounded-full bg-indigo-300/10 dark:bg-indigo-600/10 blur-3xl" />
+        <div className="absolute -bottom-24 -left-16 w-64 h-64 rounded-full bg-amber-200/15 dark:bg-slate-600/10 blur-3xl" />
         {/* Faint Sacred Concentric Mandala Lines behind Dial */}
         <svg
           viewBox="0 0 600 600"
@@ -370,7 +370,7 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
                 : 'bg-transparent text-slate-600 dark:text-slate-300 border-transparent hover:bg-white/60 dark:hover:bg-white/[0.06]'
             }`}
           >
-            <Moon className="w-4 h-4 text-indigo-600 dark:text-amber-300" />
+            <Moon className="w-4 h-4 text-slate-700 dark:text-amber-300" />
             <span>After 12 PM</span>
           </button>
         </div>
@@ -848,15 +848,15 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
             </svg>
           </div>
 
-          {/* Right Sunset / Moon Emblem */}
+          {/* Right Sunset / Moon Emblem — Deep Twilight Slate-Indigo */}
           <div
             className="hidden sm:flex flex-col items-center ml-2 shrink-0"
             title={`Sunset: ${panchang.sunsetTime}`}
           >
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 via-indigo-600 to-purple-800 shadow-[0_0_24px_rgba(99,102,241,0.4)] flex items-center justify-center text-white border-2 border-indigo-200 dark:border-indigo-400/60">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-600 via-indigo-900 to-slate-950 shadow-[0_0_20px_rgba(30,41,59,0.35)] flex items-center justify-center text-amber-100 border-2 border-amber-200/70 dark:border-amber-400/40">
               <Moon className="w-5 h-5" />
             </div>
-            <span className="text-[10px] font-mono font-bold text-indigo-900 dark:text-amber-300 mt-1.5 px-2 py-0.5 rounded-full bg-white/70 dark:bg-white/[0.06] border border-indigo-200 dark:border-amber-500/20">
+            <span className="text-[10px] font-mono font-bold text-slate-800 dark:text-amber-300 mt-1.5 px-2 py-0.5 rounded-full bg-white/75 dark:bg-white/[0.06] border border-[#DFC9A1] dark:border-amber-500/20">
               {formatTimePreference(panchang.sunsetTime, timeFormat, selectedCountryCode)}
             </span>
           </div>

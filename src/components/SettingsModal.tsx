@@ -15,6 +15,8 @@ import {
   Volume2,
   Globe,
   CalendarDays,
+  Check,
+  Scale,
 } from 'lucide-react';
 import { getCountryHolidaySummary } from '../utils/globalHolidays';
 import { getConfirmedCountryCode } from '../utils/storage';
@@ -24,6 +26,7 @@ import {
   testNotificationChimeAndAlert,
   isNotificationSupported,
 } from '../utils/notifications';
+import { getModeTheme } from '../utils/modeTheme';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -86,13 +89,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const isChristianMode = calendarMode === 'christian';
   const isHinduMode = calendarMode === 'hindu';
   const isMuslimMode = calendarMode === 'muslim';
+  const modeTheme = getModeTheme(calendarMode);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+      <div className={`${modeTheme.cardSurface} rounded-3xl max-w-lg w-full p-6 shadow-2xl border ${modeTheme.cardBorder} max-h-[90vh] overflow-y-auto`}>
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className={`flex items-center justify-between pb-4 border-b ${modeTheme.gridDivider}`}>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span>⚙️</span>
             <span>
@@ -131,7 +135,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               return (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <Compass className="w-4 h-4 text-indigo-500" />
+                    <Compass className={`w-4 h-4 ${modeTheme.accentText}`} />
                     <span>
                       {isChristianMode
                         ? 'Indian State for Regional Holidays'
@@ -145,7 +149,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <select
                     value={filters.selectedState}
                     onChange={(e) => onFilterChange({ ...filters, selectedState: e.target.value })}
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    className={`w-full px-3.5 py-2.5 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 ${modeTheme.focusRing} cursor-pointer`}
                   >
                     {INDIAN_STATES.map((st) => (
                       <option key={st.code} value={st.code}>
@@ -163,8 +167,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               );
             }
             return (
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5">
-                <Globe className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+              <div className={`p-3 rounded-2xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5`}>
+                <Globe className={`w-4 h-4 ${modeTheme.accentText} shrink-0 mt-0.5`} />
                 <div>
                   <div className="font-bold text-slate-800 dark:text-slate-200">
                     Public Holidays {countrySummary.countryName ? `(${countrySummary.countryName})` : ''}
@@ -176,9 +180,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           })()}
 
           {/* Regional & Format Preferences (Week Start, Clock 12h/24h, Date Order) */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+          <div className={`pt-2 border-t ${modeTheme.gridDivider} space-y-2.5`}>
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
-              <CalendarDays className="w-4 h-4 text-indigo-500" />
+              <CalendarDays className={`w-4 h-4 ${modeTheme.accentText}`} />
               <span>Regional Calendar Formats</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -195,7 +199,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       weekStartDay: v === 'auto' ? 'auto' : (Number(v) as 0 | 1 | 6),
                     });
                   }}
-                  className="w-full px-2.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
+                  className={`w-full px-2.5 py-2 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 ${modeTheme.focusRing} cursor-pointer`}
                 >
                   <option value="auto">Auto (Country/Locale)</option>
                   <option value="0">Sunday</option>
@@ -215,7 +219,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       timeFormat: e.target.value as 'auto' | '12h' | '24h',
                     })
                   }
-                  className="w-full px-2.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
+                  className={`w-full px-2.5 py-2 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 ${modeTheme.focusRing} cursor-pointer`}
                 >
                   <option value="auto">Auto (Locale)</option>
                   <option value="12h">12-Hour (AM/PM)</option>
@@ -234,7 +238,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       dateFormat: e.target.value as 'auto' | 'DMY' | 'MDY' | 'YMD',
                     })
                   }
-                  className="w-full px-2.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
+                  className={`w-full px-2.5 py-2 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 ${modeTheme.focusRing} cursor-pointer`}
                 >
                   <option value="auto">Auto (Locale)</option>
                   <option value="DMY">DD/MM/YYYY</option>
@@ -248,49 +252,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Muslim Mode Specific: Prayer Methods, Asr School & Moon Sighting Offset */}
           {isMuslimMode && (
             <div className="space-y-3.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-              {/* Prayer Calculation Method & Asr Juristic School */}
-              <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-900/50 space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-300">
-                    <Compass className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>
+              {/* Islamic Prayer Calculation Section */}
+              <div className="bg-emerald-50/75 dark:bg-emerald-950/35 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 space-y-4 shadow-xs">
+                <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-emerald-200/70 dark:border-emerald-800/50">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-950 dark:text-emerald-200">
+                      <Compass className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>
+                        {language === 'ur'
+                          ? 'اسلامی اوقاتِ نماز کا حساب'
+                          : 'Islamic Prayer Calculation'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">
                       {language === 'ur'
-                        ? 'اوقاتِ نماز کا طریقہ اور فقہی مسلک'
-                        : 'Prayer Times Calculation & Asr Settings'}
-                    </span>
+                        ? 'اپنے علاقے اور فقہی مسلک کے مطابق حساب کا طریقہ منتخب کریں۔'
+                        : 'Choose the regional convention and Asr juristic rule used for daily prayer times.'}
+                    </p>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/80 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200">
+                  <span className="shrink-0 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-200/85 dark:bg-emerald-900/90 text-emerald-900 dark:text-emerald-200 border border-emerald-300/70 dark:border-emerald-700/60">
                     Adhan Engine
                   </span>
                 </div>
 
                 {/* Calculation Convention Options with Helper Text */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
-                    {language === 'ur'
-                      ? 'حسابی طریقہ (Calculation Method)'
-                      : 'Calculation Method'}
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>
+                        {language === 'ur'
+                          ? 'حسابی طریقہ (Calculation Method)'
+                          : 'Calculation Method'}
+                      </span>
+                    </label>
+                    <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                      {(filters.prayerMethod || 'karachi').toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {[
                       {
                         id: 'karachi' as const,
                         title: 'Karachi',
+                        subtitle: 'Univ. of Islamic Sciences',
                         helper: 'Fajr 18°, Isha 18° — Standard across India, Pakistan & South Asia.',
                       },
                       {
                         id: 'mwl' as const,
                         title: 'MWL (Muslim World League)',
+                        subtitle: 'Global Standard',
                         helper: 'Fajr 18°, Isha 17° — Widely used across Europe, North America & globally.',
                       },
                       {
                         id: 'makkah' as const,
                         title: 'Makkah (Umm al-Qura)',
-                        helper: 'Fajr 18.5°, Isha +90 min — Used in Saudi Arabia & Gulf region.',
+                        subtitle: 'Arabian Peninsula',
+                        helper: 'Fajr 18.5°, Isha +90 min — Official calendar in Saudi Arabia & Gulf.',
                       },
                       {
                         id: 'egypt' as const,
                         title: 'Egypt (Egyptian Survey)',
+                        subtitle: 'General Authority of Survey',
                         helper: 'Fajr 19.5°, Isha 17.5° — Standard across Egypt, Africa & Middle East.',
                       },
                     ].map((opt) => {
@@ -299,20 +322,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           key={opt.id}
                           type="button"
+                          aria-pressed={active}
                           onClick={() =>
                             onFilterChange({ ...filters, prayerMethod: opt.id })
                           }
-                          className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer ${
+                          className={`text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                             active
-                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                              : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-700'
+                              ? 'bg-emerald-600 text-white border-emerald-500 ring-2 ring-emerald-400/50 shadow-sm'
+                              : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-600'
                           }`}
                         >
-                          <div className="text-xs font-bold">{opt.title}</div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-xs font-extrabold leading-tight">{opt.title}</div>
+                              <div
+                                className={`text-[10px] font-medium mt-0.5 ${
+                                  active ? 'text-emerald-100' : 'text-slate-500 dark:text-slate-400'
+                                }`}
+                              >
+                                {opt.subtitle}
+                              </div>
+                            </div>
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 border ${
+                                active
+                                  ? 'bg-white text-emerald-700 border-white'
+                                  : 'border-slate-300 dark:border-slate-600'
+                              }`}
+                            >
+                              {active && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </span>
+                          </div>
                           <div
-                            className={`text-[10px] mt-0.5 leading-snug ${
+                            className={`text-[10px] mt-1.5 leading-snug ${
                               active
-                                ? 'text-emerald-100'
+                                ? 'text-emerald-50/95'
                                 : 'text-slate-500 dark:text-slate-400'
                             }`}
                           >
@@ -326,22 +370,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Asr Juristic Method with Helper Text */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
-                    {language === 'ur'
-                      ? 'عصر کا فقہی مسلک (Asr Method)'
-                      : 'Asr Juristic Method'}
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <Scale className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>
+                        {language === 'ur'
+                          ? 'عصر کا فقہی مسلک (Asr Method)'
+                          : 'Asr Juristic Method'}
+                      </span>
+                    </label>
+                    <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                      {(filters.asrMethod || 'hanafi') === 'hanafi' ? '2× Shadow' : '1× Shadow'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {[
                       {
                         id: 'hanafi' as const,
-                        title: 'Hanafi (2x Shadow)',
-                        helper: 'Asr starts later when shadow reaches 2x object length + noon shadow.',
+                        title: 'Hanafi',
+                        helper: 'Hanafi = 2× shadow length (later Asr start; South Asia & Turkey).',
                       },
                       {
                         id: 'standard' as const,
-                        title: "Standard / Shafi'i (1x Shadow)",
-                        helper: 'Asr starts earlier when shadow reaches 1x object length + noon shadow.',
+                        title: "Standard / Shafi'i",
+                        helper: "Standard / Shafi'i = 1× shadow length (earlier Asr start; Maliki & Hanbali).",
                       },
                     ].map((opt) => {
                       const active = (filters.asrMethod || 'hanafi') === opt.id;
@@ -349,20 +401,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           key={opt.id}
                           type="button"
+                          aria-pressed={active}
                           onClick={() =>
                             onFilterChange({ ...filters, asrMethod: opt.id })
                           }
-                          className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer ${
+                          className={`text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                             active
-                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                              : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-700'
+                              ? 'bg-emerald-600 text-white border-emerald-500 ring-2 ring-emerald-400/50 shadow-sm'
+                              : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-600'
                           }`}
                         >
-                          <div className="text-xs font-bold">{opt.title}</div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs font-extrabold">{opt.title}</div>
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${
+                                active
+                                  ? 'bg-white text-emerald-700 border-white'
+                                  : 'border-slate-300 dark:border-slate-600'
+                              }`}
+                            >
+                              {active && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </span>
+                          </div>
                           <div
-                            className={`text-[10px] mt-0.5 leading-snug ${
+                            className={`text-[10px] mt-1.5 leading-snug ${
                               active
-                                ? 'text-emerald-100'
+                                ? 'text-emerald-50/95'
                                 : 'text-slate-500 dark:text-slate-400'
                             }`}
                           >
@@ -415,7 +479,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
 
           {/* Mode-Aware Language Selector & Theme */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t ${modeTheme.gridDivider}`}>
             
             {/* Language (Strictly mode-filtered) */}
             <div>
@@ -424,16 +488,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </label>
 
               {isChristianMode ? (
-                <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center justify-between border border-slate-200 dark:border-slate-700">
+                <div className={`p-2 rounded-xl ${modeTheme.cardSubSurface} text-xs font-bold ${modeTheme.accentText} flex items-center justify-between border ${modeTheme.cardBorder}`}>
                   <span>English (Exclusively)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-200 dark:bg-indigo-900 font-semibold">Active</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${modeTheme.subtleActionBtn}`}>Active</span>
                 </div>
               ) : isHinduMode ? (
-                <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <div className={`grid grid-cols-2 gap-1 ${modeTheme.cardSubSurface} p-1 rounded-xl border ${modeTheme.cardBorder}`}>
                   <button
                     onClick={() => onLanguageChange('en')}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      language === 'en' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500'
+                      language === 'en' ? modeTheme.activeTab : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     English
@@ -441,18 +505,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     onClick={() => onLanguageChange('hinglish')}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      language === 'hinglish' ? 'bg-white dark:bg-slate-700 shadow-sm text-amber-600 dark:text-amber-400' : 'text-slate-500'
+                      language === 'hinglish' ? modeTheme.activeTab : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     हिन्दी / Hinglish
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <div className={`grid grid-cols-3 gap-1 ${modeTheme.cardSubSurface} p-1 rounded-xl border ${modeTheme.cardBorder}`}>
                   <button
                     onClick={() => onLanguageChange('ur')}
                     className={`py-1.5 rounded-lg text-xs font-bold font-serif transition-all cursor-pointer ${
-                      language === 'ur' ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-500'
+                      language === 'ur' ? modeTheme.activeTab : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     اردو
@@ -460,7 +524,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     onClick={() => onLanguageChange('hinglish')}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      language === 'hinglish' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500'
+                      language === 'hinglish' ? modeTheme.activeTab : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     Hinglish
@@ -468,7 +532,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     onClick={() => onLanguageChange('en')}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      language === 'en' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500'
+                      language === 'en' ? modeTheme.activeTab : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     English
@@ -482,11 +546,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Theme
               </label>
-              <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <div className={`grid grid-cols-2 gap-1 ${modeTheme.cardSubSurface} p-1 rounded-xl border ${modeTheme.cardBorder}`}>
                 <button
                   onClick={() => onThemeChange('light')}
                   className={`py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    theme === 'light' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'
+                    theme === 'light' ? modeTheme.activeTab : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   Light
@@ -494,7 +558,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <button
                   onClick={() => onThemeChange('dark')}
                   className={`py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    theme === 'dark' ? 'bg-slate-700 shadow-sm text-amber-400' : 'text-slate-500'
+                    theme === 'dark' ? modeTheme.activeTab : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   Dark
@@ -504,7 +568,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Calendar Toggles */}
-          <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className={`space-y-2.5 pt-2 border-t ${modeTheme.gridDivider}`}>
             <label className="flex items-center justify-between cursor-pointer">
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Show Tasks & Checklists on Calendar Grid
@@ -513,7 +577,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="checkbox"
                 checked={filters.showTasksOnCalendar}
                 onChange={(e) => onFilterChange({ ...filters, showTasksOnCalendar: e.target.checked })}
-                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                className={`rounded w-4 h-4 cursor-pointer ${
+                  isMuslimMode
+                    ? 'accent-emerald-700 dark:accent-emerald-500'
+                    : isHinduMode
+                    ? 'accent-amber-700 dark:accent-amber-500'
+                    : 'accent-[#14284B] dark:accent-sky-500'
+                }`}
               />
             </label>
 
@@ -527,7 +597,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     type="checkbox"
                     checked={filters.highlightFridays}
                     onChange={(e) => onFilterChange({ ...filters, highlightFridays: e.target.checked })}
-                    className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                    className="rounded accent-emerald-700 dark:accent-emerald-500 w-4 h-4 cursor-pointer"
                   />
                 </label>
 
@@ -539,7 +609,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     type="checkbox"
                     checked={filters.showMoonPhases}
                     onChange={(e) => onFilterChange({ ...filters, showMoonPhases: e.target.checked })}
-                    className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                    className="rounded accent-emerald-700 dark:accent-emerald-500 w-4 h-4 cursor-pointer"
                   />
                 </label>
               </>
@@ -547,10 +617,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Desktop & In-App Notifications Management */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+          <div className={`pt-3 border-t ${modeTheme.gridDivider} space-y-2.5`}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Bell className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Bell className={`w-3.5 h-3.5 ${modeTheme.accentText}`} />
                 <span>Notifications & Sound Chimes</span>
               </span>
               <span
@@ -590,9 +660,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     const status = await requestNotificationPermissionByUser();
                     setNotificationStatus(status);
                   }}
-                  className="p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${modeTheme.subtleActionBtn}`}
                 >
-                  <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <Bell className="w-4 h-4" />
                   <span>Enable Desktop Alerts</span>
                 </button>
               )}
@@ -606,20 +676,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     testNotificationChimeAndAlert();
                   }
                 }}
-                className={`p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                className={`p-2.5 rounded-xl border ${modeTheme.cardBorder} hover:${modeTheme.cardSubSurface} text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                   notificationStatus === 'granted' || !isNotificationSupported() ? 'sm:col-span-2' : ''
                 }`}
               >
-                <Volume2 className="w-4 h-4 text-emerald-500" />
+                <Volume2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Test Audio Chime & Alert</span>
               </button>
             </div>
           </div>
 
           {/* Data Backup & Demo Data */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+          <div className={`pt-3 border-t ${modeTheme.gridDivider} space-y-2.5`}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Backup, Sync & Data Control
               </span>
             </div>
@@ -627,17 +697,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={onExportIcs}
-                className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className={`p-2.5 rounded-xl border ${modeTheme.cardBorder} hover:${modeTheme.cardSubSurface} text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer`}
               >
-                <FileDown className="w-4 h-4 text-indigo-500" />
+                <FileDown className={`w-4 h-4 ${modeTheme.accentText}`} />
                 <span>Export iCal (.ics)</span>
               </button>
 
               <button
                 onClick={onExportBackup}
-                className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className={`p-2.5 rounded-xl border ${modeTheme.cardBorder} hover:${modeTheme.cardSubSurface} text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer`}
               >
-                <Download className="w-4 h-4 text-emerald-500" />
+                <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>JSON Backup</span>
               </button>
             </div>
@@ -652,9 +722,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className={`w-full p-2.5 rounded-xl border ${modeTheme.cardBorder} hover:${modeTheme.cardSubSurface} text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer`}
               >
-                <Upload className="w-4 h-4 text-sky-500" />
+                <Upload className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                 <span>Restore JSON Backup</span>
               </button>
             </div>
@@ -666,10 +736,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onLoadDemoData();
                   }
                 }}
-                className="p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                className={`p-2.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${modeTheme.subtleActionBtn}`}
                 title="Load sample demonstration events and tasks"
               >
-                <Sparkles className="w-4 h-4 text-indigo-500" />
+                <Sparkles className="w-4 h-4" />
                 <span>Load Sample Demo Data</span>
               </button>
 

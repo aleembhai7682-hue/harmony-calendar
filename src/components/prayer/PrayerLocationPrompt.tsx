@@ -131,14 +131,14 @@ export const PrayerLocationPrompt: React.FC<PrayerLocationPromptProps> = ({
   }
 
   return (
-    <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-amber-50/70 dark:from-emerald-950/65 dark:via-slate-800/75 dark:to-slate-900 border border-amber-300 dark:border-amber-500/50 space-y-3 shadow-sm">
+    <div className="p-5 rounded-2xl bg-gradient-to-br from-[#F7FBF8] via-[#FCFDFC] to-[#FBF6E8] dark:from-[#0E211A] dark:via-[#0B1914] dark:to-[#18140B] border border-[#E5D3A7] dark:border-amber-700/50 space-y-3 shadow-xs">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-start gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-400/50 dark:border-amber-500/40 shrink-0">
+          <div className="p-2.5 rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-400/50 dark:border-amber-500/40 shrink-0">
             <Globe className="w-5 h-5" />
           </div>
           <div>
-            <div className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 mb-1">
+            <div className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-1">
               <span>Location required</span>
             </div>
             <h3 className="text-sm font-black text-slate-900 dark:text-white">
@@ -188,7 +188,7 @@ export const PrayerLocationPrompt: React.FC<PrayerLocationPromptProps> = ({
                 customLocationName: mumbai.nameEn,
               });
             }}
-            className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+            className="px-3.5 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
           >
             <Check className="w-3.5 h-3.5" />
             <span>
@@ -201,7 +201,7 @@ export const PrayerLocationPrompt: React.FC<PrayerLocationPromptProps> = ({
           type="button"
           onClick={onEnableGeolocation}
           disabled={isLocating}
-          className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+          className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
         >
           <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
           <span>
@@ -240,7 +240,7 @@ export const PrayerLocationPrompt: React.FC<PrayerLocationPromptProps> = ({
               });
             }
           }}
-          className="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700/60 text-xs font-semibold text-slate-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="px-3 py-2 rounded-xl bg-[#FCFDFC] dark:bg-[#0B1914] border border-[#D5E4DC] dark:border-[#1B382E] text-xs font-semibold text-slate-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-600"
         >
           <option value="">
             {language === 'ur' ? 'فہرست سے شہر منتخب کریں...' : 'Choose a City Manually...'}

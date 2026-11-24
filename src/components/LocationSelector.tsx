@@ -30,6 +30,7 @@ import {
   isValidIanaTimezone,
 } from '../utils/istTime';
 import { needsLegacyMumbaiConfirmation } from '../utils/storage';
+import { getModeTheme } from '../utils/modeTheme';
 
 interface LocationSelectorProps {
   filters: CalendarFilterSettings;
@@ -46,6 +47,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   language = 'en',
   compact = false,
 }) => {
+  const modeTheme = getModeTheme(calendarMode);
   const [searchQuery, setSearchQuery] = useState('');
   const [countryFilter, setCountryFilter] = useState<string>('ALL');
   const [onlineResults, setOnlineResults] = useState<CityLocation[]>([]);
@@ -288,11 +290,11 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const isUrdu = calendarMode === 'muslim' && language === 'ur';
 
   return (
-    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-3">
+    <div className={`p-4 rounded-2xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} space-y-3`}>
       {/* Header + Detect & Clear actions */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-          <MapPin className="w-4 h-4 text-emerald-500" />
+          <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>
             {isUrdu
               ? 'جغرافیائی مقام اور ٹائم زون'
@@ -305,7 +307,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             type="button"
             onClick={handleDetectLocation}
             disabled={isLocating}
-            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer transition-colors"
+            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer transition-colors"
           >
             <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
             <span>{isLocating ? 'Detecting...' : 'Detect my location'}</span>
@@ -314,7 +316,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           <button
             type="button"
             onClick={handleFocusManualSelection}
-            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 cursor-pointer transition-colors"
+            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border flex items-center gap-1.5 cursor-pointer transition-colors ${modeTheme.subtleActionBtn}`}
           >
             <Search className="w-3.5 h-3.5" />
             <span>Choose Location Manually</span>
@@ -371,18 +373,18 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
       {/* Separated Status Cards: Current City/Country vs Current Device Timezone */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div className="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between gap-1">
+        <div className={`px-3 py-2 rounded-xl ${modeTheme.cardSurface} border ${modeTheme.cardBorder} text-[11px]`}>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between gap-1">
             <span className="flex items-center gap-1">
-              <Globe className="w-3 h-3 text-emerald-500" />
+              <Globe className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
               <span>Current City & Country</span>
             </span>
             {isConfirmedLocation && (
               <span
-                className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
                   filters.locationSource === 'detected'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                    : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/60'
+                    : modeTheme.subtleActionBtn
                 }`}
               >
                 {filters.locationSource === 'detected' ? 'GPS Detected' : 'Manual'}
@@ -407,15 +409,15 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           </div>
         </div>
 
-        <div className="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-            <Clock className="w-3 h-3 text-indigo-500" />
+        <div className={`px-3 py-2 rounded-xl ${modeTheme.cardSurface} border ${modeTheme.cardBorder} text-[11px]`}>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <Clock className={`w-3 h-3 ${modeTheme.accentText}`} />
             <span>Device Timezone (Clock & Events)</span>
           </div>
           <div className="font-bold text-slate-900 dark:text-white mt-0.5 truncate">
             {deviceTz}
           </div>
-          <div className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5">
+          <div className={`font-mono text-[10px] ${modeTheme.accentText} mt-0.5`}>
             {deviceOffsetStr} • Auto-detected (DST-aware)
           </div>
         </div>
@@ -474,11 +476,11 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       {/* Immediately Visible Manual Country & City Selection */}
       <div
         ref={manualSectionRef}
-        className="space-y-2 p-3 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700/80"
+        className={`space-y-2 p-3 rounded-xl ${modeTheme.cardSurface} border ${modeTheme.cardBorder}`}
       >
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-            <Search className="w-3.5 h-3.5 text-indigo-500" />
+            <Search className={`w-3.5 h-3.5 ${modeTheme.accentText}`} />
             <span>Choose Location Manually</span>
           </div>
           <span className="text-[10px] text-slate-500 dark:text-slate-400">
@@ -490,7 +492,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             value={countryFilter}
             onChange={(e) => setCountryFilter(e.target.value)}
             aria-label="Filter cities by country"
-            className="w-full px-2.5 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            className={`w-full px-2.5 py-2 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 ${modeTheme.focusRing} cursor-pointer`}
           >
             <option value="ALL">All Countries</option>
             {supportedCountries.map((c) => (
@@ -512,7 +514,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                 setOnlineSearchNotice(null);
               }}
               placeholder="Search city (e.g. Pune, Kanpur, London, New York, Dubai, Tokyo)..."
-              className="w-full pl-8 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full pl-8 pr-8 py-2 text-xs rounded-xl ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing}`}
             />
             {searchQuery && (
               <button
@@ -532,7 +534,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
         {/* Matching Verified Cities List */}
         <div
-          className={`rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 ${
+          className={`rounded-xl border ${modeTheme.cardBorder} ${modeTheme.cardSurface} overflow-y-auto divide-y ${modeTheme.gridDivider} ${
             compact ? 'max-h-40' : 'max-h-48'
           }`}
         >
@@ -546,7 +548,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                   type="button"
                   onClick={handleOnlineSearch}
                   disabled={isSearchingOnline}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer"
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer ${modeTheme.primaryBtn}`}
                 >
                   {isSearchingOnline ? 'Searching global cities...' : `Search global directory for "${searchQuery.trim()}"`}
                 </button>
@@ -564,8 +566,8 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                     key={c.id}
                     type="button"
                     onClick={() => handleSelectCity(c)}
-                    className={`w-full px-3 py-2 text-left flex items-center justify-between gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer ${
-                      isSelected ? 'bg-indigo-50/80 dark:bg-indigo-950/60' : ''
+                    className={`w-full px-3 py-2 text-left flex items-center justify-between gap-2 hover:${modeTheme.specialDayCell} transition-colors cursor-pointer ${
+                      isSelected ? modeTheme.selectedCell : ''
                     }`}
                   >
                     <div className="min-w-0">
@@ -610,12 +612,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               ))}
 
               {searchQuery.trim().length >= 2 && onlineResults.length === 0 && (
-                <div className="p-2 text-center bg-slate-50/70 dark:bg-slate-800/40">
+                <div className={`p-2 text-center ${modeTheme.cardSubSurface}`}>
                   <button
                     type="button"
                     onClick={handleOnlineSearch}
                     disabled={isSearchingOnline}
-                    className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    className={`text-[11px] font-semibold ${modeTheme.accentText} hover:underline cursor-pointer`}
                   >
                     {isSearchingOnline
                       ? 'Searching global directory...'
@@ -633,13 +635,13 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         <button
           type="button"
           onClick={() => setShowManualCoords(!showManualCoords)}
-          className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+          className={`text-[11px] font-bold ${modeTheme.accentText} hover:underline cursor-pointer`}
         >
           {showManualCoords ? 'Hide manual coordinates' : 'Enter manual coordinates (latitude / longitude)'}
         </button>
 
         {showManualCoords && (
-          <div className="mt-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-2.5">
+          <div className={`mt-2 p-3 rounded-xl ${modeTheme.cardSurface} border ${modeTheme.cardBorder} space-y-2.5`}>
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-1">
@@ -653,7 +655,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                   value={manualLat}
                   onChange={(e) => setManualLat(e.target.value)}
                   placeholder="e.g. 26.4499"
-                  className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                  className={`w-full px-2.5 py-1.5 text-xs font-mono rounded-lg ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing}`}
                 />
               </div>
               <div>
@@ -668,7 +670,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                   value={manualLon}
                   onChange={(e) => setManualLon(e.target.value)}
                   placeholder="e.g. 80.3319"
-                  className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                  className={`w-full px-2.5 py-1.5 text-xs font-mono rounded-lg ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing}`}
                 />
               </div>
             </div>
@@ -683,7 +685,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
                   placeholder="City or Place Name"
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                  className={`w-full px-2.5 py-1.5 text-xs rounded-lg ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing}`}
                 />
               </div>
               <div>
@@ -695,7 +697,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                   value={manualCountry}
                   onChange={(e) => setManualCountry(e.target.value)}
                   placeholder="e.g. India"
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                  className={`w-full px-2.5 py-1.5 text-xs rounded-lg ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing}`}
                 />
               </div>
             </div>
@@ -707,7 +709,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
               <select
                 value={manualTimezone}
                 onChange={(e) => setManualTimezone(e.target.value)}
-                className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                className={`w-full px-2.5 py-1.5 text-xs rounded-lg ${modeTheme.cardSubSurface} border ${modeTheme.cardBorder} text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${modeTheme.focusRing}`}
               >
                 <option value="auto">
                   {isValidCoordinatePair(parseFloat(manualLat), parseFloat(manualLon))
@@ -733,7 +735,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             <button
               type="button"
               onClick={handleApplyManualCoords}
-              className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer transition-colors"
+              className={`w-full py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${modeTheme.primaryBtn}`}
             >
               Save Manual Coordinates
             </button>

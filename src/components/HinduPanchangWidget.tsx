@@ -158,19 +158,19 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
   );
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-[#FFFDF7] via-amber-50/70 to-orange-50/50 dark:from-[#16120c] dark:via-slate-900 dark:to-[#181108] border border-amber-300/80 dark:border-amber-600/35 text-slate-900 dark:text-slate-100 shadow-lg dark:shadow-xl overflow-hidden transition-all">
+    <div className="rounded-3xl bg-gradient-to-br from-[#FFFDF9] via-[#FAF3E6] to-[#F5E9D4] dark:from-[#18130D] dark:via-[#15110C] dark:to-[#110D09] border border-[#E8D9BE] dark:border-[#34281B] text-slate-900 dark:text-slate-100 shadow-lg dark:shadow-xl overflow-hidden transition-all">
       {/* Header Bar */}
-      <div className="px-5 py-4 bg-gradient-to-r from-amber-100/80 via-[#FFFBF0] to-orange-50/90 dark:from-amber-950/90 dark:via-slate-900 dark:to-[#140f09] border-b border-amber-200/90 dark:border-amber-600/30 flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-5 py-4 bg-gradient-to-r from-[#FAF1DF] via-[#FFFDF8] to-[#F6EAD2] dark:from-[#211910] dark:via-[#18130D] dark:to-[#130F0A] border-b border-[#E8D9BE] dark:border-[#34281B] flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-amber-500/15 dark:bg-amber-600/20 text-amber-700 dark:text-amber-400 border border-amber-400/50 dark:border-amber-500/40 flex items-center justify-center shadow-xs">
+          <div className="w-11 h-11 rounded-2xl bg-amber-700/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-600/30 dark:border-amber-500/35 flex items-center justify-center shadow-xs">
             <span className="text-xl">🕉️</span>
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
+              <span className="font-extrabold text-sm sm:text-base text-[#2D1B09] dark:text-amber-50 tracking-tight">
                 Vedic Panchang &amp; Bhagavad Gita Shloka
               </span>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-200/75 dark:bg-amber-900/80 text-amber-950 dark:text-amber-200 border border-amber-400/60 dark:border-amber-600/50 font-bold">
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100/90 dark:bg-amber-900/70 text-amber-950 dark:text-amber-200 border border-amber-400/60 dark:border-amber-600/50 font-bold">
                 {panchang.pakshaHi} • {panchang.tithiNameHi}
               </span>
               {isLocationReady ? (
@@ -178,14 +178,14 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                   className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold flex items-center gap-1 ${
                     needsManualTimezone
                       ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-600/60'
-                      : 'bg-white/90 dark:bg-slate-800 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-500/40'
+                      : 'bg-[#FFFDF9]/90 dark:bg-[#1D1710] text-amber-900 dark:text-amber-300 border-[#DFC9A1] dark:border-[#3D2F20]'
                   }`}
                 >
                   <MapPin
                     className={`w-3 h-3 ${
                       needsManualTimezone
                         ? 'text-rose-600 dark:text-rose-400'
-                        : 'text-amber-600 dark:text-amber-400'
+                        : 'text-amber-700 dark:text-amber-400'
                     }`}
                   />
                   <span>
@@ -196,7 +196,7 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                 </span>
               ) : (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-600/50 font-semibold flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  <MapPin className="w-3 h-3 text-amber-700 dark:text-amber-400" />
                   <span>
                     {needsMumbaiConfirm ? `Confirm location • Saved: Mumbai, India` : `Location not set • ${deviceTz}`}
                   </span>
@@ -216,7 +216,7 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
               <span className="text-slate-400 dark:text-slate-500">•</span>
               <span>
                 मास:{' '}
-                <strong className="text-amber-800 dark:text-amber-200">
+                <strong className="text-amber-900 dark:text-amber-200">
                   {panchang.hinduMonthHi} ({panchang.hinduMonthEn})
                 </strong>
               </span>
@@ -238,7 +238,7 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="px-3.5 py-1.5 rounded-xl bg-white/90 hover:bg-amber-100/80 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-amber-300/80 dark:border-amber-600/30 cursor-pointer shadow-xs"
+            className="px-3.5 py-1.5 rounded-xl bg-[#FFFDF9]/90 hover:bg-[#FAF1DF] dark:bg-[#1D1710] dark:hover:bg-[#271F16] text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[#DFC9A1] dark:border-[#3D2F20] cursor-pointer shadow-xs"
           >
             <span>{isCollapsed ? 'Show Full Panchang & Gita' : 'Minimize'}</span>
             {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
@@ -252,9 +252,9 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
           {/* Panchang Grid: Tithi, Nakshatra, Yoga, Karana, Sunrise, Sunset, Abhijit, Rahu Kaal */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Tithi */}
-            <div className="p-3.5 rounded-2xl bg-white/85 dark:bg-slate-800/60 border border-amber-200/90 dark:border-amber-600/25 shadow-xs">
+            <div className="p-3.5 rounded-2xl bg-[#FFFDF9]/90 dark:bg-[#1D1710]/85 border border-[#E8D9BE] dark:border-[#34281B] shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 tracking-wider">
-                <Moon className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <Moon className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                 <span>Tithi (तिथि)</span>
               </div>
               <div className="text-sm font-black text-amber-800 dark:text-amber-300 mt-1 truncate">
@@ -266,23 +266,23 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
             </div>
 
             {/* Nakshatra */}
-            <div className="p-3.5 rounded-2xl bg-white/85 dark:bg-slate-800/60 border border-amber-200/90 dark:border-amber-600/25 shadow-xs">
+            <div className="p-3.5 rounded-2xl bg-[#FFFDF9]/90 dark:bg-[#1D1710]/85 border border-[#E8D9BE] dark:border-[#34281B] shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                 <span>Nakshatra (नक्षत्र)</span>
               </div>
               <div className="text-sm font-black text-slate-900 dark:text-white mt-1 truncate">
                 {panchang.nakshatraNameEn}
               </div>
-              <div className="text-xs text-amber-800 dark:text-amber-200 mt-0.5 truncate font-medium">
+              <div className="text-xs text-amber-900 dark:text-amber-200 mt-0.5 truncate font-medium">
                 {panchang.nakshatraNameHi} (देवता: {panchang.nakshatraDeityHi})
               </div>
             </div>
 
             {/* Yoga */}
-            <div className="p-3.5 rounded-2xl bg-white/85 dark:bg-slate-800/60 border border-amber-200/90 dark:border-amber-600/25 shadow-xs">
+            <div className="p-3.5 rounded-2xl bg-[#FFFDF9]/90 dark:bg-[#1D1710]/85 border border-[#E8D9BE] dark:border-[#34281B] shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 tracking-wider">
-                <Compass className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <Compass className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                 <span>Yoga (योग)</span>
               </div>
               <div className="text-sm font-black text-amber-800 dark:text-amber-300 mt-1 truncate">
@@ -294,23 +294,23 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
             </div>
 
             {/* Karana */}
-            <div className="p-3.5 rounded-2xl bg-white/85 dark:bg-slate-800/60 border border-amber-200/90 dark:border-amber-600/25 shadow-xs">
+            <div className="p-3.5 rounded-2xl bg-[#FFFDF9]/90 dark:bg-[#1D1710]/85 border border-[#E8D9BE] dark:border-[#34281B] shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 tracking-wider">
-                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <Clock className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                 <span>Karana (करण)</span>
               </div>
               <div className="text-sm font-black text-slate-900 dark:text-white mt-1 truncate">
                 {panchang.karanaNameEn}
               </div>
-              <div className="text-xs text-amber-800 dark:text-amber-200 mt-0.5 truncate font-medium">
+              <div className="text-xs text-amber-900 dark:text-amber-200 mt-0.5 truncate font-medium">
                 {panchang.karanaNameHi}
               </div>
             </div>
 
             {/* Sunrise & Sunset */}
-            <div className="p-3.5 rounded-2xl bg-amber-100/70 dark:bg-amber-950/30 border border-amber-300/80 dark:border-amber-700/35 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-amber-800 dark:text-amber-400 flex items-center gap-1 tracking-wider">
-                <Sun className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <div className="p-3.5 rounded-2xl bg-[#FAF1DE] dark:bg-[#241B10] border border-[#E2C899] dark:border-amber-700/40 shadow-xs">
+              <div className="text-[10px] uppercase font-bold text-amber-900 dark:text-amber-400 flex items-center gap-1 tracking-wider">
+                <Sun className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
                 <span>Sunrise &amp; Sunset</span>
               </div>
               {isLocationReady && !needsManualTimezone ? (
@@ -319,16 +319,16 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                     🌅 {formatTimePreference(panchang.sunriseTime, timeFormat, selectedCountryCode)} | 🌇{' '}
                     {formatTimePreference(panchang.sunsetTime, timeFormat, selectedCountryCode)}
                   </div>
-                  <div className="text-[10px] text-amber-800 dark:text-amber-300/80 mt-0.5 font-mono">
+                  <div className="text-[10px] text-amber-900 dark:text-amber-300/80 mt-0.5 font-mono">
                     Noon: {formatTimePreference(panchang.solarNoonTime, timeFormat, selectedCountryCode)}
                   </div>
                 </>
               ) : (
                 <div className="mt-1">
-                  <div className="text-xs text-amber-900 dark:text-amber-300 font-bold">
+                  <div className="text-xs text-amber-950 dark:text-amber-300 font-bold">
                     {needsManualTimezone ? 'Timezone required' : 'Location required'}
                   </div>
-                  <div className="text-[10px] text-amber-800/85 dark:text-amber-200/80 mt-0.5">
+                  <div className="text-[10px] text-amber-900/85 dark:text-amber-200/80 mt-0.5">
                     {needsManualTimezone
                       ? 'Select an IANA timezone below'
                       : 'Please select city or enable GPS'}
@@ -338,14 +338,14 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
             </div>
 
             {/* Paksha */}
-            <div className="p-3.5 rounded-2xl bg-white/85 dark:bg-slate-800/60 border border-amber-200/90 dark:border-amber-600/25 shadow-xs">
+            <div className="p-3.5 rounded-2xl bg-[#FFFDF9]/90 dark:bg-[#1D1710]/85 border border-[#E8D9BE] dark:border-[#34281B] shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 tracking-wider">
                 <span>🌓 Lunar Fortnight (पक्ष)</span>
               </div>
               <div className="text-sm font-black text-slate-900 dark:text-white mt-1 truncate">
                 {panchang.pakshaHi}
               </div>
-              <div className="text-xs text-amber-800 dark:text-amber-200 mt-0.5 truncate font-medium">
+              <div className="text-xs text-amber-900 dark:text-amber-200 mt-0.5 truncate font-medium">
                 {panchang.pakshaEn}
               </div>
             </div>
@@ -594,7 +594,7 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
           />
 
           {/* Calculation Basis Disclaimer */}
-          <div className="px-3.5 py-2 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/80 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 flex items-center justify-between gap-2 flex-wrap">
+          <div className="px-3.5 py-2 rounded-xl bg-[#FFFDF9]/90 dark:bg-[#1D1710]/80 border border-[#E8D9BE] dark:border-[#34281B] text-[11px] text-slate-600 dark:text-slate-400 flex items-center justify-between gap-2 flex-wrap">
             <span className="flex items-center gap-1.5">
               <span>🔭</span>
               <span>
@@ -603,33 +603,33 @@ export const HinduPanchangWidget: React.FC<HinduPanchangWidgetProps> = ({
                   : `Calculated astronomical lunar estimate (Drik Siddhanta, Lahiri Ayanamsha). Select a city or enable GPS above for location-calibrated Sunrise, Sunset, Rahu Kaal & Abhijit Muhurat (${deviceTz}).`}
               </span>
             </span>
-            <span className="text-amber-700 dark:text-amber-400 font-semibold">
+            <span className="text-amber-800 dark:text-amber-400 font-semibold">
               {isLocationReady ? `${panchang.cityName} • ${panchang.timezoneName} (${panchang.timezoneOffsetStr})` : deviceTz}
             </span>
           </div>
 
           {/* Inspiring Bhagavad Gita Shloka Card */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-50/90 via-white to-orange-50/60 dark:from-amber-950/60 dark:via-slate-900 dark:to-[#120e09] border border-amber-200 dark:border-amber-600/40 shadow-inner">
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#FFFDF9] via-[#FAF3E6] to-[#F6E9D0] dark:from-[#1D1710] dark:via-[#15110C] dark:to-[#110D09] border border-[#E8D9BE] dark:border-[#34281B] shadow-xs">
             <div className="flex items-center justify-between gap-2 flex-wrap mb-2.5">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-500/15 dark:bg-amber-600/20 text-amber-700 dark:text-amber-400 border border-amber-400/40 dark:border-amber-500/30">
+                <div className="p-1.5 rounded-lg bg-amber-700/10 dark:bg-amber-600/20 text-amber-800 dark:text-amber-300 border border-amber-600/30 dark:border-amber-500/30">
                   <BookOpen className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                <span className="text-xs font-black text-amber-900 dark:text-amber-300 uppercase tracking-wider">
                   Shrimad Bhagavad Gita Verse of the Day
                 </span>
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 font-bold border border-amber-300 dark:border-amber-600/50">
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/75 text-amber-950 dark:text-amber-200 font-bold border border-amber-300 dark:border-amber-600/50">
                   {gitaVerse.citation}
                 </span>
               </div>
               <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                Theme: <strong className="text-amber-800 dark:text-amber-200">{gitaVerse.theme}</strong>
+                Theme: <strong className="text-amber-900 dark:text-amber-200">{gitaVerse.theme}</strong>
               </span>
             </div>
 
             {/* Sanskrit Devanagari */}
-            <div className="p-4 rounded-xl bg-amber-100/50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 text-center my-2.5">
-              <div className="font-serif text-base sm:text-lg font-bold text-amber-950 dark:text-amber-200 whitespace-pre-line leading-relaxed">
+            <div className="p-4 rounded-xl bg-[#FAF1DF]/80 dark:bg-[#241B10]/80 border border-[#E6D3AF] dark:border-[#3B2C1B] text-center my-2.5">
+              <div className="font-serif text-base sm:text-lg font-bold text-[#3D240B] dark:text-amber-200 whitespace-pre-line leading-relaxed">
                 {gitaVerse.sanskrit}
               </div>
               <div className="text-xs font-mono text-slate-600 dark:text-slate-300 mt-1.5 italic">

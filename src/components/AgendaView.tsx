@@ -19,6 +19,7 @@ import { getChristianObservancesForDate, getLiturgicalSeason } from '../utils/ch
 import { getLocaleTag, formatTimePreference } from '../utils/localization';
 import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
 import { getConfirmedCountryCode } from '../utils/storage';
+import { getModeTheme } from '../utils/modeTheme';
 import {
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -74,23 +75,16 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 
   const query = searchQuery.toLowerCase().trim();
   const isChristianModeView = filters.calendarMode === 'christian';
+  const modeTheme = getModeTheme(filters.calendarMode);
 
   return (
     <div
-      className={`flex-1 flex flex-col rounded-2xl border overflow-hidden transition-colors ${
-        isChristianModeView
-          ? 'bg-[#FCFBF8] dark:bg-[#0D182D] border-[#E4DDD0] dark:border-slate-800 shadow-[0_8px_28px_-12px_rgba(20,40,75,0.08)]'
-          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm'
-      }`}
+      className={`flex-1 flex flex-col rounded-2xl border overflow-hidden transition-colors shadow-xs ${modeTheme.cardSurface} ${modeTheme.cardBorder}`}
     >
       
       {/* Top Filter Chips */}
       <div
-        className={`p-4 border-b flex flex-wrap items-center justify-between gap-3 ${
-          isChristianModeView
-            ? 'bg-[#F6F3EB]/80 dark:bg-[#101D36]/80 border-[#E4DDD0] dark:border-slate-800'
-            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50'
-        }`}
+        className={`p-4 border-b flex flex-wrap items-center justify-between gap-3 ${modeTheme.cardSubSurface} ${modeTheme.cardBorder}`}
       >
         <div className="flex items-center gap-2 overflow-x-auto">
           {(
@@ -120,10 +114,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
               onClick={() => setFilterType(chip.id as any)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 filterType === chip.id
-                  ? isChristianModeView
-                    ? 'bg-[#14284B] dark:bg-sky-600 text-white shadow-xs'
-                    : 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                  ? modeTheme.primaryBtn
+                  : `${modeTheme.cardSurface} text-slate-600 dark:text-slate-300 border ${modeTheme.cardBorder} hover:brightness-97 dark:hover:brightness-110`
               }`}
             >
               {chip.label}
@@ -247,21 +239,13 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           return (
             <div
               key={dateStr}
-              className={`rounded-2xl border p-4 shadow-xs transition-all ${
-                isChristianMode
-                  ? 'bg-white/90 dark:bg-[#101D36]/90 border-[#E5DFD2] dark:border-slate-700/80 hover:border-[#C69C44]/60 dark:hover:border-sky-500/50'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:border-slate-300 dark:hover:border-slate-700'
-              }`}
+              className={`rounded-2xl border p-4 shadow-xs transition-all ${modeTheme.cardSurface} ${modeTheme.cardBorder}`}
             >
               {/* Day Date Header Banner */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+              <div className={`flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b ${modeTheme.gridDivider} gap-2`}>
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-12 h-12 rounded-xl border flex flex-col items-center justify-center font-bold ${
-                      isChristianMode
-                        ? 'bg-[#F2F6FC] dark:bg-sky-950/50 border-[#D5E0F0] dark:border-sky-800/60 text-[#14284B] dark:text-sky-200'
-                        : 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400'
-                    }`}
+                    className={`w-12 h-12 rounded-xl border flex flex-col items-center justify-center font-bold ${modeTheme.cardSubSurface} ${modeTheme.cardBorder} ${modeTheme.accentText}`}
                   >
                     <span className="text-[10px] uppercase">{t.daysShort[dayOfWeekIndex]}</span>
                     <span className="text-base font-mono-tabular leading-none">{dayNum}</span>
@@ -325,7 +309,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 
                 <button
                   onClick={() => onSelectDate(dayObj)}
-                  className="self-start sm:self-auto text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                  className={`self-start sm:self-auto text-xs font-semibold ${modeTheme.accentText} hover:underline cursor-pointer`}
                 >
                   {isChristianMode
                     ? 'View Day Calendar →'
@@ -346,20 +330,20 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                   const alert = checkFridayFestivalCoincidence(dayObj);
                   if (!alert) return null;
                   return (
-                    <div className="p-3.5 rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/50 flex items-start gap-3 shadow-sm">
-                      <div className="p-2 rounded-lg bg-red-600 text-white mt-0.5">
-                        <AlertTriangle className="w-4 h-4 animate-bounce" />
+                    <div className="p-3.5 rounded-xl border border-rose-300 dark:border-rose-700/70 bg-rose-50 dark:bg-rose-950/60 flex items-start gap-3 shadow-xs">
+                      <div className="p-2 rounded-lg bg-rose-700 text-white mt-0.5">
+                        <AlertTriangle className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-sm font-bold text-red-950 dark:text-red-200">
-                            {language === 'ur' ? 'انتباہ: جمعۃ المبارک + ہولی کا تہوار' : 'Red Advisory: Jummah Prayer + Holi Festival'}
+                          <h4 className="text-sm font-bold text-rose-950 dark:text-rose-100">
+                            {language === 'ur' ? 'انتباہ: جمعۃ المبارک + ہولی کا تہوار' : 'Advisory: Jummah Prayer + Holi Festival'}
                           </h4>
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse">
-                            {language === 'ur' ? 'اہم الرٹ' : 'High Priority'}
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-700 text-white">
+                            {language === 'ur' ? 'اہم الرٹ' : 'Priority'}
                           </span>
                         </div>
-                        <p className="text-xs text-red-800 dark:text-red-300 mt-1 leading-relaxed font-medium">
+                        <p className="text-xs text-rose-800 dark:text-rose-200 mt-1 leading-relaxed font-medium">
                           {language === 'ur' ? alert.warningUr : language === 'hinglish' ? alert.warningHinglish : alert.warningEn}
                         </p>
                       </div>
@@ -509,15 +493,18 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                     <div
                       key={evt.id}
                       onClick={() => onSelectEvent(evt)}
-                      className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 cursor-pointer transition-all flex items-center justify-between gap-3"
-                      style={{ borderLeftColor: evt.color || '#4f46e5', borderLeftWidth: '4px' }}
+                      className={`p-3 rounded-xl border ${modeTheme.cardBorder} ${modeTheme.cardSubSurface} hover:brightness-98 dark:hover:brightness-110 cursor-pointer transition-all flex items-center justify-between gap-3`}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: evt.color || (isMuslimMode ? '#047857' : isHinduMode ? '#B45309' : '#1E3A6E') }}
+                          />
                           <span className="text-xs font-bold text-slate-900 dark:text-white">
                             {evt.title}
                           </span>
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 capitalize">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${modeTheme.cardSurface} border ${modeTheme.cardBorder} ${modeTheme.accentText} capitalize`}>
                             {evt.category}
                           </span>
                         </div>

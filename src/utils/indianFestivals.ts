@@ -865,32 +865,32 @@ export function getCategoryBadgeStyle(category: FestivalCategory): {
       };
     case 'christian':
       return {
-        bg: 'bg-rose-100 dark:bg-rose-950/60',
-        text: 'text-rose-800 dark:text-rose-300',
-        border: 'border-rose-200 dark:border-rose-800',
-        dotColor: '#e11d48',
+        bg: 'bg-rose-50 dark:bg-rose-950/60',
+        text: 'text-rose-800 dark:text-rose-200',
+        border: 'border-rose-200 dark:border-rose-800/70',
+        dotColor: '#be123c',
       };
     case 'jain':
       return {
         bg: 'bg-yellow-100 dark:bg-yellow-950/60',
-        text: 'text-yellow-800 dark:text-yellow-300',
-        border: 'border-yellow-200 dark:border-yellow-800',
+        text: 'text-yellow-800 dark:text-yellow-200',
+        border: 'border-yellow-200 dark:border-yellow-800/70',
         dotColor: '#ca8a04',
       };
     case 'buddhist':
       return {
-        bg: 'bg-indigo-100 dark:bg-indigo-950/60',
-        text: 'text-indigo-800 dark:text-indigo-300',
-        border: 'border-indigo-200 dark:border-indigo-800',
-        dotColor: '#4f46e5',
+        bg: 'bg-purple-100/80 dark:bg-purple-950/60',
+        text: 'text-purple-900 dark:text-purple-200',
+        border: 'border-purple-200 dark:border-purple-800/70',
+        dotColor: '#7e22ce',
       };
     case 'national':
     default:
       return {
-        bg: 'bg-blue-100 dark:bg-blue-950/60',
-        text: 'text-blue-800 dark:text-blue-300',
-        border: 'border-blue-200 dark:border-blue-800',
-        dotColor: '#2563eb',
+        bg: 'bg-[#EAF0FA] dark:bg-[#13223D]',
+        text: 'text-[#14284B] dark:text-sky-200',
+        border: 'border-[#C9D7ED] dark:border-sky-800/60',
+        dotColor: '#1E3A6E',
       };
   }
 }
