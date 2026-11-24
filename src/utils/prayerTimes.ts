@@ -57,7 +57,9 @@ export interface DetailedPrayerInfo {
   timezoneName: string;
   timezoneOffsetStr: string;
   methodName: string;
+  methodShortName: string;
   asrJuristicName: string;
+  asrShortName: string;
   disclaimer: string;
   disclaimerUr: string;
 }
@@ -155,6 +157,7 @@ export function calculateLocationPrayerTimes(
 
   const asrJuristicName =
     asrMethod === 'hanafi' ? 'Hanafi (Asr: 2x Shadow)' : "Standard / Shafi'i (Asr: 1x Shadow)";
+  const asrShortName = asrMethod === 'hanafi' ? 'Hanafi (2x)' : 'Standard (1x)';
   const methodName =
     prayerMethod === 'mwl'
       ? 'Muslim World League (Fajr 18°, Isha 17°)'
@@ -163,6 +166,14 @@ export function calculateLocationPrayerTimes(
       : prayerMethod === 'egypt'
       ? 'Egyptian General Survey Authority (Fajr 19.5°, Isha 17.5°)'
       : 'Univ. of Islamic Sciences, Karachi (Fajr 18°, Isha 18°)';
+  const methodShortName =
+    prayerMethod === 'mwl'
+      ? 'MWL'
+      : prayerMethod === 'makkah'
+      ? 'Makkah'
+      : prayerMethod === 'egypt'
+      ? 'Egypt'
+      : 'Karachi';
 
   if (city.id === 'unset' || !isValidCoordinatePair(city.latitude, city.longitude)) {
     const deviceTz = options.timezoneName && isValidIanaTimezone(options.timezoneName)
@@ -194,7 +205,9 @@ export function calculateLocationPrayerTimes(
       timezoneName: deviceTz,
       timezoneOffsetStr: tzOffsetStr,
       methodName,
+      methodShortName,
       asrJuristicName,
+      asrShortName,
       disclaimer:
         'Location required — Please select city or enable GPS to calculate prayer times. Always confirm prayer times with your local mosque.',
       disclaimerUr:
@@ -238,7 +251,9 @@ export function calculateLocationPrayerTimes(
       timezoneName: '',
       timezoneOffsetStr: 'Timezone required',
       methodName,
+      methodShortName,
       asrJuristicName,
+      asrShortName,
       disclaimer: `Geographical timezone could not be determined for ${displayLabel} (${coordStr}). Please select an IANA timezone manually before calculating prayer times.`,
       disclaimerUr: `${city.nameUr} (${coordStr}) کے لیے جغرافیائی ٹائم زون معلوم نہیں ہو سکا۔ درست اوقاتِ نماز کے لیے براہ کرم دستی طور پر IANA ٹائم زون منتخب کریں۔`,
     };
@@ -286,8 +301,10 @@ export function calculateLocationPrayerTimes(
     timezoneName: tzName || tzOffsetStr,
     timezoneOffsetStr: tzOffsetStr,
     methodName,
+    methodShortName,
     asrJuristicName,
-    disclaimer: `Calculated via Adhan astronomical engine (${methodName}, ${asrJuristicName}) for ${displayLabel} (${coordStr}) in ${tzName || tzOffsetStr} (${tzOffsetStr}). Astronomical estimates may vary by 1–2 minutes; always confirm prayer times with your local mosque.`,
-    disclaimerUr: `یہ اوقاتِ نماز فلکیاتی حساب سے ${city.nameUr} (${coordStr} • ${tzName || tzOffsetStr}، ${tzOffsetStr}) کے لیے تیار کیے گئے ہیں۔ حتمی اوقات کے لیے ہمیشہ اپنی مقامی مسجد کی اذان و جماعت سے تصدیق کریں۔`,
+    asrShortName,
+    disclaimer: `Calculated via Adhan astronomical engine (${methodName}, ${asrJuristicName}) for ${displayLabel} (${coordStr}) in ${tzName || tzOffsetStr} (${tzOffsetStr}). Please confirm prayer times with your local mosque.`,
+    disclaimerUr: `یہ اوقاتِ نماز فلکیاتی حساب سے ${city.nameUr} (${coordStr} • ${tzName || tzOffsetStr}، ${tzOffsetStr}) — طریقہ: ${methodName.split('(')[0].trim()} • عصر: ${asrMethod === 'hanafi' ? 'حنفی (2x)' : 'جمہور/شافعی (1x)'} کے مطابق تیار کیے گئے ہیں۔ حتمی اوقات کے لیے مقامی مسجد سے تصدیق کریں۔`,
   };
 }

@@ -245,10 +245,136 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Muslim Mode Specific: Moon Sighting Offset & Prayer Methods */}
+          {/* Muslim Mode Specific: Prayer Methods, Asr School & Moon Sighting Offset */}
           {isMuslimMode && (
-            <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              
+            <div className="space-y-3.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+              {/* Prayer Calculation Method & Asr Juristic School */}
+              <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-900/50 space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-300">
+                    <Compass className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>
+                      {language === 'ur'
+                        ? 'اوقاتِ نماز کا طریقہ اور فقہی مسلک'
+                        : 'Prayer Times Calculation & Asr Settings'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/80 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200">
+                    Adhan Engine
+                  </span>
+                </div>
+
+                {/* Calculation Convention Options with Helper Text */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+                    {language === 'ur'
+                      ? 'حسابی طریقہ (Calculation Method)'
+                      : 'Calculation Method'}
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      {
+                        id: 'karachi' as const,
+                        title: 'Karachi',
+                        helper: 'Fajr 18°, Isha 18° — Standard across India, Pakistan & South Asia.',
+                      },
+                      {
+                        id: 'mwl' as const,
+                        title: 'MWL (Muslim World League)',
+                        helper: 'Fajr 18°, Isha 17° — Widely used across Europe, North America & globally.',
+                      },
+                      {
+                        id: 'makkah' as const,
+                        title: 'Makkah (Umm al-Qura)',
+                        helper: 'Fajr 18.5°, Isha +90 min — Used in Saudi Arabia & Gulf region.',
+                      },
+                      {
+                        id: 'egypt' as const,
+                        title: 'Egypt (Egyptian Survey)',
+                        helper: 'Fajr 19.5°, Isha 17.5° — Standard across Egypt, Africa & Middle East.',
+                      },
+                    ].map((opt) => {
+                      const active = (filters.prayerMethod || 'karachi') === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() =>
+                            onFilterChange({ ...filters, prayerMethod: opt.id })
+                          }
+                          className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer ${
+                            active
+                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                              : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-700'
+                          }`}
+                        >
+                          <div className="text-xs font-bold">{opt.title}</div>
+                          <div
+                            className={`text-[10px] mt-0.5 leading-snug ${
+                              active
+                                ? 'text-emerald-100'
+                                : 'text-slate-500 dark:text-slate-400'
+                            }`}
+                          >
+                            {opt.helper}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Asr Juristic Method with Helper Text */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+                    {language === 'ur'
+                      ? 'عصر کا فقہی مسلک (Asr Method)'
+                      : 'Asr Juristic Method'}
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      {
+                        id: 'hanafi' as const,
+                        title: 'Hanafi (2x Shadow)',
+                        helper: 'Asr starts later when shadow reaches 2x object length + noon shadow.',
+                      },
+                      {
+                        id: 'standard' as const,
+                        title: "Standard / Shafi'i (1x Shadow)",
+                        helper: 'Asr starts earlier when shadow reaches 1x object length + noon shadow.',
+                      },
+                    ].map((opt) => {
+                      const active = (filters.asrMethod || 'hanafi') === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() =>
+                            onFilterChange({ ...filters, asrMethod: opt.id })
+                          }
+                          className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer ${
+                            active
+                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                              : 'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-700'
+                          }`}
+                        >
+                          <div className="text-xs font-bold">{opt.title}</div>
+                          <div
+                            className={`text-[10px] mt-0.5 leading-snug ${
+                              active
+                                ? 'text-emerald-100'
+                                : 'text-slate-500 dark:text-slate-400'
+                            }`}
+                          >
+                            {opt.helper}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
               {/* Islamic Moon Sighting Offset */}
               <div className="bg-amber-50/70 dark:bg-amber-950/40 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-900/50">
                 <div className="flex items-center justify-between mb-1.5">
@@ -285,40 +411,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ))}
                 </div>
               </div>
-
-              {/* Asr Juristic Method & Calculation Convention */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Asr Juristic Method (فقہی مسلک)
-                  </label>
-                  <select
-                    value={filters.asrMethod || 'hanafi'}
-                    onChange={(e) => onFilterChange({ ...filters, asrMethod: e.target.value as any })}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
-                  >
-                    <option value="hanafi">Hanafi (Shadow: 2x Object Length)</option>
-                    <option value="standard">Standard / Shafi'i (Shadow: 1x Length)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Calculation Convention
-                  </label>
-                  <select
-                    value={filters.prayerMethod || 'karachi'}
-                    onChange={(e) => onFilterChange({ ...filters, prayerMethod: e.target.value as any })}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold cursor-pointer"
-                  >
-                    <option value="karachi">Univ. of Karachi (Subcontinent 18°/18°)</option>
-                    <option value="mwl">Muslim World League (MWL 18°/17°)</option>
-                    <option value="makkah">Umm al-Qura University, Makkah</option>
-                    <option value="egypt">Egyptian Survey Authority (19.5°/17.5°)</option>
-                  </select>
-                </div>
-              </div>
-
             </div>
           )}
 
