@@ -132,11 +132,13 @@ export const DayView: React.FC<DayViewProps> = ({
         className={`rounded-3xl p-6 relative overflow-hidden transition-colors ${
           isChristianMode
             ? 'bg-gradient-to-br from-[#FCFBF8] via-[#F3F8FE] to-[#EAF1FA] dark:from-[#0E1B33] dark:via-[#11203D] dark:to-[#0B1528] border border-[#E4DDD0] dark:border-slate-700/80 text-[#10203B] dark:text-[#FAF7F0] shadow-[0_8px_28px_-12px_rgba(20,40,75,0.1)]'
-            : 'bg-gradient-to-r from-indigo-900 via-indigo-800 to-amber-900 text-white shadow-lg'
+            : isHinduMode
+            ? 'bg-gradient-to-br from-[#FFFDF7] via-amber-50/90 to-orange-50/70 dark:from-[#1b150d] dark:via-slate-900 dark:to-[#241608] border border-amber-200 dark:border-amber-700/40 text-slate-900 dark:text-amber-50 shadow-sm dark:shadow-lg'
+            : 'bg-gradient-to-br from-emerald-50/95 via-white to-teal-50/80 dark:from-emerald-950 dark:via-slate-900 dark:to-teal-950 border border-emerald-200 dark:border-emerald-800/50 text-slate-900 dark:text-emerald-50 shadow-sm dark:shadow-lg'
         }`}
       >
         {/* Background glow & aesthetic motifs */}
-        <div className="absolute right-0 top-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute right-0 top-0 w-80 h-80 bg-white/10 dark:bg-white/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -144,7 +146,9 @@ export const DayView: React.FC<DayViewProps> = ({
               className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-1 ${
                 isChristianMode
                   ? 'text-[#8C6418] dark:text-amber-300'
-                  : 'text-indigo-200'
+                  : isHinduMode
+                  ? 'text-amber-700 dark:text-amber-300'
+                  : 'text-emerald-700 dark:text-emerald-300'
               }`}
             >
               <span>{t.days[dayOfWeekIndex]}</span>
@@ -163,7 +167,7 @@ export const DayView: React.FC<DayViewProps> = ({
               className={
                 isChristianMode
                   ? 'font-editorial text-3xl sm:text-4xl font-semibold tracking-tight text-[#10203B] dark:text-[#FAF7F0]'
-                  : 'text-2xl sm:text-3xl font-extrabold tracking-tight'
+                  : 'text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white'
               }
             >
               {t.months[month]} {day}, {year}
@@ -181,9 +185,14 @@ export const DayView: React.FC<DayViewProps> = ({
                 <span aria-hidden="true">·</span>
                 <span>{liturgicalSeason.spiritualFocus}</span>
               </div>
+            ) : isHinduMode ? (
+              <div className="flex items-center gap-2 mt-2 text-amber-800 dark:text-amber-200 text-sm font-semibold">
+                <span className="text-base">{moon.icon}</span>
+                <span>{language === 'en' ? moon.nameEn : moon.nameHi}</span>
+              </div>
             ) : (
-              /* Hijri Banner (Hindu & Muslim modes preserved) */
-              <div className="flex items-center gap-2 mt-2 text-amber-200 text-sm font-semibold">
+              /* Hijri Banner (Muslim mode) */
+              <div className="flex items-center gap-2 mt-2 text-emerald-800 dark:text-amber-200 text-sm font-semibold">
                 <span className="text-base">{moon.icon}</span>
                 <span>
                   {language === 'en'
@@ -192,7 +201,7 @@ export const DayView: React.FC<DayViewProps> = ({
                     ? hijri.formattedUr
                     : hijri.formattedHi}
                 </span>
-                <span className="text-xs text-amber-300/80 font-normal">
+                <span className="text-xs text-emerald-700/80 dark:text-amber-300/80 font-normal">
                   ({language === 'en' ? moon.nameEn : language === 'ur' ? moon.nameUr : moon.nameHi})
                 </span>
               </div>
@@ -205,7 +214,9 @@ export const DayView: React.FC<DayViewProps> = ({
               className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
                 isChristianMode
                   ? 'bg-[#14284B] hover:bg-[#1E3A6E] text-white dark:bg-sky-600 dark:hover:bg-sky-500'
-                  : 'bg-white text-indigo-900 hover:bg-indigo-50 shadow-md'
+                  : isHinduMode
+                  ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
               }`}
             >
               <Plus className="w-4 h-4" />
@@ -216,7 +227,7 @@ export const DayView: React.FC<DayViewProps> = ({
               className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
                 isChristianMode
                   ? 'bg-white/90 hover:bg-white text-[#14284B] border border-[#DED8CA] dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-700'
-                  : 'bg-emerald-500/90 hover:bg-emerald-500 text-white shadow-md'
+                  : 'bg-white/90 hover:bg-white text-slate-800 border border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-700'
               }`}
             >
               <CalendarCheck className="w-4 h-4" />
@@ -231,20 +242,22 @@ export const DayView: React.FC<DayViewProps> = ({
             className={`mt-5 pt-4 border-t flex flex-wrap gap-2.5 ${
               isChristianMode
                 ? 'border-[#E4DDD0] dark:border-slate-700/80'
-                : 'border-white/10'
+                : isHinduMode
+                ? 'border-amber-200 dark:border-amber-800/40'
+                : 'border-emerald-200 dark:border-emerald-800/40'
             }`}
           >
             {islamicOccasion && (
               <div
                 onClick={() => onSelectIslamic(islamicOccasion)}
-                className="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-400/40 rounded-xl px-3 py-2 cursor-pointer transition-all flex items-center gap-2 text-xs"
+                className="bg-emerald-100/90 hover:bg-emerald-200/80 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 border border-emerald-300 dark:border-emerald-400/40 rounded-xl px-3 py-2 cursor-pointer transition-all flex items-center gap-2 text-xs"
               >
-                <Sparkles className="w-4 h-4 text-emerald-300" />
+                <Sparkles className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />
                 <div>
-                  <div className="font-bold text-emerald-100">
+                  <div className="font-bold text-emerald-950 dark:text-emerald-100">
                     {language === 'en' ? islamicOccasion.nameEn : islamicOccasion.nameHi}
                   </div>
-                  <div className="text-[10px] text-emerald-300/90 line-clamp-1">
+                  <div className="text-[10px] text-emerald-800 dark:text-emerald-300/90 line-clamp-1">
                     {islamicOccasion.spiritualSignificance}
                   </div>
                 </div>
@@ -273,25 +286,25 @@ export const DayView: React.FC<DayViewProps> = ({
                 className={
                   isChristianMode
                     ? 'bg-white/90 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 border border-[#D8E2F0] dark:border-sky-800/60 rounded-xl px-3.5 py-2 cursor-pointer transition-all flex items-center gap-2.5 text-xs'
-                    : 'bg-black/30 hover:bg-black/40 border border-amber-300/40 rounded-xl px-3 py-2 cursor-pointer transition-all flex items-center gap-2 text-xs'
+                    : 'bg-white/90 hover:bg-white dark:bg-black/30 dark:hover:bg-black/40 border border-amber-300 dark:border-amber-300/40 rounded-xl px-3 py-2 cursor-pointer transition-all flex items-center gap-2 text-xs'
                 }
               >
                 <BookOpen
                   className={`w-4 h-4 shrink-0 ${
-                    isChristianMode ? 'text-[#1E3A6E] dark:text-sky-300' : 'text-amber-300'
+                    isChristianMode ? 'text-[#1E3A6E] dark:text-sky-300' : 'text-amber-700 dark:text-amber-300'
                   }`}
                 />
                 <div>
                   <div
                     className={`font-bold ${
-                      isChristianMode ? 'text-[#14284B] dark:text-sky-200' : 'text-amber-100'
+                      isChristianMode ? 'text-[#14284B] dark:text-sky-200' : 'text-slate-900 dark:text-amber-100'
                     }`}
                   >
                     {isChristianMode ? fest.nameEn : language === 'en' ? fest.nameEn : fest.nameHi}
                   </div>
                   <div
                     className={`text-[10px] line-clamp-1 ${
-                      isChristianMode ? 'text-slate-600 dark:text-slate-300' : 'text-amber-200/90'
+                      isChristianMode ? 'text-slate-600 dark:text-slate-300' : 'text-slate-600 dark:text-amber-200/90'
                     }`}
                   >
                     {fest.significance}

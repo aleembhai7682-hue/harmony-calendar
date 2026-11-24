@@ -76,23 +76,23 @@ export const ProductivityTimerWidget: React.FC<ProductivityTimerWidgetProps> = (
   const progressPercent = Math.round(((totalSeconds - timerSeconds) / totalSeconds) * 100);
 
   return (
-    <div className="rounded-3xl bg-slate-900 border border-indigo-900/40 text-slate-100 shadow-xl overflow-hidden transition-all">
+    <div className="rounded-3xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/40 text-slate-900 dark:text-slate-100 shadow-lg dark:shadow-xl overflow-hidden transition-all">
       {/* Header Bar */}
-      <div className="px-5 py-4 bg-gradient-to-r from-indigo-950/80 via-slate-900 to-slate-900 border-b border-indigo-900/30 flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-5 py-4 bg-gradient-to-r from-indigo-50/90 via-white to-slate-50/80 dark:from-indigo-950/80 dark:via-slate-900 dark:to-slate-900 border-b border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shadow-xs">
-            <Zap className="w-5 h-5 text-indigo-400" />
+          <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shadow-xs">
+            <Zap className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-white tracking-tight">
-                Daily Routine & Productivity Focus Timer
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-sm text-slate-900 dark:text-white tracking-tight">
+                Daily Routine &amp; Productivity Focus Timer
               </span>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700/50 font-semibold">
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/50 font-semibold">
                 {completedSessions} sessions done today
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Smooth routine management for focused work, fitness, and lifestyle habits.
             </p>
           </div>
@@ -101,8 +101,9 @@ export const ProductivityTimerWidget: React.FC<ProductivityTimerWidgetProps> = (
         {/* Action Controls */}
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <span>{isCollapsed ? 'Show Timer' : 'Minimize'}</span>
             {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
@@ -117,12 +118,13 @@ export const ProductivityTimerWidget: React.FC<ProductivityTimerWidgetProps> = (
           <div className="w-full md:w-auto flex flex-wrap gap-2">
             {routinePresets.map((r) => (
               <button
+                type="button"
                 key={r.label}
                 onClick={() => handleSelectRoutine(r)}
-                className={`px-3 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                className={`px-3 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
                   selectedRoutine === r.label
                     ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/30'
-                    : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border-slate-700/60'
+                    : 'bg-slate-100/90 hover:bg-slate-200/80 dark:bg-slate-800/60 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/60'
                 }`}
               >
                 <span>{r.icon}</span>
@@ -135,16 +137,16 @@ export const ProductivityTimerWidget: React.FC<ProductivityTimerWidgetProps> = (
           {/* Central Timer & Controls */}
           <div className="flex items-center gap-5">
             <div>
-              <div className="text-[10px] text-slate-400 uppercase font-semibold text-center md:text-right">
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold text-center md:text-right">
                 {selectedRoutine}
               </div>
-              <div className="font-mono text-3xl sm:text-4xl font-black text-amber-300 tracking-wider text-center md:text-right">
+              <div className="font-mono tabular-nums text-3xl sm:text-4xl font-black text-indigo-700 dark:text-amber-300 tracking-wider text-center md:text-right">
                 {formatTimer()}
               </div>
               {/* Mini Progress Bar */}
-              <div className="w-32 h-1.5 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+              <div className="w-32 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-indigo-500 to-amber-400 transition-all duration-1000"
+                  className="h-full bg-gradient-to-r from-indigo-500 to-amber-500 dark:to-amber-400 transition-all duration-1000"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -153,6 +155,7 @@ export const ProductivityTimerWidget: React.FC<ProductivityTimerWidgetProps> = (
             {/* Play / Pause / Reset Buttons */}
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setIsRunning(!isRunning)}
                 className="w-12 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white flex items-center justify-center transition-all shadow-md shadow-indigo-600/30 cursor-pointer"
                 title={isRunning ? 'Pause Timer' : 'Start Focus Session'}
@@ -160,8 +163,9 @@ export const ProductivityTimerWidget: React.FC<ProductivityTimerWidgetProps> = (
                 {isRunning ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
               </button>
               <button
+                type="button"
                 onClick={handleReset}
-                className="w-10 h-10 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 flex items-center justify-center transition-all border border-slate-700 cursor-pointer"
+                className="w-10 h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-95 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-all border border-slate-200 dark:border-slate-700 cursor-pointer"
                 title="Reset Timer"
               >
                 <RotateCcw className="w-4 h-4" />

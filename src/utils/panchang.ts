@@ -530,3 +530,474 @@ export function getHinduPanchang(
       : `Location required — Please select city or enable GPS for Sunrise, Sunset, Abhijit Muhurat, and Rahu Kaal. Lunar estimate shown in ${tzName} (${tzOffsetStr}) for general guidance only.`,
   };
 }
+
+export type ChoghadiyaType = 'Amrit' | 'Shubh' | 'Laabh' | 'Chal' | 'Udveg' | 'Rog' | 'Kaal';
+export type ChoghadiyaTier = 'best' | 'good' | 'gain' | 'neutral' | 'avoid';
+
+export interface ChoghadiyaDialSegment {
+  id: string;
+  period: 'beforeNoon' | 'afterNoon';
+  name: ChoghadiyaType;
+  nameHi: string;
+  meaning: string;
+  tier: ChoghadiyaTier;
+  isDay: boolean;
+  /** Minute offset within the 12-hour half-day dial [0..720] */
+  startMin12h: number;
+  endMin12h: number;
+  /** Full unclipped slot label in target timezone */
+  startTimeStr: string;
+  endTimeStr: string;
+  /** Clipped dial window label in target timezone */
+  dialRangeStr: string;
+  fullRangeStr: string;
+  startUtcMs: number;
+  endUtcMs: number;
+}
+
+export interface HoraSlotInfo {
+  planetEn: string;
+  planetHi: string;
+  guidance: string;
+  isAuspicious: boolean;
+  isDay: boolean;
+  startTimeStr: string;
+  endTimeStr: string;
+}
+
+export interface GowriSlotInfo {
+  nameEn: string;
+  nameHi: string;
+  meaning: string;
+  tier: 'good' | 'moderate' | 'avoid';
+  startTimeStr: string;
+  endTimeStr: string;
+}
+
+export interface VedicMuhuratTimeline {
+  hasLocation: boolean;
+  timezoneMissing: boolean;
+  timezoneName: string;
+  timezoneOffsetStr: string;
+  cityName: string;
+  sunriseMinOfDay: number;
+  sunsetMinOfDay: number;
+  currentMinOfDay: number;
+  currentPeriod: 'beforeNoon' | 'afterNoon';
+  beforeNoonSegments: ChoghadiyaDialSegment[];
+  afterNoonSegments: ChoghadiyaDialSegment[];
+  currentHora: HoraSlotInfo | null;
+  currentGowri: GowriSlotInfo | null;
+}
+
+const CHOGHADIYA_META: Record<
+  ChoghadiyaType,
+  { hi: string; meaning: string; tier: ChoghadiyaTier }
+> = {
+  Amrit: { hi: 'अमृत', meaning: 'Best', tier: 'best' },
+  Shubh: { hi: 'शुभ', meaning: 'Auspicious', tier: 'good' },
+  Laabh: { hi: 'लाभ', meaning: 'Gain', tier: 'gain' },
+  Chal: { hi: 'चल', meaning: 'Neutral', tier: 'neutral' },
+  Udveg: { hi: 'उद्वेग', meaning: 'Avoid', tier: 'avoid' },
+  Rog: { hi: 'रोग', meaning: 'Avoid', tier: 'avoid' },
+  Kaal: { hi: 'काल', meaning: 'Avoid', tier: 'avoid' },
+};
+
+const DAY_CHOGHADIYA_BY_DOW: ChoghadiyaType[][] = [
+  ['Udveg', 'Chal', 'Laabh', 'Amrit', 'Kaal', 'Shubh', 'Rog', 'Udveg'], // Sun
+  ['Amrit', 'Kaal', 'Shubh', 'Rog', 'Udveg', 'Chal', 'Laabh', 'Amrit'], // Mon
+  ['Rog', 'Udveg', 'Chal', 'Laabh', 'Amrit', 'Kaal', 'Shubh', 'Rog'], // Tue
+  ['Laabh', 'Amrit', 'Kaal', 'Shubh', 'Rog', 'Udveg', 'Chal', 'Laabh'], // Wed
+  ['Shubh', 'Rog', 'Udveg', 'Chal', 'Laabh', 'Amrit', 'Kaal', 'Shubh'], // Thu
+  ['Chal', 'Laabh', 'Amrit', 'Kaal', 'Shubh', 'Rog', 'Udveg', 'Chal'], // Fri
+  ['Kaal', 'Shubh', 'Rog', 'Udveg', 'Chal', 'Laabh', 'Amrit', 'Kaal'], // Sat
+];
+
+const NIGHT_CHOGHADIYA_BY_DOW: ChoghadiyaType[][] = [
+  ['Shubh', 'Amrit', 'Chal', 'Rog', 'Kaal', 'Laabh', 'Udveg', 'Shubh'], // Sun
+  ['Chal', 'Rog', 'Kaal', 'Laabh', 'Udveg', 'Shubh', 'Amrit', 'Chal'], // Mon
+  ['Kaal', 'Laabh', 'Udveg', 'Shubh', 'Amrit', 'Chal', 'Rog', 'Kaal'], // Tue
+  ['Udveg', 'Shubh', 'Amrit', 'Chal', 'Rog', 'Kaal', 'Laabh', 'Udveg'], // Wed
+  ['Amrit', 'Chal', 'Rog', 'Kaal', 'Laabh', 'Udveg', 'Shubh', 'Amrit'], // Thu
+  ['Rog', 'Kaal', 'Laabh', 'Udveg', 'Shubh', 'Amrit', 'Chal', 'Rog'], // Fri
+  ['Laabh', 'Udveg', 'Shubh', 'Amrit', 'Chal', 'Rog', 'Kaal', 'Laabh'], // Sat
+];
+
+const CHALDEAN_PLANETS = [
+  { en: 'Sun', hi: 'सूर्य', guidance: 'Leadership & Vitality', auspicious: true },
+  { en: 'Venus', hi: 'शुक्र', guidance: 'Harmony, Art & Comfort', auspicious: true },
+  { en: 'Mercury', hi: 'बुध', guidance: 'Study, Trade & Clarity', auspicious: true },
+  { en: 'Moon', hi: 'चंद्र', guidance: 'Calm & Nurturing Tasks', auspicious: true },
+  { en: 'Saturn', hi: 'शनि', guidance: 'Discipline & Routine Work', auspicious: false },
+  { en: 'Jupiter', hi: 'गुरु', guidance: 'Wisdom, Prayer & Growth', auspicious: true },
+  { en: 'Mars', hi: 'मंगल', guidance: 'Courage & Decisive Action', auspicious: false },
+];
+
+const SUNRISE_HORA_INDEX_BY_DOW = [0, 3, 6, 2, 5, 1, 4];
+
+const GOWRI_DAY_BY_DOW: string[][] = [
+  ['Uthi', 'Amirtham', 'Rogam', 'Labam', 'Dhanam', 'Sugam', 'Soram', 'Visham'],
+  ['Amirtham', 'Sugam', 'Uthi', 'Dhanam', 'Soram', 'Rogam', 'Visham', 'Labam'],
+  ['Rogam', 'Dhanam', 'Amirtham', 'Sugam', 'Uthi', 'Visham', 'Labam', 'Soram'],
+  ['Labam', 'Uthi', 'Dhanam', 'Amirtham', 'Rogam', 'Soram', 'Sugam', 'Visham'],
+  ['Dhanam', 'Labam', 'Sugam', 'Rogam', 'Amirtham', 'Uthi', 'Visham', 'Soram'],
+  ['Sugam', 'Visham', 'Labam', 'Uthi', 'Dhanam', 'Amirtham', 'Soram', 'Rogam'],
+  ['Visham', 'Soram', 'Sugam', 'Labam', 'Rogam', 'Dhanam', 'Uthi', 'Amirtham'],
+];
+
+const GOWRI_NIGHT_BY_DOW: string[][] = [
+  ['Sugam', 'Amirtham', 'Dhanam', 'Labam', 'Uthi', 'Rogam', 'Soram', 'Visham'],
+  ['Amirtham', 'Dhanam', 'Labam', 'Sugam', 'Visham', 'Uthi', 'Rogam', 'Soram'],
+  ['Dhanam', 'Labam', 'Uthi', 'Amirtham', 'Soram', 'Sugam', 'Visham', 'Rogam'],
+  ['Labam', 'Sugam', 'Amirtham', 'Dhanam', 'Rogam', 'Visham', 'Uthi', 'Soram'],
+  ['Amirtham', 'Uthi', 'Sugam', 'Soram', 'Dhanam', 'Labam', 'Rogam', 'Visham'],
+  ['Sugam', 'Labam', 'Dhanam', 'Amirtham', 'Visham', 'Rogam', 'Uthi', 'Soram'],
+  ['Uthi', 'Dhanam', 'Sugam', 'Visham', 'Amirtham', 'Labam', 'Soram', 'Rogam'],
+];
+
+const GOWRI_META: Record<string, { hi: string; meaning: string; tier: 'good' | 'moderate' | 'avoid' }> = {
+  Amirtham: { hi: 'अमृतम्', meaning: 'Best / Auspicious', tier: 'good' },
+  Dhanam: { hi: 'धनम्', meaning: 'Prosperity & Wealth', tier: 'good' },
+  Sugam: { hi: 'सुखम्', meaning: 'Peace & Comfort', tier: 'good' },
+  Labam: { hi: 'लाभम्', meaning: 'Gain & Success', tier: 'good' },
+  Uthi: { hi: 'उन्नति', meaning: 'Rising / Moderate', tier: 'moderate' },
+  Rogam: { hi: 'रोगम्', meaning: 'Avoid New Starts', tier: 'avoid' },
+  Soram: { hi: 'शोरम्', meaning: 'Avoid Risk', tier: 'avoid' },
+  Visham: { hi: 'विषम्', meaning: 'Inauspicious', tier: 'avoid' },
+};
+
+function getMinutesRelativeToTargetDate(
+  utcDate: Date,
+  targetYear: number,
+  targetMonthZeroBased: number,
+  targetDay: number,
+  tzName: string
+): number {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tzName,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(utcDate);
+    const y = Number(parts.find((p) => p.type === 'year')?.value ?? targetYear);
+    const m = Number(parts.find((p) => p.type === 'month')?.value ?? targetMonthZeroBased + 1);
+    const d = Number(parts.find((p) => p.type === 'day')?.value ?? targetDay);
+    let h = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
+    const min = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
+    if (h === 24) h = 0;
+
+    const targetMidnightUtc = Date.UTC(targetYear, targetMonthZeroBased, targetDay);
+    const actualMidnightUtc = Date.UTC(y, m - 1, d);
+    const dayDiff = Math.round((actualMidnightUtc - targetMidnightUtc) / 86400000);
+    return dayDiff * 1440 + h * 60 + min;
+  } catch {
+    return utcDate.getHours() * 60 + utcDate.getMinutes();
+  }
+}
+
+function getAdhanSunriseSunset(lat: number, lon: number, dateObj: Date): { sunrise: Date; sunset: Date } | null {
+  const coordinates = new Coordinates(lat, lon);
+  const solarParams = CalculationMethod.MuslimWorldLeague();
+  solarParams.methodAdjustments.dhuhr = 0;
+  solarParams.highLatitudeRule = HighLatitudeRule.recommended(coordinates);
+  const calcDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), 12, 0, 0);
+  const times = new AdhanPrayerTimes(coordinates, calcDate, solarParams);
+  if (
+    !times.sunrise ||
+    !times.sunset ||
+    Number.isNaN(times.sunrise.getTime()) ||
+    Number.isNaN(times.sunset.getTime())
+  ) {
+    return null;
+  }
+  return { sunrise: times.sunrise, sunset: times.sunset };
+}
+
+/**
+ * Computes full-day Before 12 PM & After 12 PM Choghadiya dial segments plus
+ * active Planetary Hora and Gowri Panchang slot using Adhan astronomical sunrise/sunset.
+ * Never silently falls back to Mumbai/IST when location or timezone is missing.
+ */
+export function getVedicMuhuratTimeline(
+  targetDate: Date,
+  nowInstant: Date,
+  cityId?: string,
+  customLat?: number,
+  customLon?: number,
+  customName?: string,
+  customCountry?: string,
+  customTimezone?: string,
+  locationExplicitlyConfirmed?: boolean
+): VedicMuhuratTimeline {
+  const isExplicitlyUnconfirmed = locationExplicitlyConfirmed === false;
+  const city: CityLocation = isExplicitlyUnconfirmed
+    ? getUnsetLocation()
+    : getCityLocation(cityId, customLat, customLon, customName, customCountry, customTimezone);
+
+  const hasLocation = city.id !== 'unset' && isValidCoordinatePair(city.latitude, city.longitude);
+  const explicitTz = customTimezone?.trim();
+  const resolvedTz =
+    explicitTz && isValidIanaTimezone(explicitTz)
+      ? explicitTz
+      : city.timezone && isValidIanaTimezone(city.timezone)
+      ? city.timezone
+      : '';
+  const timezoneMissing = hasLocation && !resolvedTz;
+  const tzName = hasLocation ? resolvedTz : getDeviceTimezone();
+  const displayLabel = hasLocation ? formatCityCountryLabel(city) : 'Location not set';
+
+  const currentMinRaw = getMinutesRelativeToTargetDate(
+    nowInstant,
+    nowInstant.getFullYear(),
+    nowInstant.getMonth(),
+    nowInstant.getDate(),
+    tzName || getDeviceTimezone()
+  );
+  const currentMinOfDay = ((currentMinRaw % 1440) + 1440) % 1440;
+  const currentPeriod: 'beforeNoon' | 'afterNoon' = currentMinOfDay < 720 ? 'beforeNoon' : 'afterNoon';
+
+  if (!hasLocation || timezoneMissing) {
+    return {
+      hasLocation,
+      timezoneMissing,
+      timezoneName: tzName,
+      timezoneOffsetStr: timezoneMissing
+        ? 'Timezone required'
+        : formatUtcOffset(getTimezoneOffsetHoursForZone(tzName, targetDate)),
+      cityName: displayLabel,
+      sunriseMinOfDay: 360,
+      sunsetMinOfDay: 1080,
+      currentMinOfDay,
+      currentPeriod,
+      beforeNoonSegments: [],
+      afterNoonSegments: [],
+      currentHora: null,
+      currentGowri: null,
+    };
+  }
+
+  const y = targetDate.getFullYear();
+  const m = targetDate.getMonth();
+  const d = targetDate.getDate();
+  const dow = targetDate.getDay();
+  const prevDate = new Date(y, m, d - 1, 12, 0, 0);
+  const nextDate = new Date(y, m, d + 1, 12, 0, 0);
+
+  const todaySolar = getAdhanSunriseSunset(city.latitude, city.longitude, targetDate);
+  const prevSolar = getAdhanSunriseSunset(city.latitude, city.longitude, prevDate);
+  const nextSolar = getAdhanSunriseSunset(city.latitude, city.longitude, nextDate);
+
+  if (!todaySolar || !prevSolar || !nextSolar) {
+    return {
+      hasLocation,
+      timezoneMissing: false,
+      timezoneName: tzName,
+      timezoneOffsetStr: formatUtcOffset(getTimezoneOffsetHoursForZone(tzName, targetDate)),
+      cityName: displayLabel,
+      sunriseMinOfDay: 360,
+      sunsetMinOfDay: 1080,
+      currentMinOfDay,
+      currentPeriod,
+      beforeNoonSegments: [],
+      afterNoonSegments: [],
+      currentHora: null,
+      currentGowri: null,
+    };
+  }
+
+  const tzOffsetStr = formatUtcOffset(getTimezoneOffsetHoursForZone(tzName, todaySolar.sunrise));
+  const sunriseMinOfDay = getMinutesRelativeToTargetDate(todaySolar.sunrise, y, m, d, tzName);
+  const sunsetMinOfDay = getMinutesRelativeToTargetDate(todaySolar.sunset, y, m, d, tzName);
+
+  interface RawWindow {
+    id: string;
+    name: ChoghadiyaType;
+    isDay: boolean;
+    startUtc: Date;
+    endUtc: Date;
+    startMin: number;
+    endMin: number;
+  }
+
+  const rawWindows: RawWindow[] = [];
+
+  const pushEqualWindows = (
+    prefix: string,
+    startUtc: Date,
+    endUtc: Date,
+    names: ChoghadiyaType[],
+    isDay: boolean
+  ) => {
+    const stepMs = (endUtc.getTime() - startUtc.getTime()) / names.length;
+    for (let i = 0; i < names.length; i++) {
+      const sUtc = new Date(startUtc.getTime() + i * stepMs);
+      const eUtc = new Date(startUtc.getTime() + (i + 1) * stepMs);
+      const startMin = getMinutesRelativeToTargetDate(sUtc, y, m, d, tzName);
+      const endMin = getMinutesRelativeToTargetDate(eUtc, y, m, d, tzName);
+      rawWindows.push({
+        id: `${prefix}-${i}`,
+        name: names[i],
+        isDay,
+        startUtc: sUtc,
+        endUtc: eUtc,
+        startMin,
+        endMin,
+      });
+    }
+  };
+
+  // Pre-sunrise early morning (previous day's night Choghadiya)
+  const prevDow = prevDate.getDay();
+  pushEqualWindows('prev-night', prevSolar.sunset, todaySolar.sunrise, NIGHT_CHOGHADIYA_BY_DOW[prevDow], false);
+  // Today's daytime Choghadiya
+  pushEqualWindows('day', todaySolar.sunrise, todaySolar.sunset, DAY_CHOGHADIYA_BY_DOW[dow], true);
+  // Today's post-sunset night Choghadiya
+  pushEqualWindows('night', todaySolar.sunset, nextSolar.sunrise, NIGHT_CHOGHADIYA_BY_DOW[dow], false);
+
+  const beforeNoonSegments: ChoghadiyaDialSegment[] = [];
+  const afterNoonSegments: ChoghadiyaDialSegment[] = [];
+
+  for (const w of rawWindows) {
+    const meta = CHOGHADIYA_META[w.name];
+    const startTimeStr = formatUtcInstant12hInZone(w.startUtc, tzName);
+    const endTimeStr = formatUtcInstant12hInZone(w.endUtc, tzName);
+    const fullRangeStr = `${startTimeStr} - ${endTimeStr}`;
+
+    // Clip to Before 12 PM [0, 720]
+    const bStart = Math.max(0, w.startMin);
+    const bEnd = Math.min(720, w.endMin);
+    if (bEnd - bStart >= 1) {
+      beforeNoonSegments.push({
+        id: `${w.id}-am`,
+        period: 'beforeNoon',
+        name: w.name,
+        nameHi: meta.hi,
+        meaning: meta.meaning,
+        tier: meta.tier,
+        isDay: w.isDay,
+        startMin12h: bStart,
+        endMin12h: bEnd,
+        startTimeStr,
+        endTimeStr,
+        dialRangeStr: fullRangeStr,
+        fullRangeStr,
+        startUtcMs: w.startUtc.getTime(),
+        endUtcMs: w.endUtc.getTime(),
+      });
+    }
+
+    // Clip to After 12 PM [720, 1440]
+    const aStart = Math.max(720, w.startMin);
+    const aEnd = Math.min(1440, w.endMin);
+    if (aEnd - aStart >= 1) {
+      afterNoonSegments.push({
+        id: `${w.id}-pm`,
+        period: 'afterNoon',
+        name: w.name,
+        nameHi: meta.hi,
+        meaning: meta.meaning,
+        tier: meta.tier,
+        isDay: w.isDay,
+        startMin12h: aStart - 720,
+        endMin12h: aEnd - 720,
+        startTimeStr,
+        endTimeStr,
+        dialRangeStr: fullRangeStr,
+        fullRangeStr,
+        startUtcMs: w.startUtc.getTime(),
+        endUtcMs: w.endUtc.getTime(),
+      });
+    }
+  }
+
+  // Determine Reference Instant inside selected targetDate for Hora & Gowri (matching active clock time on that date)
+  const refTargetMs =
+    todaySolar.sunrise.getTime() + (currentMinOfDay - sunriseMinOfDay) * 60_000;
+
+  // Planetary Hora lookup across prev-night / day / tonight
+  const computeHoraAtMs = (ms: number): HoraSlotInfo | null => {
+    const checkSpan = (
+      spanStart: Date,
+      spanEnd: Date,
+      startPlanetIdx: number,
+      isDay: boolean
+    ): HoraSlotInfo | null => {
+      if (ms < spanStart.getTime() || ms >= spanEnd.getTime()) return null;
+      const stepMs = (spanEnd.getTime() - spanStart.getTime()) / 12;
+      const idx = Math.min(11, Math.max(0, Math.floor((ms - spanStart.getTime()) / stepMs)));
+      const planet = CHALDEAN_PLANETS[(startPlanetIdx + idx) % 7];
+      const s = new Date(spanStart.getTime() + idx * stepMs);
+      const e = new Date(spanStart.getTime() + (idx + 1) * stepMs);
+      return {
+        planetEn: planet.en,
+        planetHi: planet.hi,
+        guidance: planet.guidance,
+        isAuspicious: planet.auspicious,
+        isDay,
+        startTimeStr: formatUtcInstant12hInZone(s, tzName),
+        endTimeStr: formatUtcInstant12hInZone(e, tzName),
+      };
+    };
+
+    const prevSunriseStartIdx = SUNRISE_HORA_INDEX_BY_DOW[prevDow];
+    const todaySunriseStartIdx = SUNRISE_HORA_INDEX_BY_DOW[dow];
+
+    return (
+      checkSpan(prevSolar.sunset, todaySolar.sunrise, (prevSunriseStartIdx + 12) % 7, false) ||
+      checkSpan(todaySolar.sunrise, todaySolar.sunset, todaySunriseStartIdx, true) ||
+      checkSpan(todaySolar.sunset, nextSolar.sunrise, (todaySunriseStartIdx + 12) % 7, false)
+    );
+  };
+
+  // Gowri Panchang lookup across prev-night / day / tonight
+  const computeGowriAtMs = (ms: number): GowriSlotInfo | null => {
+    const checkSpan = (spanStart: Date, spanEnd: Date, list: string[]): GowriSlotInfo | null => {
+      if (ms < spanStart.getTime() || ms >= spanEnd.getTime()) return null;
+      const stepMs = (spanEnd.getTime() - spanStart.getTime()) / 8;
+      const idx = Math.min(7, Math.max(0, Math.floor((ms - spanStart.getTime()) / stepMs)));
+      const gName = list[idx] || 'Amirtham';
+      const meta = GOWRI_META[gName] || GOWRI_META.Amirtham;
+      const s = new Date(spanStart.getTime() + idx * stepMs);
+      const e = new Date(spanStart.getTime() + (idx + 1) * stepMs);
+      return {
+        nameEn: gName,
+        nameHi: meta.hi,
+        meaning: meta.meaning,
+        tier: meta.tier,
+        startTimeStr: formatUtcInstant12hInZone(s, tzName),
+        endTimeStr: formatUtcInstant12hInZone(e, tzName),
+      };
+    };
+
+    return (
+      checkSpan(prevSolar.sunset, todaySolar.sunrise, GOWRI_NIGHT_BY_DOW[prevDow]) ||
+      checkSpan(todaySolar.sunrise, todaySolar.sunset, GOWRI_DAY_BY_DOW[dow]) ||
+      checkSpan(todaySolar.sunset, nextSolar.sunrise, GOWRI_NIGHT_BY_DOW[dow])
+    );
+  };
+
+  const currentHora = computeHoraAtMs(refTargetMs) || computeHoraAtMs(todaySolar.sunrise.getTime());
+  const currentGowri = computeGowriAtMs(refTargetMs) || computeGowriAtMs(todaySolar.sunrise.getTime());
+
+  return {
+    hasLocation,
+    timezoneMissing: false,
+    timezoneName: tzName,
+    timezoneOffsetStr: tzOffsetStr,
+    cityName: displayLabel,
+    sunriseMinOfDay,
+    sunsetMinOfDay,
+    currentMinOfDay,
+    currentPeriod,
+    beforeNoonSegments,
+    afterNoonSegments,
+    currentHora,
+    currentGowri,
+  };
+}
+
