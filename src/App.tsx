@@ -464,16 +464,25 @@ export default function App() {
         calendarMode === 'christian'
           ? 'bg-gradient-to-b from-[#FAF8F3] via-[#F4F8FD] to-[#EEF3FA] dark:bg-gradient-to-b dark:from-[#070E1D] dark:via-[#0B162C] dark:to-[#081020]'
           : calendarMode === 'hindu'
-          ? 'bg-gradient-to-b from-amber-50/40 via-orange-50/20 to-slate-50 dark:bg-gradient-to-b dark:from-slate-950 dark:via-[#191107] dark:to-slate-950'
-          : 'bg-slate-50 dark:bg-slate-950'
+          ? 'bg-gradient-to-b from-[#FFFDF7] via-[#FDF5E4] to-[#F8ECDA] dark:bg-gradient-to-b dark:from-[#0b0907] dark:via-[#171108] dark:to-[#0a0806]'
+          : 'bg-gradient-to-b from-[#F5FCF8] via-[#F1FAF5] to-[#EBF5F0] dark:bg-gradient-to-b dark:from-[#060E0C] dark:via-[#091814] dark:to-[#060C0A]'
       }`}
     >
-      {/* Ambient background light glow for peaceful Christian / Hindu themes */}
+      {/* Ambient background light glow for serene Light & Dark mode depth */}
       {calendarMode === 'christian' && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-b from-sky-300/18 via-amber-200/12 to-transparent dark:from-sky-500/10 dark:via-amber-300/5 blur-3xl pointer-events-none -z-0" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-b from-sky-300/20 via-amber-200/12 to-transparent dark:from-sky-500/12 dark:via-amber-300/5 blur-3xl pointer-events-none -z-0" />
       )}
       {calendarMode === 'hindu' && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-b from-amber-500/10 via-orange-400/5 to-transparent blur-3xl pointer-events-none -z-0" />
+        <>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-gradient-to-b from-amber-300/22 via-orange-200/12 to-transparent dark:from-amber-500/12 dark:via-orange-500/6 dark:to-transparent blur-3xl pointer-events-none -z-0" />
+          <div className="absolute top-1/3 -right-24 w-96 h-96 rounded-full bg-amber-200/25 dark:bg-amber-500/6 blur-3xl pointer-events-none -z-0" />
+        </>
+      )}
+      {calendarMode === 'muslim' && (
+        <>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-gradient-to-b from-emerald-300/18 via-teal-200/10 to-transparent dark:from-emerald-500/12 dark:via-teal-500/5 dark:to-transparent blur-3xl pointer-events-none -z-0" />
+          <div className="absolute top-1/3 -left-24 w-96 h-96 rounded-full bg-teal-200/20 dark:bg-emerald-500/6 blur-3xl pointer-events-none -z-0" />
+        </>
       )}
       
       {/* 🌟 Unified Clean Navbar with 3-Way Mode Switcher */}
