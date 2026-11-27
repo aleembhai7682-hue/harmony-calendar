@@ -25,6 +25,7 @@ import {
 import { getEffectiveCalendarTimezone, getEventDisplayInTimezone } from '../utils/timezoneService';
 import { getConfirmedCountryCode } from '../utils/storage';
 import { getModeTheme } from '../utils/modeTheme';
+import { MonthSummaryBar } from './MonthSummaryBar';
 import { Plus, CheckCircle2 } from 'lucide-react';
 
 interface MonthViewProps {
@@ -484,7 +485,25 @@ export const MonthView: React.FC<MonthViewProps> = ({
     <div
       className={`flex-1 flex flex-col rounded-2xl border overflow-hidden transition-colors shadow-xs ${modeTheme.cardSurface} ${modeTheme.cardBorder}`}
     >
-      
+      {/* Monthly Data Visualization Summary */}
+      <MonthSummaryBar
+        year={year}
+        month={month}
+        startingDayOfWeek={startingDayOfWeek}
+        totalDaysInMonth={totalDaysInMonth}
+        todayStr={todayStr}
+        events={events}
+        tasks={tasks}
+        filters={filters}
+        language={language}
+        effectiveTz={effectiveTz}
+        onSelectDate={onSelectDate}
+        onSelectFestival={onSelectFestival}
+        onSelectIslamic={onSelectIslamic}
+        onSelectEvent={onSelectEvent}
+        onOpenCreateEventOnDate={onOpenCreateEventOnDate}
+      />
+
       {/* Weekday Names Header */}
       <div
         className={`grid grid-cols-7 border-b ${modeTheme.cardSubSurface} ${modeTheme.cardBorder}`}
