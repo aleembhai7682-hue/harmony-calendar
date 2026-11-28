@@ -19,6 +19,7 @@ import { getDeviceTimezone } from '../utils/istTime';
 import { getCityLocation, hasExplicitLocation, formatCityCountryLabel } from '../utils/cities';
 import { getLocaleTag, formatClockInZone, formatDateLocalized, TimeFormatOption, DateFormatOption } from '../utils/localization';
 import { getModeTheme } from '../utils/modeTheme';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavbarProps {
   currentDate: Date;
@@ -339,6 +340,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Moon className={`w-4 h-4 ${modeTheme.accentText}`} />
               )}
             </button>
+
+            {/* Install App (PWA) */}
+            <PWAInstallButton calendarMode={calendarMode} />
 
             {/* Settings */}
             <button

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="hc-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#065f46" />
+      <stop offset="55%" stop-color="#0f766e" />
+      <stop offset="100%" stop-color="#134e4a" />
+    </linearGradient>
+    <linearGradient id="hc-card" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#ecfdf5" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#hc-bg)" />
+  <rect x="88" y="108" width="336" height="312" rx="44" fill="url(#hc-card)" />
+  <rect x="88" y="108" width="336" height="92" rx="44" fill="#047857" />
+  <rect x="88" y="160" width="336" height="40" fill="#047857" />
+  <rect x="156" y="76" width="28" height="64" rx="14" fill="#a7f3d0" />
+  <rect x="328" y="76" width="28" height="64" rx="14" fill="#a7f3d0" />
+  <circle cx="256" cy="306" r="66" fill="#065f46" opacity="0.12" />
+  <path
+    d="M274 252c-29 4-51 29-51 59 0 33 27 60 60 60 15 0 29-6 40-15-8 18-26 30-47 30-29 0-52-23-52-52 0-37 22-72 50-82z"
+    fill="#047857"
+  />
+  <circle cx="304" cy="272" r="10" fill="#0d9488" />
+</svg>

@@ -69,6 +69,7 @@ import { IslamicPrayerWidget } from './components/IslamicPrayerWidget';
 import { HinduPanchangWidget } from './components/HinduPanchangWidget';
 import { ChristianLifestyleWidget } from './components/ChristianLifestyleWidget';
 import { ProductivityTimerWidget } from './components/ProductivityTimerWidget';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 export default function App() {
   // Mode Isolation State: 'christian' (default) | 'hindu' | 'muslim'
@@ -918,6 +919,7 @@ export default function App() {
         </aside>
       )}
 
+      <OfflineIndicator />
     </div>
   );
 }
