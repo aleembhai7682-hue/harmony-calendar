@@ -214,7 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Moon className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
               <span>Hijri Moon Offset</span>
             </div>
-            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/40">
+            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-[#EAF7F2] dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 border border-[#BCE0D2] dark:border-teal-700/50">
               {filters.hijriAdjustmentDays > 0
                 ? `+${filters.hijriAdjustmentDays} Day`
                 : filters.hijriAdjustmentDays < 0
@@ -267,7 +267,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <div className="flex items-center justify-between text-[11px] font-bold text-emerald-800 dark:text-emerald-300 mb-0.5">
                   <span>{formatDateLocalized(occ.estimatedDate, filters.dateFormat || 'auto', locale, 'medium')}</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/40 font-bold">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#EAF7F2] dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 border border-[#BCE0D2] dark:border-teal-700/50 font-bold">
                     {occ.hijriDay}{' '}
                     {occ.hijriMonth === 9
                       ? 'Ramadan'

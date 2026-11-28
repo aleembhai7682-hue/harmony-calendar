@@ -547,6 +547,7 @@ export default function App() {
             customName={filters.customLocationName}
             prayerMethod={filters.prayerMethod}
             asrMethod={filters.asrMethod}
+            prayerTimeOffsetMinutes={filters.prayerTimeOffsetMinutes ?? 0}
             timeFormat={filters.timeFormat}
             onLocationChange={(loc) => handleUpdateFilters({ ...filters, ...loc })}
             onOpenSettings={() => setIsSettingsModalOpen(true)}

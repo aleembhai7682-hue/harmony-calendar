@@ -203,7 +203,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 </span>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-300 leading-tight">
-                    {language === 'en' ? hijri.monthNameEn : hijri.monthNameHi}
+                    {language === 'ur' ? hijri.monthNameUr : hijri.monthNameEn}
                   </span>
                   <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold leading-none">
                     Greg: {dayNum}
@@ -213,7 +213,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
 
               <div className="flex items-center gap-1">
                 {isFriday && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100/80 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/40 font-bold">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#EAF7F2] dark:bg-teal-950/70 text-teal-800 dark:text-teal-200 border border-[#BCE0D2] dark:border-teal-700/50 font-bold">
                     جمعہ
                   </span>
                 )}

@@ -263,7 +263,7 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
   const secondaryTierStyles = secondarySlot ? getTierStyles(secondarySlot.tier) : null;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-[#DFC9A1] dark:border-[#3B2C1B] bg-gradient-to-b from-[#FFFEFA] via-[#FDF5E2] to-[#F6E6C6] dark:from-[#18130D] dark:via-[#120F0A] dark:to-[#0A0806] p-4 sm:p-6 shadow-md dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.85)] transition-colors">
+    <div className="relative overflow-hidden rounded-3xl border border-[#DFC9A1] dark:border-[#3B2C1B] bg-gradient-to-b from-[#FFFEFA] via-[#FDF5E2] to-[#F6E6C6] dark:from-[#1B160F] dark:via-[#15110B] dark:to-[#100D09] p-4 sm:p-6 shadow-md dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.75)] transition-colors">
       {/* Subtle Celestial Ambient Glows & Sacred Mandala Backdrop */}
       <div
         aria-hidden="true"
@@ -461,9 +461,9 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
                   <stop offset="100%" stopColor="#b45309" />
                 </radialGradient>
                 <radialGradient id="chog-moon-orb" cx="35%" cy="32%" r="68%">
-                  <stop offset="0%" stopColor="#f8fafc" />
-                  <stop offset="55%" stopColor="#cbd5e1" />
-                  <stop offset="100%" stopColor="#475569" />
+                  <stop offset="0%" stopColor="#e2e8f0" />
+                  <stop offset="55%" stopColor="#94a3b8" />
+                  <stop offset="100%" stopColor="#334155" />
                 </radialGradient>
 
                 {/* Dark Mode Symmetric Radial Enamel Gradients */}
@@ -584,7 +584,7 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
                 cx={cx}
                 cy={cy}
                 r={bezelOuterR}
-                fill={isDark ? '#0e0d0a' : '#fffaf0'}
+                fill={isDark ? '#15120d' : '#fffaf0'}
                 stroke={isDark ? 'rgba(245,158,11,0.35)' : 'rgba(180,120,30,0.4)'}
                 strokeWidth="1.5"
               />
@@ -593,7 +593,7 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
                 cy={cy}
                 r={outerR + 2}
                 fill="none"
-                stroke={isDark ? 'rgba(255,255,255,0.12)' : 'rgba(180,120,30,0.22)'}
+                stroke={isDark ? 'rgba(251,191,36,0.16)' : 'rgba(180,120,30,0.22)'}
                 strokeWidth="1"
               />
               {Array.from({ length: 48 }, (_, i) => {
@@ -694,7 +694,7 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
                           dominantBaseline="central"
                           fill={
                             isDark
-                              ? '#ffffff'
+                              ? '#f5efe2'
                               : seg.tier === 'avoid'
                               ? '#881337'
                               : '#0f172a'
@@ -753,8 +753,8 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
                       cx={pos.x}
                       cy={pos.y}
                       r="12"
-                      fill={isDark ? '#faf4e6' : '#ffffff'}
-                      stroke={isDark ? 'rgba(245,158,11,0.55)' : 'rgba(180,120,30,0.5)'}
+                      fill={isDark ? '#1d1812' : '#ffffff'}
+                      stroke={isDark ? 'rgba(245,158,11,0.45)' : 'rgba(180,120,30,0.48)'}
                       strokeWidth="1.25"
                     />
                     <text
@@ -762,7 +762,7 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
                       y={pos.y + 0.5}
                       textAnchor="middle"
                       dominantBaseline="central"
-                      fill="#0f172a"
+                      fill={isDark ? '#f3e3be' : '#0f172a'}
                       fontSize="11"
                       fontWeight="800"
                     >
@@ -777,8 +777,8 @@ export const ChoghadiyaClockDial: React.FC<ChoghadiyaClockDialProps> = ({
                 cx={cx}
                 cy={cy}
                 r={innerR}
-                fill={isDark ? '#141310' : '#fffdf5'}
-                stroke={isDark ? 'rgba(251,191,36,0.55)' : 'rgba(217,119,6,0.65)'}
+                fill={isDark ? '#191510' : '#fffdf5'}
+                stroke={isDark ? 'rgba(251,191,36,0.5)' : 'rgba(217,119,6,0.65)'}
                 strokeWidth="2"
               />
               <circle

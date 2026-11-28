@@ -150,6 +150,7 @@ export interface CalendarFilterSettings {
   dateFormat?: 'auto' | 'DMY' | 'MDY' | 'YMD'; // Date order preference
   asrMethod: 'hanafi' | 'standard'; // Hanafi (2x shadow) vs Standard (1x shadow)
   prayerMethod: 'karachi' | 'mwl' | 'makkah' | 'egypt';
+  prayerTimeOffsetMinutes?: number; // Global prayer adjustment in minutes (-15 to +15, default 0)
   enabledCategories: Record<FestivalCategory, boolean>;
   showGazettedOnly: boolean;
   showHijri: boolean;

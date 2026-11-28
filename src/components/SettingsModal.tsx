@@ -17,6 +17,9 @@ import {
   CalendarDays,
   Check,
   Scale,
+  Clock,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import { getCountryHolidaySummary } from '../utils/globalHolidays';
 import { getConfirmedCountryCode } from '../utils/storage';
@@ -437,16 +440,121 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     })}
                   </div>
                 </div>
+
+                {/* Global Prayer Time Offset (-15 to +15 minutes) */}
+                <div className="pt-3 border-t border-emerald-200/70 dark:border-emerald-800/50">
+                  {(() => {
+                    const currentOffset = Math.max(
+                      -15,
+                      Math.min(15, Math.round(filters.prayerTimeOffsetMinutes ?? 0))
+                    );
+                    const formattedOffset =
+                      currentOffset > 0
+                        ? `+${currentOffset} min`
+                        : currentOffset < 0
+                        ? `${currentOffset} min`
+                        : '0 min (Default)';
+                    const updateOffset = (val: number) =>
+                      onFilterChange({
+                        ...filters,
+                        prayerTimeOffsetMinutes: Math.max(-15, Math.min(15, Math.round(val))),
+                      });
+
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                          <label
+                            htmlFor="prayer-time-offset-slider"
+                            className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5"
+                          >
+                            <Clock className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                            <span>
+                              {language === 'ur'
+                                ? 'اوقاتِ نماز میں تبدیلی (منٹ)'
+                                : 'Adjust prayer times by X minutes'}
+                            </span>
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`text-[11px] font-extrabold font-mono px-2.5 py-0.5 rounded-full border ${
+                                currentOffset !== 0
+                                  ? 'bg-teal-600 text-white border-teal-500 shadow-xs'
+                                  : 'bg-white dark:bg-slate-800 text-emerald-800 dark:text-emerald-300 border-emerald-300/70 dark:border-emerald-700/60'
+                              }`}
+                            >
+                              {formattedOffset}
+                            </span>
+                            {currentOffset !== 0 && (
+                              <button
+                                type="button"
+                                onClick={() => updateOffset(0)}
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-teal-800 dark:text-teal-300 border border-teal-300/70 dark:border-teal-700/60 hover:bg-teal-50 dark:hover:bg-teal-950/60 cursor-pointer transition-colors"
+                              >
+                                {language === 'ur' ? 'ری سیٹ' : 'Reset'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-[10px] text-slate-600 dark:text-slate-400 mb-2.5 leading-snug">
+                          {language === 'ur'
+                            ? 'مقامی مسجد کے شیڈول سے مطابقت کے لیے تمام اوقاتِ نماز (فجر، طلوع، ظہر، عصر، مغرب، عشاء، سحری اور افطار) کو ±15 منٹ تک آگے یا پیچھے کریں۔'
+                            : 'Shift all calculated times (Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha, Sehri Ends & Iftar) by -15 to +15 minutes to match your local mosque.'}
+                        </p>
+
+                        <div className="flex items-center gap-2.5 bg-white/90 dark:bg-slate-900/70 p-2.5 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60">
+                          <button
+                            type="button"
+                            onClick={() => updateOffset(currentOffset - 1)}
+                            disabled={currentOffset <= -15}
+                            aria-label="Decrease prayer time offset by 1 minute"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-emerald-950/70 dark:hover:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800/70 cursor-pointer transition-colors shrink-0"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+
+                          <div className="flex-1 flex flex-col gap-1">
+                            <input
+                              id="prayer-time-offset-slider"
+                              type="range"
+                              min={-15}
+                              max={15}
+                              step={1}
+                              value={currentOffset}
+                              onChange={(e) => updateOffset(Number(e.target.value))}
+                              className="w-full accent-teal-600 dark:accent-emerald-400 cursor-pointer"
+                            />
+                            <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400 px-0.5">
+                              <span>-15m</span>
+                              <span>0</span>
+                              <span>+15m</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => updateOffset(currentOffset + 1)}
+                            disabled={currentOffset >= 15}
+                            aria-label="Increase prayer time offset by 1 minute"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-emerald-950/70 dark:hover:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800/70 cursor-pointer transition-colors shrink-0"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Islamic Moon Sighting Offset */}
-              <div className="bg-amber-50/70 dark:bg-amber-950/40 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-900/50">
+              <div className="bg-teal-50/70 dark:bg-teal-950/35 p-4 rounded-2xl border border-teal-200/80 dark:border-teal-800/60">
                 <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-300">
-                    <Moon className="w-4 h-4 text-amber-600" />
+                  <div className="flex items-center gap-2 text-xs font-bold text-teal-950 dark:text-teal-200">
+                    <Moon className="w-4 h-4 text-teal-700 dark:text-teal-400" />
                     <span>{language === 'ur' ? 'رویتِ ہلال ایڈجسٹمنٹ (قمری دن)' : 'Moon Sighting Offset (Hilal Adjustment)'}</span>
                   </div>
-                  <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 font-mono">
+                  <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/80 text-teal-900 dark:text-teal-200 border border-teal-200 dark:border-teal-700/60 font-mono">
                     {filters.hijriAdjustmentDays > 0
                       ? `+${filters.hijriAdjustmentDays} Day`
                       : filters.hijriAdjustmentDays < 0
@@ -454,7 +562,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       : '0 (Astronomical)'}
                   </span>
                 </div>
-                <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed mb-3">
+                <p className="text-[11px] text-teal-900/80 dark:text-teal-300/80 leading-relaxed mb-3">
                   {language === 'ur'
                     ? 'اگر آپ کے علاقے میں چاند دیکھنے کا اعلان ایک دن آگے یا پیچھے ہو تو یہاں سے تاریخ ایڈجسٹ کریں۔'
                     : 'Adjust the Hijri calendar date by ±1 or ±2 days to match your verified local Hilal / moon sighting committee.'}
@@ -466,8 +574,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => onFilterChange({ ...filters, hijriAdjustmentDays: val })}
                       className={`py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         filters.hijriAdjustmentDays === val
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                          ? 'bg-teal-700 dark:bg-teal-600 text-white shadow-sm'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-teal-100 dark:hover:bg-teal-900/40'
                       }`}
                     >
                       {val > 0 ? `+${val}` : val}

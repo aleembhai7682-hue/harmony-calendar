@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   Scale,
   CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import {
   PrayerLocationPrompt,
@@ -21,6 +22,20 @@ import {
 } from './prayer/PrayerLocationPrompt';
 import { PrayerCountdownGrid, PrayerSlot } from './prayer/PrayerCountdownGrid';
 import { PrayerWisdomTasbeeh } from './prayer/PrayerWisdomTasbeeh';
+import { PrayerHistoryChart } from './prayer/PrayerHistoryChart';
+import { formatDateToLocalYMD } from '../utils/dateUtils';
+import {
+  EMPTY_PRAYER_DAY_RECORD,
+  PrayerHistoryMap,
+  PrayerId,
+  clampDailyPrayerGoal,
+  loadDailyPrayerGoal,
+  loadPrayerHistory,
+  saveDailyPrayerGoal,
+  savePrayerHistory,
+  setAllPrayersForDay,
+  togglePrayerInHistory,
+} from '../utils/prayerHistory';
 
 interface IslamicPrayerWidgetProps {
   currentDate: Date;
@@ -38,6 +53,7 @@ interface IslamicPrayerWidgetProps {
   timeFormat?: TimeFormatOption;
   prayerMethod?: 'karachi' | 'mwl' | 'makkah' | 'egypt';
   asrMethod?: 'hanafi' | 'standard';
+  prayerTimeOffsetMinutes?: number;
   onLocationChange?: (loc: PrayerLocationUpdatePayload) => void;
   onOpenSettings?: () => void;
 }
@@ -58,6 +74,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
   timeFormat = 'auto',
   prayerMethod = 'karachi',
   asrMethod = 'hanafi',
+  prayerTimeOffsetMinutes = 0,
   onLocationChange,
   onOpenSettings,
 }) => {
@@ -65,6 +82,33 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [prayerHistory, setPrayerHistory] = useState<PrayerHistoryMap>(() => loadPrayerHistory());
+  const [dailyPrayerGoal, setDailyPrayerGoal] = useState<number>(() => loadDailyPrayerGoal());
+
+  const currentDateYmd = formatDateToLocalYMD(currentDate);
+  const currentDayRecord = prayerHistory[currentDateYmd] ?? EMPTY_PRAYER_DAY_RECORD;
+
+  const handleTogglePrayerForDate = (dateStr: string, prayerId: PrayerId) => {
+    setPrayerHistory((prev) => {
+      const next = togglePrayerInHistory(prev, dateStr, prayerId);
+      savePrayerHistory(next);
+      return next;
+    });
+  };
+
+  const handleSetAllPrayersForDay = (dateStr: string, completed: boolean) => {
+    setPrayerHistory((prev) => {
+      const next = setAllPrayersForDay(prev, dateStr, completed);
+      savePrayerHistory(next);
+      return next;
+    });
+  };
+
+  const handleChangeDailyGoal = (goal: number) => {
+    const clamped = clampDailyPrayerGoal(goal);
+    setDailyPrayerGoal(clamped);
+    saveDailyPrayerGoal(clamped);
+  };
 
   const hasLocation = hasExplicitLocation(selectedCity, customLat, customLon);
   const needsMumbaiConfirm =
@@ -128,6 +172,7 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
     timezoneName: isLocationReady ? selectedLocationTimezone : undefined,
     prayerMethod,
     asrMethod,
+    prayerTimeOffsetMinutes,
     locationExplicitlyConfirmed: isLocationReady,
   });
 
@@ -243,9 +288,9 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
   return (
     <div className="rounded-3xl bg-gradient-to-br from-[#FAFDFB] via-[#FCFDFC] to-[#EFF6F2] dark:from-[#0B1914] dark:via-[#0A1713] dark:to-[#08130F] border border-[#D5E4DC] dark:border-[#1B382E] text-slate-900 dark:text-slate-100 shadow-lg dark:shadow-xl overflow-hidden transition-all">
       {/* Header Bar */}
-      <div className="px-5 py-4 bg-gradient-to-r from-[#EFF6F2] via-[#FAFDFB] to-[#F7F4EA] dark:from-[#0E211A] dark:via-[#0B1914] dark:to-[#0A1612] border-b border-[#D5E4DC] dark:border-[#1B382E] flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-5 py-4 bg-gradient-to-r from-[#EEF6F2] via-[#FAFDFC] to-[#E9F5F2] dark:from-[#0E211A] dark:via-[#0B1914] dark:to-[#081915] border-b border-[#CFE2D8] dark:border-[#1B382E] flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-emerald-700/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 dark:border-emerald-500/30 flex items-center justify-center shadow-xs">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-700/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-teal-600/30 dark:border-teal-400/30 flex items-center justify-center shadow-xs">
             <span className="text-xl">🌙</span>
           </div>
           <div>
@@ -255,17 +300,17 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                   ? 'اوقاتِ نماز و اسلامی تقویم'
                   : 'Islamic Prayer Times & Hijri Calendar'}
               </span>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#FBF5E6] dark:bg-amber-950/60 text-[#8C6418] dark:text-amber-300 border border-[#E5D3A7] dark:border-amber-700/50 font-bold">
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#EAF7F2] dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 border border-[#BCE0D2] dark:border-teal-700/50 font-bold">
                 {language === 'ur' ? hijri.formattedUr : hijri.formattedEn}
               </span>
 
-              {/* Prominent Glassmorphic Calculation Method (Botanical Emerald) & Asr (Champagne Brass) Badges */}
+              {/* Prominent Glassmorphic Calculation Method (Emerald) & Asr (Teal) Badges */}
               <button
                 type="button"
                 onClick={onOpenSettings}
                 disabled={!onOpenSettings}
                 title={`${prayerData.methodName} — Click to change in Settings`}
-                className={`inline-flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full backdrop-blur-md bg-emerald-50/80 dark:bg-emerald-900/35 border border-emerald-400/55 dark:border-emerald-400/35 ring-1 ring-inset ring-white/75 dark:ring-white/10 font-bold tracking-wide shadow-xs ${
+                className={`inline-flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full backdrop-blur-md bg-emerald-50/85 dark:bg-emerald-900/35 border border-emerald-400/55 dark:border-emerald-400/35 ring-1 ring-inset ring-white/75 dark:ring-white/10 font-bold tracking-wide shadow-xs ${
                   onOpenSettings
                     ? 'hover:bg-emerald-100/90 dark:hover:bg-emerald-800/45 hover:border-emerald-500/70 dark:hover:border-emerald-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 dark:focus-visible:ring-emerald-300 cursor-pointer transition-all'
                     : ''
@@ -281,29 +326,48 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                 onClick={onOpenSettings}
                 disabled={!onOpenSettings}
                 title={`${prayerData.asrJuristicName} — Click to change in Settings`}
-                className={`inline-flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full backdrop-blur-md bg-amber-50/80 dark:bg-amber-900/30 border border-amber-400/55 dark:border-amber-400/35 ring-1 ring-inset ring-white/75 dark:ring-white/10 font-bold tracking-wide shadow-xs ${
+                className={`inline-flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full backdrop-blur-md bg-teal-50/85 dark:bg-teal-900/35 border border-teal-400/55 dark:border-teal-400/35 ring-1 ring-inset ring-white/75 dark:ring-white/10 font-bold tracking-wide shadow-xs ${
                   onOpenSettings
-                    ? 'hover:bg-amber-100/90 dark:hover:bg-amber-800/40 hover:border-amber-500/70 dark:hover:border-amber-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 dark:focus-visible:ring-amber-300 cursor-pointer transition-all'
+                    ? 'hover:bg-teal-100/90 dark:hover:bg-teal-800/45 hover:border-teal-500/70 dark:hover:border-teal-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 dark:focus-visible:ring-teal-300 cursor-pointer transition-all'
                     : ''
                 }`}
               >
-                <Scale className="w-3.5 h-3.5 text-amber-800 dark:text-amber-300 shrink-0" />
-                <span className="text-amber-900 dark:text-amber-200 font-semibold">Asr:</span>
-                <span className="text-amber-950 dark:text-white">{prayerData.asrShortName}</span>
+                <Scale className="w-3.5 h-3.5 text-teal-800 dark:text-teal-300 shrink-0" />
+                <span className="text-teal-900 dark:text-teal-200 font-semibold">Asr:</span>
+                <span className="text-teal-950 dark:text-white">{prayerData.asrShortName}</span>
               </button>
+
+              {prayerData.offsetMinutes !== 0 && (
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  disabled={!onOpenSettings}
+                  title="Global prayer time adjustment — Click to adjust in Settings"
+                  className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-emerald-700/10 dark:bg-teal-500/20 text-emerald-900 dark:text-teal-200 border border-emerald-500/40 dark:border-teal-400/40 font-bold ${
+                    onOpenSettings ? 'hover:bg-emerald-700/20 dark:hover:bg-teal-500/30 cursor-pointer transition-colors' : ''
+                  }`}
+                >
+                  <Clock className="w-3 h-3 text-teal-700 dark:text-teal-300 shrink-0" />
+                  <span>
+                    {language === 'ur'
+                      ? `${prayerData.offsetMinutes > 0 ? `+${prayerData.offsetMinutes}` : prayerData.offsetMinutes} منٹ کی تبدیلی`
+                      : `Adjusted by ${prayerData.offsetMinutes > 0 ? `+${prayerData.offsetMinutes}` : prayerData.offsetMinutes} min`}
+                  </span>
+                </button>
+              )}
 
               {isLocationReady ? (
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold flex items-center gap-1 ${
                     needsManualTimezone
-                      ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700/60'
+                      ? 'bg-teal-100/90 dark:bg-teal-950/80 text-teal-900 dark:text-teal-200 border-teal-300 dark:border-teal-700/60'
                       : 'bg-white/90 dark:bg-[#10231C] text-emerald-900 dark:text-emerald-300 border-[#C6DDD1] dark:border-[#1B382E]'
                   }`}
                 >
                   <MapPin
                     className={`w-3 h-3 ${
                       needsManualTimezone
-                        ? 'text-amber-700 dark:text-amber-400'
+                        ? 'text-teal-700 dark:text-teal-400'
                         : 'text-emerald-700 dark:text-emerald-400'
                     }`}
                   />
@@ -316,8 +380,8 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                   </span>
                 </span>
               ) : (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 font-bold flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-amber-700 dark:text-amber-400" />
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/80 text-teal-900 dark:text-teal-200 border border-teal-300 dark:border-teal-700/60 font-bold flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-teal-700 dark:text-teal-400" />
                   <span>
                     {needsMumbaiConfirm
                       ? language === 'ur'
@@ -436,8 +500,20 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
               prayerData={prayerData}
               timeFormat={timeFormat}
               selectedCountryCode={selectedCountryCode}
+              dayRecord={currentDayRecord}
+              onTogglePrayer={(prayerId) => handleTogglePrayerForDate(currentDateYmd, prayerId)}
             />
           )}
+
+          <PrayerHistoryChart
+            currentDate={currentDate}
+            language={language}
+            history={prayerHistory}
+            dailyGoal={dailyPrayerGoal}
+            onTogglePrayer={handleTogglePrayerForDate}
+            onSetAllPrayersForDay={handleSetAllPrayersForDay}
+            onChangeGoal={handleChangeDailyGoal}
+          />
 
           <PrayerWisdomTasbeeh language={language} wisdom={wisdom} />
 
@@ -449,8 +525,8 @@ export const IslamicPrayerWidget: React.FC<IslamicPrayerWidgetProps> = ({
                 {isLocationReady && !needsManualTimezone
                   ? `${prayerData.methodName} • ${prayerData.asrJuristicName}`
                   : language === 'ur'
-                  ? `مقام درکار ہے۔ منتخب طریقہ: ${prayerData.methodShortName} • ${prayerData.asrShortName} • حتمی اوقات کے لیے مقامی مسجد سے تصدیق کریں۔`
-                  : `Location required — Selected: ${prayerData.methodShortName} • ${prayerData.asrShortName}. Always confirm with your local mosque.`}
+                  ? `مقام درکار ہے۔ منتخب طریقہ: ${prayerData.methodShortName} • ${prayerData.asrShortName} • حتمی اوقات کے لیے ہمیشہ اپنی مقامی مسجد سے تصدیق کریں۔`
+                  : `Location required — Selected: ${prayerData.methodShortName} • ${prayerData.asrShortName}. Always confirm final times with your local mosque.`}
               </span>
             </span>
             <span className="text-emerald-800 dark:text-emerald-400 font-semibold font-mono text-[10px]">

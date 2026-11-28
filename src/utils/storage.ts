@@ -54,6 +54,7 @@ export const DEFAULT_FILTERS: CalendarFilterSettings = {
   dateFormat: 'auto',
   asrMethod: 'hanafi',
   prayerMethod: 'karachi',
+  prayerTimeOffsetMinutes: 0,
   enabledCategories: {
     hindu: true,
     islamic: true,
@@ -555,9 +556,16 @@ export function loadFilters(): CalendarFilterSettings {
       ? parsed.selectedRegion.trim()
       : matchedCity?.stateOrRegion || undefined;
 
+    const sanitizedOffsetMinutes =
+      typeof parsed.prayerTimeOffsetMinutes === 'number' &&
+      !isNaN(parsed.prayerTimeOffsetMinutes)
+        ? Math.max(-15, Math.min(15, Math.round(parsed.prayerTimeOffsetMinutes)))
+        : 0;
+
     return {
       ...DEFAULT_FILTERS,
       ...parsed,
+      prayerTimeOffsetMinutes: sanitizedOffsetMinutes,
       selectedCity,
       selectedCountry: derivedCountry,
       selectedCountryCode: derivedCountryCode,
@@ -891,6 +899,11 @@ export function importBackupData(jsonString: string): ImportBackupResult {
       const prayerMethod = ['karachi', 'mwl', 'makkah', 'egypt'].includes(rawF.prayerMethod)
         ? rawF.prayerMethod
         : 'karachi';
+      const prayerTimeOffsetMinutes =
+        typeof rawF.prayerTimeOffsetMinutes === 'number' &&
+        !isNaN(rawF.prayerTimeOffsetMinutes)
+          ? Math.max(-15, Math.min(15, Math.round(rawF.prayerTimeOffsetMinutes)))
+          : 0;
       const hijriAdj =
         typeof rawF.hijriAdjustmentDays === 'number' &&
         !isNaN(rawF.hijriAdjustmentDays) &&
@@ -990,6 +1003,7 @@ export function importBackupData(jsonString: string): ImportBackupResult {
         customLocationName,
         asrMethod,
         prayerMethod,
+        prayerTimeOffsetMinutes,
         enabledCategories: validatedCategories,
         showGazettedOnly: Boolean(rawF.showGazettedOnly),
         showHijri: rawF.showHijri !== undefined ? Boolean(rawF.showHijri) : true,

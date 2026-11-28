@@ -360,12 +360,12 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
   ]);
 
   const activeEventsColorLight = isMuslimMode
-    ? '#047857'
+    ? '#065F46'
     : isHinduMode
     ? '#B45309'
     : '#14284B';
   const activeEventsColorDark = isMuslimMode
-    ? '#34D399'
+    ? '#22D3EE'
     : isHinduMode
     ? '#FB923C'
     : '#38BDF8';
@@ -377,14 +377,14 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
         label: copy.completedTasks,
         value: summary.completedTasksCount,
         colorLight: '#059669',
-        colorDark: '#10B981',
+        colorDark: '#34D399',
       },
       {
         key: 'festivals',
         label: copy.upcomingFestivals,
         value: summary.upcomingFestivalsCount,
-        colorLight: '#C69C44',
-        colorDark: '#F59E0B',
+        colorLight: isMuslimMode ? '#0D9488' : '#C69C44',
+        colorDark: isMuslimMode ? '#2DD4BF' : '#FBBF24',
       },
       {
         key: 'events',
@@ -448,7 +448,7 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
   return (
     <section
       aria-label={`${monthTitle} ${copy.overview}`}
-      className={`px-4 py-3.5 sm:px-5 border-b ${modeTheme.gridDivider} ${modeTheme.cardSubSurface}/55`}
+      className={`px-4 py-3.5 sm:px-5 border-b ${modeTheme.gridDivider} ${modeTheme.cardSubSurface}`}
     >
       {/* Top quiet editorial strip */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -491,11 +491,25 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
               role="img"
               aria-label={`${monthTitle}: ${summary.completedTasksCount} ${copy.completedTasks}, ${summary.upcomingFestivalsCount} ${copy.upcomingFestivals}, ${summary.activeEventsCount} ${copy.activeEvents}`}
             >
+              {/* Subtle outer & inner guide rings for Dark Mode visibility */}
+              <circle
+                r="43"
+                fill="none"
+                className="stroke-slate-300/75 dark:stroke-white/15"
+                strokeWidth="0.9"
+              />
+              <circle
+                r="26"
+                fill="none"
+                className="stroke-slate-300/65 dark:stroke-white/12"
+                strokeWidth="0.9"
+              />
+
               {totalVisualItems === 0 ? (
                 <circle
                   r="34.5"
                   fill="none"
-                  className="stroke-slate-300 dark:stroke-slate-700"
+                  className="stroke-slate-300 dark:stroke-slate-600"
                   strokeWidth="12"
                   strokeDasharray="4 4"
                 />
@@ -512,16 +526,19 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
                     >
                       <path
                         d={slice.path}
+                        strokeWidth="0.9"
                         className={
                           slice.key === 'tasks'
-                            ? 'fill-emerald-600 dark:fill-emerald-500'
+                            ? 'fill-emerald-600 dark:fill-emerald-400 stroke-emerald-800/30 dark:stroke-emerald-200/45'
                             : slice.key === 'festivals'
-                            ? 'fill-[#C69C44] dark:fill-amber-400'
+                            ? isMuslimMode
+                              ? 'fill-teal-600 dark:fill-teal-300 stroke-teal-800/30 dark:stroke-teal-100/45'
+                              : 'fill-[#C69C44] dark:fill-amber-300 stroke-amber-900/25 dark:stroke-amber-100/40'
                             : isMuslimMode
-                            ? 'fill-[#047857] dark:fill-emerald-400'
+                            ? 'fill-[#065F46] dark:fill-cyan-300 stroke-emerald-950/35 dark:stroke-cyan-100/45'
                             : isHinduMode
-                            ? 'fill-[#B45309] dark:fill-orange-400'
-                            : 'fill-[#14284B] dark:fill-sky-400'
+                            ? 'fill-[#B45309] dark:fill-orange-400 stroke-orange-950/30 dark:stroke-orange-100/40'
+                            : 'fill-[#14284B] dark:fill-sky-400 stroke-slate-900/30 dark:stroke-sky-100/40'
                         }
                       >
                         <title>{`${slice.label}: ${slice.value} (${slice.pct}%)`}</title>
@@ -537,7 +554,7 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
                 y="-4"
                 textAnchor="middle"
                 dominantBaseline="central"
-                className="fill-slate-900 dark:fill-white font-mono font-bold text-[16px] tabular-nums"
+                className="fill-slate-800 dark:fill-slate-100 font-mono font-bold text-[16px] tabular-nums"
               >
                 {hoveredKey
                   ? slices.find((s) => s.key === hoveredKey)?.value ?? totalVisualItems
@@ -548,7 +565,7 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
                 y="11"
                 textAnchor="middle"
                 dominantBaseline="central"
-                className="fill-slate-500 dark:fill-slate-400 font-semibold text-[8px] uppercase tracking-wider"
+                className="fill-slate-600 dark:fill-slate-300 font-semibold text-[8px] uppercase tracking-wider"
               >
                 {hoveredKey
                   ? `${
@@ -584,7 +601,7 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
             style={{ opacity: hoveredKey && hoveredKey !== 'tasks' ? 0.55 : 1 }}
           >
             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-              <span className="w-2.5 h-2.5 rounded-[3px] bg-emerald-600 dark:bg-emerald-500 shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-[3px] bg-emerald-600 dark:bg-emerald-400 border border-black/15 dark:border-white/25 shrink-0" />
               <span className="truncate">{copy.completedTasks}</span>
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
@@ -598,9 +615,9 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
               </span>
             </div>
             {/* Slim completion bar */}
-            <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden">
+            <div className="mt-2 h-2 w-full rounded-full bg-slate-200/85 dark:bg-slate-900/80 border border-slate-300/80 dark:border-emerald-400/25 overflow-hidden">
               <div
-                className="h-full rounded-full bg-emerald-600 dark:bg-emerald-500 transition-all duration-300"
+                className="h-full rounded-full bg-emerald-600 dark:bg-emerald-400 transition-all duration-300"
                 style={{ width: `${summary.taskCompletionPct}%` }}
               />
             </div>
@@ -614,7 +631,13 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
             style={{ opacity: hoveredKey && hoveredKey !== 'festivals' ? 0.55 : 1 }}
           >
             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-              <span className="w-2.5 h-2.5 rounded-[3px] bg-[#C69C44] dark:bg-amber-400 shrink-0" />
+              <span
+                className={`w-2.5 h-2.5 rounded-[3px] border border-black/15 dark:border-white/25 shrink-0 ${
+                  isMuslimMode
+                    ? 'bg-teal-600 dark:bg-teal-300'
+                    : 'bg-[#C69C44] dark:bg-amber-300'
+                }`}
+              />
               <span className="truncate">{copy.upcomingFestivals}</span>
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
@@ -670,9 +693,9 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
           >
             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
               <span
-                className={`w-2.5 h-2.5 rounded-[3px] shrink-0 ${
+                className={`w-2.5 h-2.5 rounded-[3px] border border-black/15 dark:border-white/25 shrink-0 ${
                   isMuslimMode
-                    ? 'bg-[#047857] dark:bg-emerald-400'
+                    ? 'bg-[#065F46] dark:bg-cyan-300'
                     : isHinduMode
                     ? 'bg-[#B45309] dark:bg-orange-400'
                     : 'bg-[#14284B] dark:bg-sky-400'
@@ -699,7 +722,13 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
                   title={`${summary.nextActiveEvent.dateStr}: ${summary.nextActiveEvent.event.title}`}
                 >
                   <span className="font-mono-tabular shrink-0">
-                    {summary.nextActiveEvent.dateStr.slice(8, 10)}
+                    {new Date(`${summary.nextActiveEvent.dateStr}T12:00:00`).toLocaleDateString(
+                      locale,
+                      {
+                        month: 'short',
+                        day: 'numeric',
+                      }
+                    )}
                   </span>
                   <span aria-hidden="true">·</span>
                   <span className="truncate">{summary.nextActiveEvent.event.title}</span>
@@ -755,17 +784,17 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
                   className="flex flex-col items-center gap-1 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded px-1"
                   title={`${wk.label}: ${wk.completedTasks} ${copy.completedTasks}, ${wk.festivals} ${copy.upcomingFestivals}, ${wk.events} ${copy.activeEvents}`}
                 >
-                  <div className="w-4 h-[34px] flex flex-col justify-end overflow-hidden rounded-t-sm">
+                  <div className="w-4 h-[34px] flex flex-col justify-end overflow-hidden rounded-t-sm border border-slate-300/65 dark:border-white/15 bg-slate-100/70 dark:bg-white/[0.03]">
                     {wkTotal === 0 ? (
-                      <div className="w-full h-[3px] rounded-full bg-slate-200 dark:bg-slate-800" />
+                      <div className="w-full h-[3px] rounded-full bg-slate-300 dark:bg-slate-600/80" />
                     ) : (
-                      <div className="w-full flex flex-col overflow-hidden rounded-t-sm transition-transform duration-150 group-hover:scale-y-105 origin-bottom">
+                      <div className="w-full flex flex-col overflow-hidden rounded-t-sm divide-y divide-white/40 dark:divide-slate-950/60 transition-transform duration-150 group-hover:scale-y-105 origin-bottom">
                         {evtH > 0 && (
                           <div
                             style={{ height: `${evtH}px` }}
                             className={
                               isMuslimMode
-                                ? 'bg-[#047857] dark:bg-emerald-400'
+                                ? 'bg-[#065F46] dark:bg-cyan-300'
                                 : isHinduMode
                                 ? 'bg-[#B45309] dark:bg-orange-400'
                                 : 'bg-[#14284B] dark:bg-sky-400'
@@ -775,13 +804,17 @@ export const MonthSummaryBar: React.FC<MonthSummaryBarProps> = ({
                         {festH > 0 && (
                           <div
                             style={{ height: `${festH}px` }}
-                            className="bg-[#C69C44] dark:bg-amber-400"
+                            className={
+                              isMuslimMode
+                                ? 'bg-teal-600 dark:bg-teal-300'
+                                : 'bg-[#C69C44] dark:bg-amber-300'
+                            }
                           />
                         )}
                         {taskH > 0 && (
                           <div
                             style={{ height: `${taskH}px` }}
-                            className="bg-emerald-600 dark:bg-emerald-500"
+                            className="bg-emerald-600 dark:bg-emerald-400"
                           />
                         )}
                       </div>

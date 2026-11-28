@@ -76,42 +76,42 @@ const CHRISTIAN_THEME: ModeThemeTokens = {
 
 const MUSLIM_THEME: ModeThemeTokens = {
   pageCanvas:
-    'bg-gradient-to-b from-[#F6FAF7] via-[#F0F7F3] to-[#E8F2EC] dark:bg-gradient-to-b dark:from-[#060E0C] dark:via-[#091612] dark:to-[#060C0A]',
+    'bg-gradient-to-b from-[#F5FAF7] via-[#EEF7F2] to-[#E6F2EC] dark:bg-gradient-to-b dark:from-[#060E0C] dark:via-[#081512] dark:to-[#050C0A]',
   headerSurface:
-    'bg-[#FAFDFB]/92 dark:bg-[#0A1713]/92 border-b border-[#D5E4DC] dark:border-emerald-950/90 shadow-[0_2px_12px_rgba(6,78,59,0.04)]',
+    'bg-[#FAFDFC]/92 dark:bg-[#091612]/92 border-b border-[#CFE2D8] dark:border-emerald-950/90 shadow-[0_2px_12px_rgba(6,78,59,0.04)]',
   brandBadge:
-    'bg-gradient-to-tr from-[#064E3B] via-[#047857] to-[#B45309] shadow-emerald-900/20',
+    'bg-gradient-to-tr from-[#064E3B] via-[#047857] to-[#0D9488] shadow-emerald-900/20',
   clockText: 'text-emerald-800 dark:text-emerald-300',
   primaryBtn:
     'bg-emerald-700 hover:bg-emerald-600 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-xs',
   subtleActionBtn:
-    'bg-emerald-50 hover:bg-emerald-100/90 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-800/60',
+    'bg-emerald-50 hover:bg-teal-50/90 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-teal-950/60 dark:text-emerald-200 dark:border-emerald-800/60',
   activeTab:
     'bg-white dark:bg-[#0F241D] text-emerald-800 dark:text-emerald-300 shadow-xs font-bold',
-  cardSurface: 'bg-[#FCFDFC] dark:bg-[#0B1914]',
-  cardSubSurface: 'bg-[#EFF6F2] dark:bg-[#10231C]',
-  cardBorder: 'border-[#D5E4DC] dark:border-[#1B382E]',
-  gridDivider: 'border-[#DDEAE3] dark:border-[#183128]',
+  cardSurface: 'bg-[#FCFDFC] dark:bg-[#0A1814]',
+  cardSubSurface: 'bg-[#EEF6F2] dark:bg-[#0F221C]',
+  cardBorder: 'border-[#CFE2D8] dark:border-[#1B382E]',
+  gridDivider: 'border-[#DAE9E1] dark:border-[#173028]',
   todayCircle:
-    'bg-emerald-700 dark:bg-emerald-500 text-white shadow-xs ring-2 ring-[#C69C44]/45 dark:ring-emerald-400/50',
+    'bg-emerald-700 dark:bg-emerald-500 text-white shadow-xs ring-2 ring-teal-500/45 dark:ring-emerald-400/50',
   selectedCell:
-    'bg-emerald-50/75 dark:bg-emerald-950/40 ring-1 ring-inset ring-emerald-700/25 dark:ring-emerald-500/35',
+    'bg-emerald-50/80 dark:bg-emerald-950/40 ring-1 ring-inset ring-teal-700/25 dark:ring-emerald-500/35',
   specialDayCell:
-    'bg-[#F1F8F4] dark:bg-emerald-950/20 hover:bg-[#E7F3EC] dark:hover:bg-emerald-950/35',
-  specialDayTopBorder: 'border-t-2 border-t-emerald-600/80 dark:border-t-emerald-400/70',
+    'bg-[#EFF8F3] dark:bg-emerald-950/25 hover:bg-[#E4F2EB] dark:hover:bg-emerald-950/35',
+  specialDayTopBorder: 'border-t-2 border-t-teal-600/80 dark:border-t-emerald-400/70',
   accentText: 'text-emerald-800 dark:text-emerald-300',
-  accentTextMuted: 'text-[#8C6418] dark:text-amber-300',
+  accentTextMuted: 'text-teal-700 dark:text-teal-300',
   timerCard:
-    'bg-[#FCFDFC] dark:bg-[#0B1914] border border-[#D5E4DC] dark:border-[#1B382E] shadow-[0_8px_26px_-12px_rgba(6,78,59,0.1)] dark:shadow-xl',
+    'bg-[#FCFDFC] dark:bg-[#0A1814] border border-[#CFE2D8] dark:border-[#1B382E] shadow-[0_8px_26px_-12px_rgba(6,78,59,0.1)] dark:shadow-xl',
   timerHeader:
-    'bg-gradient-to-r from-[#EFF6F2] via-[#FAFDFB] to-[#F7F5EE] dark:from-[#0F231C] dark:via-[#0B1914] dark:to-[#0A1511] border-b border-[#D5E4DC] dark:border-[#1B382E]',
+    'bg-gradient-to-r from-[#EEF6F2] via-[#FAFDFC] to-[#E9F5F2] dark:from-[#0E221B] dark:via-[#0A1814] dark:to-[#081915] border-b border-[#CFE2D8] dark:border-[#1B382E]',
   timerIconBox:
-    'bg-emerald-700/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-600/30 dark:border-emerald-500/30',
+    'bg-emerald-700/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-teal-600/30 dark:border-teal-400/30',
   timerBadge:
-    'bg-[#FBF5E6] dark:bg-amber-950/50 text-[#8C6418] dark:text-amber-300 border border-[#E5D3A7] dark:border-amber-700/50',
+    'bg-[#EAF7F2] dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 border border-[#BCE0D2] dark:border-teal-700/50',
   timerDigits: 'text-emerald-800 dark:text-emerald-300',
-  timerBar: 'from-emerald-700 to-[#C69C44] dark:from-emerald-400 dark:to-amber-300',
-  focusRing: 'focus:ring-emerald-600 dark:focus:ring-emerald-500',
+  timerBar: 'from-emerald-700 via-teal-600 to-emerald-500 dark:from-emerald-400 dark:to-teal-300',
+  focusRing: 'focus:ring-emerald-600 dark:focus:ring-teal-500',
 };
 
 const HINDU_THEME: ModeThemeTokens = {

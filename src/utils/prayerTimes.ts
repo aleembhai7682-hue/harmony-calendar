@@ -41,6 +41,7 @@ export interface PrayerCalculationOptions {
   customCountry?: string;
   prayerMethod?: 'karachi' | 'mwl' | 'makkah' | 'egypt';
   asrMethod?: 'hanafi' | 'standard';
+  prayerTimeOffsetMinutes?: number;
   timezoneOffsetHours?: number;
   timezoneName?: string;
   locationExplicitlyConfirmed?: boolean;
@@ -60,6 +61,7 @@ export interface DetailedPrayerInfo {
   methodShortName: string;
   asrJuristicName: string;
   asrShortName: string;
+  offsetMinutes: number;
   disclaimer: string;
   disclaimerUr: string;
 }
@@ -150,6 +152,10 @@ export function calculateLocationPrayerTimes(
 
   const prayerMethod = options.prayerMethod || 'karachi';
   const asrMethod = options.asrMethod || 'hanafi';
+  const rawOffset = options.prayerTimeOffsetMinutes ?? 0;
+  const offsetMinutes = Number.isFinite(rawOffset)
+    ? Math.max(-15, Math.min(15, Math.round(rawOffset)))
+    : 0;
   const year = date.getFullYear();
   const month = date.getMonth();
   const day = date.getDate();
@@ -208,10 +214,11 @@ export function calculateLocationPrayerTimes(
       methodShortName,
       asrJuristicName,
       asrShortName,
+      offsetMinutes,
       disclaimer:
-        'Location required — Please select city or enable GPS to calculate prayer times. Always confirm prayer times with your local mosque.',
+        'Location required — Please select city or enable GPS to calculate prayer times. Always confirm final times with your local mosque.',
       disclaimerUr:
-        'مقام درکار ہے۔ براہ کرم شہر منتخب کریں یا GPS فعال کریں۔ حتمی اوقات کے لیے اپنی مقامی مسجد سے تصدیق کریں۔',
+        'مقام درکار ہے۔ براہ کرم شہر منتخب کریں یا GPS فعال کریں۔ حتمی اوقات کے لیے ہمیشہ اپنی مقامی مسجد سے تصدیق کریں۔',
     };
   }
 
@@ -254,6 +261,7 @@ export function calculateLocationPrayerTimes(
       methodShortName,
       asrJuristicName,
       asrShortName,
+      offsetMinutes,
       disclaimer: `Geographical timezone could not be determined for ${displayLabel} (${coordStr}). Please select an IANA timezone manually before calculating prayer times.`,
       disclaimerUr: `${city.nameUr} (${coordStr}) کے لیے جغرافیائی ٹائم زون معلوم نہیں ہو سکا۔ درست اوقاتِ نماز کے لیے براہ کرم دستی طور پر IANA ٹائم زون منتخب کریں۔`,
     };
@@ -271,24 +279,42 @@ export function calculateLocationPrayerTimes(
       : getTimezoneOffsetHoursForZone(tzName, adhanTimes.dhuhr || noonUtc);
   const tzOffsetStr = formatUtcOffset(tzOffsetHours);
 
-  // Sehri Ends (Imsak precautionary cutoff ~10 minutes before true dawn / Fajr)
-  const sehriEndsDate = new Date(adhanTimes.fajr.getTime() - 10 * 60_000);
+  // Global user minute offset (-15 to +15 min) applied uniformly on top of base Adhan times
+  const offsetMs = offsetMinutes * 60_000;
+  const fajrDate = new Date(adhanTimes.fajr.getTime() + offsetMs);
+  const sunriseDate = new Date(adhanTimes.sunrise.getTime() + offsetMs);
+  const dhuhrDate = new Date(adhanTimes.dhuhr.getTime() + offsetMs);
+  const asrDate = new Date(adhanTimes.asr.getTime() + offsetMs);
+  const maghribDate = new Date(adhanTimes.maghrib.getTime() + offsetMs);
+  const ishaDate = new Date(adhanTimes.isha.getTime() + offsetMs);
+
+  // Sehri Ends (Imsak precautionary cutoff ~10 minutes before Fajr)
+  const sehriEndsDate = new Date(fajrDate.getTime() - 10 * 60_000);
   // Iftar occurs strictly at Maghrib sunset
-  const iftarDate = adhanTimes.maghrib;
+  const iftarDate = maghribDate;
 
   const fmt = (d: Date) =>
     formatUtcDateInLocationZone(d, tzName, options.timezoneOffsetHours);
 
   const times: PrayerTimes = {
-    fajr: fmt(adhanTimes.fajr),
-    sunrise: fmt(adhanTimes.sunrise),
-    dhuhr: fmt(adhanTimes.dhuhr),
-    asr: fmt(adhanTimes.asr),
-    maghrib: fmt(adhanTimes.maghrib),
-    isha: fmt(adhanTimes.isha),
+    fajr: fmt(fajrDate),
+    sunrise: fmt(sunriseDate),
+    dhuhr: fmt(dhuhrDate),
+    asr: fmt(asrDate),
+    maghrib: fmt(maghribDate),
+    isha: fmt(ishaDate),
     sehriEnds: fmt(sehriEndsDate),
     iftarTime: fmt(iftarDate),
   };
+
+  const offsetNote =
+    offsetMinutes !== 0
+      ? ` Adjusted by ${offsetMinutes > 0 ? `+${offsetMinutes}` : offsetMinutes} min.`
+      : '';
+  const offsetNoteUr =
+    offsetMinutes !== 0
+      ? ` (${offsetMinutes > 0 ? `+${offsetMinutes}` : offsetMinutes} منٹ کی تبدیلی کے ساتھ)`
+      : '';
 
   return {
     hasLocation: true,
@@ -304,7 +330,8 @@ export function calculateLocationPrayerTimes(
     methodShortName,
     asrJuristicName,
     asrShortName,
-    disclaimer: `Calculated via Adhan astronomical engine (${methodName}, ${asrJuristicName}) for ${displayLabel} (${coordStr}) in ${tzName || tzOffsetStr} (${tzOffsetStr}). Please confirm prayer times with your local mosque.`,
-    disclaimerUr: `یہ اوقاتِ نماز فلکیاتی حساب سے ${city.nameUr} (${coordStr} • ${tzName || tzOffsetStr}، ${tzOffsetStr}) — طریقہ: ${methodName.split('(')[0].trim()} • عصر: ${asrMethod === 'hanafi' ? 'حنفی (2x)' : 'جمہور/شافعی (1x)'} کے مطابق تیار کیے گئے ہیں۔ حتمی اوقات کے لیے مقامی مسجد سے تصدیق کریں۔`,
+    offsetMinutes,
+    disclaimer: `Calculated via Adhan astronomical engine (${methodName}, ${asrJuristicName}) for ${displayLabel} (${coordStr}) in ${tzName || tzOffsetStr} (${tzOffsetStr}).${offsetNote} Always confirm final times with your local mosque.`,
+    disclaimerUr: `یہ اوقاتِ نماز فلکیاتی حساب سے ${city.nameUr} (${coordStr} • ${tzName || tzOffsetStr}، ${tzOffsetStr}) — طریقہ: ${methodName.split('(')[0].trim()} • عصر: ${asrMethod === 'hanafi' ? 'حنفی (2x)' : 'جمہور/شافعی (1x)'}${offsetNoteUr} کے مطابق تیار کیے گئے ہیں۔ حتمی اوقات کے لیے ہمیشہ اپنی مقامی مسجد سے تصدیق کریں۔`,
   };
 }

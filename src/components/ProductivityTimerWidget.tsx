@@ -146,7 +146,7 @@ export const ProductivityTimerWidget: React.FC<ProductivityTimerWidgetProps> = (
                 {formatTimer()}
               </div>
               {/* Mini Progress Bar */}
-              <div className="w-32 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+              <div className="w-32 h-2 bg-slate-200/90 dark:bg-slate-900/90 border border-slate-300/80 dark:border-white/15 rounded-full mt-1.5 overflow-hidden">
                 <div
                   className={`h-full bg-gradient-to-r ${modeTheme.timerBar} transition-all duration-1000`}
                   style={{ width: `${progressPercent}%` }}

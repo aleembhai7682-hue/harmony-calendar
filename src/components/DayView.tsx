@@ -194,17 +194,13 @@ export const DayView: React.FC<DayViewProps> = ({
               </div>
             ) : (
               /* Hijri Banner (Muslim mode) */
-              <div className="flex items-center gap-2 mt-2 text-emerald-800 dark:text-amber-200 text-sm font-semibold">
+              <div className="flex items-center gap-2 mt-2 text-emerald-800 dark:text-teal-200 text-sm font-semibold">
                 <span className="text-base">{moon.icon}</span>
                 <span>
-                  {language === 'en'
-                    ? hijri.formattedEn
-                    : language === 'ur'
-                    ? hijri.formattedUr
-                    : hijri.formattedHi}
+                  {language === 'ur' ? hijri.formattedUr : hijri.formattedEn}
                 </span>
-                <span className="text-xs text-emerald-700/80 dark:text-amber-300/80 font-normal">
-                  ({language === 'en' ? moon.nameEn : language === 'ur' ? moon.nameUr : moon.nameHi})
+                <span className="text-xs text-emerald-700/80 dark:text-teal-300/80 font-normal">
+                  ({language === 'ur' ? moon.nameUr : moon.nameEn})
                 </span>
               </div>
             )}
@@ -247,7 +243,9 @@ export const DayView: React.FC<DayViewProps> = ({
                 <Sparkles className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />
                 <div>
                   <div className="font-bold text-emerald-950 dark:text-emerald-100">
-                    {language === 'en' ? islamicOccasion.nameEn : islamicOccasion.nameHi}
+                    {language === 'ur'
+                      ? islamicOccasion.nameUr || islamicOccasion.nameEn
+                      : islamicOccasion.nameEn}
                   </div>
                   <div className="text-[10px] text-emerald-800 dark:text-emerald-300/90 line-clamp-1">
                     {islamicOccasion.spiritualSignificance}

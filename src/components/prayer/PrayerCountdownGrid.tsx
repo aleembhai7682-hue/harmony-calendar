@@ -1,12 +1,13 @@
 import React from 'react';
-import { Clock, CheckCircle2 } from 'lucide-react';
+import { Clock, CheckCircle2, Circle } from 'lucide-react';
 import { Language, PrayerTimes } from '../../types/calendar';
 import { formatTimePreference, TimeFormatOption } from '../../utils/localization';
 import { DetailedPrayerInfo } from '../../utils/prayerTimes';
+import { PrayerDayRecord, PrayerId } from '../../utils/prayerHistory';
 import { PrayerWindowPieChart } from './PrayerWindowPieChart';
 
 export interface PrayerSlot {
-  id: string;
+  id: PrayerId;
   nameEn: string;
   nameHinglish: string;
   nameUr: string;
@@ -27,6 +28,8 @@ interface PrayerCountdownGridProps {
   prayerData: DetailedPrayerInfo;
   timeFormat: TimeFormatOption;
   selectedCountryCode?: string;
+  dayRecord?: PrayerDayRecord;
+  onTogglePrayer?: (prayerId: PrayerId) => void;
 }
 
 export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
@@ -40,6 +43,8 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
   prayerData,
   timeFormat,
   selectedCountryCode,
+  dayRecord,
+  onTogglePrayer,
 }) => {
   const nextPrayerLabel =
     language === 'ur'
@@ -82,7 +87,7 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                 <span>{language === 'ur' ? 'اگلی نماز' : 'Next Prayer'}</span>
                 {isTomorrowFajr && (
-                  <span className="text-[10px] normal-case font-semibold text-[#8C6418] dark:text-amber-200 bg-[#FBF5E6] dark:bg-amber-950/70 px-2 py-0.5 rounded-full border border-[#E5D3A7] dark:border-amber-600/50">
+                  <span className="text-[10px] normal-case font-semibold text-teal-800 dark:text-teal-200 bg-[#EAF7F2] dark:bg-teal-950/70 px-2 py-0.5 rounded-full border border-[#BCE0D2] dark:border-teal-600/50">
                     {language === 'ur' ? 'کل صبح' : 'Tomorrow'}
                   </span>
                 )}
@@ -142,9 +147,9 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
         </div>
 
         {/* Subtle Interval Progress Bar */}
-        <div className="h-1 w-full bg-[#DDEAE3] dark:bg-[#07110D]">
+        <div className="h-1.5 w-full bg-[#D7EAE0] dark:bg-[#0B1C16] border-t border-[#C4DDD0] dark:border-teal-500/25">
           <div
-            className="h-full bg-gradient-to-r from-emerald-700 via-emerald-500 to-amber-400 transition-all duration-700"
+            className="h-full bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400 dark:from-emerald-400 dark:via-teal-300 dark:to-cyan-300 transition-all duration-700"
             style={{ width: `${intervalProgressPct}%` }}
           />
         </div>
@@ -154,12 +159,15 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
         {slots.map((slot) => {
           const isNext = slot.id === nextPrayer.id && !isTomorrowFajr;
+          const isCompleted = Boolean(dayRecord?.[slot.id]);
           return (
             <div
               key={slot.id}
               className={`p-3 rounded-2xl border transition-all ${
                 isNext
                   ? 'bg-[#E6F4EC] dark:bg-emerald-900/45 border-emerald-600 dark:border-emerald-400 ring-1 ring-emerald-500/35 shadow-sm'
+                  : isCompleted
+                  ? 'bg-[#EDF8F2] dark:bg-[#0F2A21] border-emerald-500/70 dark:border-emerald-400/55 shadow-xs'
                   : 'bg-[#FCFDFC] dark:bg-[#10231C]/80 border-[#D5E4DC] dark:border-[#1B382E] hover:border-emerald-400/70 dark:hover:border-emerald-700 shadow-xs'
               }`}
             >
@@ -170,41 +178,71 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
               <div className="text-base font-black font-mono text-emerald-950 dark:text-white">
                 {formatTimePreference(slot.timeStr, timeFormat, selectedCountryCode)}
               </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                {isNext
-                  ? language === 'ur'
-                    ? 'اگلی نماز'
-                    : 'Up next'
-                  : slot.isJummah
-                  ? 'Jummah Adhan'
-                  : 'Adhan Time'}
+              <div className="flex items-center justify-between gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+                <span className="truncate">
+                  {isNext
+                    ? language === 'ur'
+                      ? 'اگلی نماز'
+                      : 'Up next'
+                    : slot.isJummah
+                    ? 'Jummah Adhan'
+                    : 'Adhan Time'}
+                </span>
+                {onTogglePrayer && (
+                  <button
+                    type="button"
+                    onClick={() => onTogglePrayer(slot.id)}
+                    aria-pressed={isCompleted}
+                    title={
+                      isCompleted
+                        ? language === 'ur'
+                          ? 'مکمل شدہ — ہٹانے کے لیے کلک کریں'
+                          : 'Completed — click to unmark'
+                        : language === 'ur'
+                        ? 'مکمل نشان زد کریں'
+                        : 'Mark prayer completed'
+                    }
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-bold transition-colors cursor-pointer shrink-0 ${
+                      isCompleted
+                        ? 'bg-emerald-700 dark:bg-emerald-400 text-white dark:text-emerald-950'
+                        : 'bg-[#EFF6F2] dark:bg-[#0B1914] text-emerald-800 dark:text-teal-200 border border-[#C6DDD1] dark:border-teal-500/35 hover:bg-[#E1F0E8] dark:hover:bg-[#15352B]'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                    ) : (
+                      <Circle className="w-3 h-3 shrink-0" />
+                    )}
+                    <span>{isCompleted ? (language === 'ur' ? 'ادا' : 'Done') : language === 'ur' ? 'نشان' : 'Log'}</span>
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
 
-        {/* Sehri Ends — Champagne Brass Dawn */}
-        <div className="p-3 rounded-2xl bg-[#FEF9EC] dark:bg-[#1D1709] border border-[#E8D5A7] dark:border-amber-700/50 shadow-xs">
-          <div className="text-[11px] font-bold text-[#92400E] dark:text-amber-300 mb-1">
+        {/* Sehri Ends — Soft Mint-Cream Dawn */}
+        <div className="p-3 rounded-2xl bg-[#F2FAF6] dark:bg-[#0D211B] border border-[#BEE3D2] dark:border-teal-800/60 shadow-xs">
+          <div className="text-[11px] font-bold text-teal-800 dark:text-teal-300 mb-1">
             {language === 'ur' ? 'سحری ختم (امساک)' : 'Sehri Ends'}
           </div>
-          <div className="text-base font-black font-mono text-[#78350F] dark:text-amber-200">
+          <div className="text-base font-black font-mono text-emerald-950 dark:text-teal-100">
             {formatTimePreference(prayerTimes.sehriEnds, timeFormat, selectedCountryCode)}
           </div>
-          <div className="text-[10px] text-[#92400E]/85 dark:text-amber-300/80 mt-1">
+          <div className="text-[10px] text-teal-800/80 dark:text-teal-300/80 mt-1">
             {language === 'ur' ? 'فجر سے 10 منٹ قبل' : '10 min before Fajr'}
           </div>
         </div>
 
-        {/* Iftar Time — Warm Terracotta Dusk */}
-        <div className="p-3 rounded-2xl bg-[#FFF6F0] dark:bg-[#22130D] border border-[#F0CDBB] dark:border-orange-800/50 shadow-xs">
-          <div className="text-[11px] font-bold text-[#9A3412] dark:text-orange-300 mb-1">
+        {/* Iftar Time — Deep Emerald-Teal Dusk */}
+        <div className="p-3 rounded-2xl bg-[#EAF7F2] dark:bg-[#0B231E] border border-[#A8D8C6] dark:border-emerald-700/60 shadow-xs">
+          <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 mb-1">
             {language === 'ur' ? 'افطار کا وقت' : 'Iftar Time'}
           </div>
-          <div className="text-base font-black font-mono text-[#7C2D12] dark:text-orange-200">
+          <div className="text-base font-black font-mono text-emerald-950 dark:text-emerald-100">
             {formatTimePreference(prayerTimes.iftarTime, timeFormat, selectedCountryCode)}
           </div>
-          <div className="text-[10px] text-[#9A3412]/85 dark:text-orange-300/80 mt-1">
+          <div className="text-[10px] text-emerald-800/80 dark:text-emerald-300/80 mt-1">
             {language === 'ur' ? 'وقتِ مغرب' : 'At Maghrib Adhan'}
           </div>
         </div>
@@ -212,20 +250,27 @@ export const PrayerCountdownGrid: React.FC<PrayerCountdownGridProps> = ({
 
       {/* Subtle Adhan Astronomical Confirmation + Non-Intrusive Mosque Disclaimer */}
       <div className="px-3.5 py-2.5 rounded-xl bg-[#FCFDFC]/90 dark:bg-[#0B1914]/85 border border-[#D5E4DC] dark:border-[#1B382E] text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between gap-2 flex-wrap">
-        <span className="flex items-center gap-2 text-emerald-900 dark:text-emerald-300 font-medium">
+        <span className="flex items-center gap-2 text-emerald-900 dark:text-emerald-300 font-medium flex-wrap">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
           <span>
             {language === 'ur'
               ? `Adhan فلکیاتی انجن سے حساب شدہ (${prayerData.methodShortName} • ${prayerData.asrShortName})`
               : `Calculated using Adhan astronomical engine (${prayerData.methodShortName} • ${prayerData.asrShortName})`}
           </span>
+          {prayerData.offsetMinutes !== 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EAF7F2] dark:bg-teal-950/70 text-teal-800 dark:text-teal-200 border border-[#BCE0D2] dark:border-teal-700/50">
+              {language === 'ur'
+                ? `${prayerData.offsetMinutes > 0 ? `+${prayerData.offsetMinutes}` : prayerData.offsetMinutes} منٹ کی تبدیلی`
+                : `Adjusted by ${prayerData.offsetMinutes > 0 ? `+${prayerData.offsetMinutes}` : prayerData.offsetMinutes} min`}
+            </span>
+          )}
         </span>
         <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
           <span>🕌</span>
           <span>
             {language === 'ur'
-              ? 'حتمی اوقات کے لیے ہمیشہ مقامی مسجد سے تصدیق کریں۔'
-              : 'Always confirm with your local mosque.'}
+              ? 'حتمی اوقات کے لیے ہمیشہ اپنی مقامی مسجد سے تصدیق کریں۔'
+              : 'Always confirm final times with your local mosque.'}
           </span>
         </span>
       </div>

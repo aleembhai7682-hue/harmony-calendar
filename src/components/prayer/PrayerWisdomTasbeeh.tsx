@@ -54,7 +54,7 @@ export const PrayerWisdomTasbeeh: React.FC<PrayerWisdomTasbeehProps> = ({
 
         <div className="mt-3 pt-2.5 border-t border-[#E3EFE8] dark:border-[#1B382E] flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
           <span>Islamic Lifestyle Harmony</span>
-          <span className="text-[#8C6418] dark:text-amber-300 font-semibold">Peace &amp; Reflection</span>
+          <span className="text-teal-700 dark:text-teal-300 font-semibold">Peace &amp; Reflection</span>
         </div>
       </div>
 
